@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Surteme · Gestión</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f6f8f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111615" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='14' fill='%230f766e'/%3E%3Cpath d='M42 22c-2-3-6-4-10-4-6 0-10 3-10 8 0 11 20 6 20 16 0 5-4 8-10 8-4 0-8-1-11-5' stroke='white' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f8f7;
+    --surface: #ffffff;
+    --surface-2: #eef3f1;
+    --text: #15201d;
+    --muted: #5d6b67;
+    --line: #dfe7e4;
+    --accent: #0f766e;
+    --accent-hover: #0b5f58;
+    --accent-soft: #dcf2ee;
+    --accent-text: #0b5f58;
+    --on-accent: #ffffff;
+    --ok: #2b8a3e;
+    --ok-soft: #e3f4e6;
+    --warn: #a15c00;
+    --warn-soft: #fff1d6;
+    --bad: #c92a2a;
+    --bad-soft: #fde4e4;
+    --shadow: 0 1px 2px rgba(21,32,29,.05), 0 6px 20px rgba(21,32,29,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111615;
+      --surface: #19201e;
+      --surface-2: #222b28;
+      --text: #ecf2f0;
+      --muted: #a1afab;
+      --line: #2f3a37;
+      --accent: #2dd4bf;
+      --accent-hover: #5eead4;
+      --accent-soft: #123b36;
+      --accent-text: #5eead4;
+      --on-accent: #062a26;
+      --ok: #69db7c;
+      --ok-soft: #173321;
+      --warn: #ffc65c;
+      --warn-soft: #3a2d10;
+      --bad: #ff8787;
+      --bad-soft: #3d1a1a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111615; --surface: #19201e; --surface-2: #222b28; --text: #ecf2f0; --muted: #a1afab;
+    --line: #2f3a37; --accent: #2dd4bf; --accent-hover: #5eead4; --accent-soft: #123b36; --accent-text: #5eead4;
+    --on-accent: #062a26; --ok: #69db7c; --ok-soft: #173321; --warn: #ffc65c; --warn-soft: #3a2d10;
+    --bad: #ff8787; --bad-soft: #3d1a1a; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  [hidden] { display: none !important; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
+
+  /* Encabezado */
+  header.top {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .top-row { display: flex; align-items: center; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; }
+  .logo { width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: var(--on-accent);
+    display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; }
+  .spacer { flex: 1; }
+  nav.tabs { display: flex; gap: 4px; padding-bottom: 10px; overflow-x: auto; }
+  nav.tabs button {
+    flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted);
+    padding: 9px 12px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
+
+  main { padding-top: 20px; padding-bottom: 60px; }
+
+  /* Tarjetas y formularios */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 14px; }
+  .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .section-head h2 { font-size: 1.3rem; }
+  .hint { color: var(--muted); font-size: .9rem; margin: 4px 0 0; }
+
+  label.field { display: block; }
+  label.field > span { display: block; font-size: .88rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+  input, select, textarea {
+    width: 100%; font: inherit; color: var(--text); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid .full { grid-column: 1 / -1; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    font: inherit; font-weight: 600; padding: 9px 14px; min-height: 42px; border-radius: 10px; cursor: pointer;
+    text-decoration: none;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.danger { color: var(--bad); }
+  .btn.small { min-height: 34px; padding: 5px 10px; font-size: .9rem; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .actions .push { margin-left: auto; }
+
+  /* Calculadora */
+  .seg { display: flex; max-width: 420px; background: var(--surface-2); padding: 4px; border-radius: 12px; gap: 4px; margin-bottom: 16px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .92rem; font-weight: 600; padding: 8px 8px; border-radius: 9px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chips button { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: .9rem; cursor: pointer; }
+  .chips button:hover { border-color: var(--accent); }
+  .results { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
+  @media (max-width: 560px) { .results { grid-template-columns: 1fr 1fr; } }
+  .stat { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+  .stat .k { font-size: .82rem; color: var(--muted); font-weight: 600; }
+  .stat .v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  @media (max-width: 560px) { .stat .v { font-size: 1.08rem; } .stat .k { font-size: .78rem; } }
+  .stat.big { grid-column: 1 / -1; background: var(--accent-soft); }
+  .stat.big .v { font-size: 1.9rem; color: var(--accent-text); }
+  .stat .v.neg { color: var(--bad); }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-weight: 500; }
+  .check input { width: 20px; height: 20px; min-height: 0; }
+  .explain { margin-top: 16px; font-size: .9rem; color: var(--muted); }
+  .explain b { color: var(--text); }
+
+  /* Listas */
+  .search { position: relative; flex: 1; min-width: 180px; }
+  .list { display: grid; gap: 8px; }
+  .row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 12px; cursor: pointer; text-align: left; width: 100%; font: inherit; color: inherit;
+  }
+  .row:hover { border-color: var(--accent); }
+  .row .main { flex: 1; min-width: 0; }
+  .row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .sub { color: var(--muted); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .amount { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text);
+    display: grid; place-items: center; font-weight: 700; flex: none; }
+  .badge { display: inline-block; font-size: .78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .badge.pagada { background: var(--ok-soft); color: var(--ok); }
+  .badge.pendiente { background: var(--warn-soft); color: var(--warn); }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  .totals { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 14px; }
+  @media (max-width: 560px) { .totals { grid-template-columns: 1fr 1fr; } .totals .stat:first-child { grid-column: 1 / -1; } }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filters select { width: auto; flex: 0 1 auto; }
+
+  /* Ventanas emergentes */
+  dialog {
+    border: 0; padding: 0; border-radius: 18px; background: var(--surface); color: var(--text);
+    width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  dialog::backdrop { background: rgba(10,15,14,.5); }
+  .dlg-head { display: flex; align-items: center; gap: 8px; padding: 16px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  .dlg-head h3 { font-size: 1.15rem; flex: 1; }
+  .dlg-body { padding: 18px; }
+  .x { border: 0; background: var(--surface-2); color: var(--text); width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; }
+  .file-now { font-size: .88rem; color: var(--muted); margin-top: 6px; }
+  .profit-line { margin-top: 6px; font-size: .9rem; font-weight: 600; }
+  .sub-title { font-size: 1rem; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .sub-title span { flex: 1; }
+
+  /* Entrada */
+  .center-screen { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  .login { width: min(400px, 100%); }
+  .login .brand { justify-content: center; font-size: 1.5rem; margin-bottom: 6px; }
+  .login .logo { width: 44px; height: 44px; font-size: 1.4rem; border-radius: 12px; }
+  .login p.lead { text-align: center; color: var(--muted); margin: 0 0 18px; }
+  .login .field + .field { margin-top: 12px; }
+  .login .btn { width: 100%; margin-top: 16px; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: .92rem; background: var(--bad-soft); color: var(--bad); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 100;
+    background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600;
+    max-width: calc(100vw - 32px); box-shadow: var(--shadow);
+  }
+  .toast.error { background: var(--bad); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- Pantalla: falta conectar Supabase -->
+<section id="v-setup" class="center-screen" hidden>
+  <div class="card login">
+    <div class="brand"><div class="logo">S</div>Surteme</div>
+    <p class="lead">Falta conectar la base de datos. Pega aquí los dos datos de Supabase (solo hay que hacerlo una vez en este aparato).</p>
+    <form id="f-setup">
+      <label class="field"><span>Project URL</span><input name="url" placeholder="https://xxxx.supabase.co" required></label>
+      <label class="field"><span>Publishable key (o anon key)</span><input name="key" placeholder="sb_publishable_… o eyJ…" required></label>
+      <button class="btn primary">Guardar y continuar</button>
+    </form>
+  </div>
+</section>
+
+<!-- Pantalla: entrar -->
+<section id="v-login" class="center-screen" hidden>
+  <div class="card login">
+    <div class="brand"><div class="logo">S</div>Surteme</div>
+    <p class="lead">Suministros y desechables</p>
+    <form id="f-login">
+      <label class="field"><span>Correo</span><input name="email" type="email" autocomplete="username" required></label>
+      <label class="field"><span>Contraseña</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary" id="b-login">Entrar</button>
+      <div class="msg" id="login-msg" hidden></div>
+    </form>
+  </div>
+</section>
+
+<!-- Aplicación -->
+<div id="v-app" hidden>
+  <header class="top">
+    <div class="wrap top-row">
+      <div class="brand"><div class="logo">S</div>Surteme</div>
+      <div class="spacer"></div>
+      <button class="btn small" id="b-logout" title="Salir">Salir</button>
+    </div>
+    <div class="wrap">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="calc" aria-selected="true">Calculadora</button>
+        <button role="tab" data-tab="clientes" aria-selected="false">Clientes</button>
+        <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Calculadora -->
+    <section id="t-calc">
+      <div class="card">
+        <div class="section-head"><div><h2>Calculadora de ganancia</h2><p class="hint">Todo en pesos (RD$). Los precios van sin ITBIS.</p></div></div>
+        <div class="seg" role="group">
+          <button type="button" data-mode="precio" aria-pressed="true">Ya tengo el precio</button>
+          <button type="button" data-mode="margen" aria-pressed="false">Quiero ganar un %</button>
+        </div>
+
+        <div class="grid">
+          <label class="field"><span>¿Cuánto te cuesta? (por unidad)</span><input id="c-costo" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></label>
+          <label class="field" id="w-precio"><span>¿En cuánto lo vendes? (por unidad)</span><input id="c-precio" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></label>
+          <label class="field" id="w-margen" hidden><span>¿Qué % quieres ganar?</span><input id="c-margen" type="number" inputmode="decimal" step="any" min="0" max="99" placeholder="30">
+            <div class="chips"><button type="button" data-m="15">15%</button><button type="button" data-m="20">20%</button><button type="button" data-m="25">25%</button><button type="button" data-m="30">30%</button><button type="button" data-m="40">40%</button><button type="button" data-m="50">50%</button></div>
+          </label>
+          <label class="field"><span>Cantidad de unidades</span><input id="c-cant" type="number" inputmode="numeric" step="any" min="0" value="1"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="c-itbis"> Mostrar precio con ITBIS (18%)</label>
+
+        <div class="results" id="c-results"></div>
+        <p class="explain"><b>Margen</b>: de cada RD$100 que cobras, cuánto es ganancia.<br><b>Sobre el costo</b>: cuánto le subiste al costo (también se llama "markup").</p>
+      </div>
+    </section>
+
+    <!-- Clientes -->
+    <section id="t-clientes" hidden>
+      <div class="section-head">
+        <h2>Clientes</h2>
+        <div class="spacer"></div>
+        <button class="btn primary" id="b-new-client">+ Nuevo cliente</button>
+      </div>
+      <div class="filters"><input class="search" id="s-clientes" type="search" placeholder="Buscar por nombre, teléfono o RNC…"></div>
+      <div class="list" id="l-clientes"></div>
+    </section>
+
+    <!-- Facturas -->
+    <section id="t-facturas" hidden>
+      <div class="section-head">
+        <h2>Facturas</h2>
+        <div class="spacer"></div>
+        <button class="btn primary" id="b-new-invoice">+ Nueva factura</button>
+      </div>
+      <div class="totals" id="f-totals"></div>
+      <div class="filters">
+        <input class="search" id="s-facturas" type="search" placeholder="Buscar por cliente o número…">
+        <select id="s-estado"><option value="">Todas</option><option value="pendiente">Pendientes</option><option value="pagada">Pagadas</option></select>
+        <select id="s-mes"><option value="">Todo el tiempo</option></select>
+      </div>
+      <div class="list" id="l-facturas"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Ventana: cliente -->
+<dialog id="d-client">
+  <div class="dlg-head"><h3 id="dc-title">Cliente</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-client">
+      <div class="grid">
+        <label class="field full"><span>Nombre o empresa *</span><input name="nombre" required></label>
+        <label class="field"><span>RNC o cédula</span><input name="rnc"></label>
+        <label class="field"><span>Teléfono</span><input name="telefono" type="tel"></label>
+        <label class="field full"><span>Correo</span><input name="correo" type="email"></label>
+        <label class="field full"><span>Dirección</span><input name="direccion"></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="dc-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary">Guardar</button>
+      </div>
+    </form>
+    <div id="dc-invoices" hidden>
+      <h4 class="sub-title"><span>Facturas de este cliente</span><button class="btn small" id="dc-add-invoice">+ Agregar factura</button></h4>
+      <div class="list" id="dc-list"></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Ventana: factura -->
+<dialog id="d-invoice">
+  <div class="dlg-head"><h3 id="di-title">Factura</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-invoice">
+      <div class="grid">
+        <label class="field full"><span>Cliente *</span><select name="cliente_id" required></select></label>
+        <label class="field"><span>Número de factura</span><input name="numero" placeholder="Ej. B0100000123"></label>
+        <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
+        <label class="field"><span>Total cobrado (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
+        <label class="field"><span>Lo que te costó (RD$)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+        <div class="full profit-line" id="di-profit"></div>
+        <label class="field"><span>Estado</span><select name="estado"><option value="pendiente">Pendiente de cobro</option><option value="pagada">Pagada</option></select></label>
+        <label class="field"><span>Archivo (PDF o foto)</span><input name="archivo" type="file" accept="application/pdf,image/*">
+          <div class="file-now" id="di-file"></div></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="di-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary" id="di-save">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+(() => {
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const BUCKET = 'facturas';
+
+  // ---------- Utilidades ----------
+  const money = new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' });
+  const fmt = n => money.format(Number.isFinite(n) ? n : 0);
+  const pct = n => Number.isFinite(n) ? n.toLocaleString('es-DO', { maximumFractionDigits: 1 }) + '%' : '—';
+  const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const fdate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const initials = s => String(s || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const show = (id) => { ['v-setup', 'v-login', 'v-app'].forEach(v => $('#' + v).hidden = v !== id); };
+
+  let toastTimer;
+  function toast(text, isError) {
+    const t = $('#toast');
+    t.textContent = text; t.className = 'toast' + (isError ? ' error' : ''); t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, isError ? 6000 : 2500);
+  }
+  function errText(e) {
+    const m = (e && (e.message || e.error_description)) || String(e);
+    if (/invalid login/i.test(m)) return 'Correo o contraseña incorrectos.';
+    if (/failed to fetch|network/i.test(m)) return 'Sin conexión a internet. Intenta de nuevo.';
+    if (/email not confirmed/i.test(m)) return 'Ese correo aún no está confirmado en Supabase.';
+    return 'Hubo un problema: ' + m;
+  }
+
+  // ---------- Calculadora (funciona sin conexión) ----------
+  let mode = 'precio';
+  $$('.seg button').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    $$('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    $('#w-precio').hidden = mode !== 'precio';
+    $('#w-margen').hidden = mode !== 'margen';
+    calc();
+  }));
+  $$('.chips button').forEach(b => b.addEventListener('click', () => { $('#c-margen').value = b.dataset.m; calc(); }));
+  ['#c-costo', '#c-precio', '#c-margen', '#c-cant', '#c-itbis'].forEach(s => $(s).addEventListener('input', calc));
+
+  function calc() {
+    const costo = num($('#c-costo').value);
+    const cant = num($('#c-cant').value);
+    const q = Number.isFinite(cant) && cant > 0 ? cant : 1;
+    const itbis = $('#c-itbis').checked;
+    let precio = NaN, nota = '';
+    if (mode === 'precio') {
+      precio = num($('#c-precio').value);
+    } else {
+      const m = num($('#c-margen').value);
+      if (Number.isFinite(costo) && Number.isFinite(m)) {
+        if (m >= 100) nota = 'El margen tiene que ser menor que 100%.';
+        else precio = costo / (1 - m / 100);
+      }
+    }
+    const box = $('#c-results');
+    if (!Number.isFinite(costo) || !Number.isFinite(precio)) {
+      box.innerHTML = `<div class="stat big"><div class="k">Resultado</div><div class="v" style="font-size:1.05rem;color:var(--muted)">${esc(nota || (mode === 'precio' ? 'Escribe el costo y el precio de venta.' : 'Escribe el costo y el % que quieres ganar.'))}</div></div>`;
+      return;
+    }
+    const gan = precio - costo;
+    const margen = precio > 0 ? gan / precio * 100 : NaN;
+    const markup = costo > 0 ? gan / costo * 100 : NaN;
+    const neg = gan < 0 ? ' neg' : '';
+    let html = '';
+    if (mode === 'margen') html += `<div class="stat big"><div class="k">Precio de venta sugerido</div><div class="v">${fmt(precio)}</div></div>`;
+    else html += `<div class="stat big"><div class="k">Margen de ganancia</div><div class="v${neg}">${pct(margen)}</div></div>`;
+    html += `<div class="stat"><div class="k">Ganancia por unidad</div><div class="v${neg}">${fmt(gan)}</div></div>`;
+    html += `<div class="stat"><div class="k">Ganancia total (${q.toLocaleString('es-DO')} u.)</div><div class="v${neg}">${fmt(gan * q)}</div></div>`;
+    if (mode === 'margen') html += `<div class="stat"><div class="k">Margen</div><div class="v">${pct(margen)}</div></div>`;
+    html += `<div class="stat"><div class="k">Sobre el costo</div><div class="v${neg}">${pct(markup)}</div></div>`;
+    html += `<div class="stat"><div class="k">Venta total</div><div class="v">${fmt(precio * q)}</div></div>`;
+    if (mode === 'precio') html += `<div class="stat"><div class="k">Costo total</div><div class="v">${fmt(costo * q)}</div></div>`;
+    if (itbis) {
+      html += `<div class="stat"><div class="k">Precio con ITBIS (unidad)</div><div class="v">${fmt(precio * 1.18)}</div></div>`;
+      html += `<div class="stat"><div class="k">Total con ITBIS</div><div class="v">${fmt(precio * q * 1.18)}</div></div>`;
+    }
+    if (gan < 0) html += `<div class="stat big" style="background:var(--bad-soft)"><div class="k">Atención</div><div class="v neg" style="font-size:1.05rem">Estás vendiendo por debajo del costo.</div></div>`;
+    box.innerHTML = html;
+  }
+  calc();
+
+  // ---------- Pestañas ----------
+  $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
+  function openTab(tab) {
+    $$('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab));
+    ['calc', 'clientes', 'facturas'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
+  }
+
+  // ---------- Conexión ----------
+  const cfg = window.SURTEME_CONFIG || {};
+  let url = cfg.url, key = cfg.key;
+  try { url = url || localStorage.getItem('surteme_url'); key = key || localStorage.getItem('surteme_key'); } catch (e) {}
+
+  $('#f-setup').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    try { localStorage.setItem('surteme_url', f.get('url').trim()); localStorage.setItem('surteme_key', f.get('key').trim()); } catch (er) {}
+    location.reload();
+  });
+
+  if (!url || !key) { show('v-setup'); return; }
+  if (!window.supabase) { show('v-login'); $('#login-msg').hidden = false; $('#login-msg').textContent = 'No se pudo cargar. Revisa tu conexión a internet y recarga la página.'; return; }
+  const sb = window.supabase.createClient(url, key);
+
+  let clientes = [], facturas = [], started = false;
+
+  $('#f-login').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = new FormData(e.target), btn = $('#b-login'), msg = $('#login-msg');
+    btn.disabled = true; btn.textContent = 'Entrando…'; msg.hidden = true;
+    const { error } = await sb.auth.signInWithPassword({ email: f.get('email').trim(), password: f.get('password') });
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if (error) { msg.textContent = errText(error); msg.hidden = false; }
+  });
+  $('#b-logout').addEventListener('click', () => sb.auth.signOut());
+
+  sb.auth.onAuthStateChange((_ev, session) => {
+    if (session) {
+      show('v-app');
+      if (!started) {
+        started = true;
+        let tab = 'calc';
+        try { tab = localStorage.getItem('surteme_tab') || 'calc'; } catch (e) {}
+        openTab(tab);
+        setTimeout(load, 0);
+      }
+    } else {
+      started = false; clientes = []; facturas = [];
+      show('v-login');
+    }
+  });
+
+  async function load() {
+    const [c, f] = await Promise.all([
+      sb.from('clientes').select('*').order('nombre'),
+      sb.from('facturas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }),
+    ]);
+    if (c.error || f.error) { toast(errText(c.error || f.error), true); return; }
+    clientes = c.data; facturas = f.data;
+    renderClientes(); renderFacturas(); fillMonths();
+    if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
+  }
+  const clientName = id => (clientes.find(c => c.id === id) || {}).nombre || 'Sin cliente';
+
+  // ---------- Clientes ----------
+  $('#s-clientes').addEventListener('input', renderClientes);
+  function renderClientes() {
+    const q = norm($('#s-clientes').value);
+    const list = clientes.filter(c => !q || norm([c.nombre, c.telefono, c.rnc, c.correo].join(' ')).includes(q));
+    const el = $('#l-clientes');
+    if (!clientes.length) { el.innerHTML = '<div class="empty">Aún no hay clientes. Pulsa <b>+ Nuevo cliente</b> para agregar el primero.</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty">No se encontró ningún cliente con esa búsqueda.</div>'; return; }
+    el.innerHTML = list.map(c => {
+      const fs = facturas.filter(f => f.cliente_id === c.id);
+      const pend = fs.filter(f => f.estado === 'pendiente').reduce((s, f) => s + Number(f.monto || 0), 0);
+      const sub = [c.telefono, c.rnc && 'RNC ' + c.rnc, fs.length + (fs.length === 1 ? ' factura' : ' facturas')].filter(Boolean).join(' · ');
+      return `<button class="row" data-id="${c.id}"><div class="avatar">${esc(initials(c.nombre))}</div>
+        <div class="main"><div class="title">${esc(c.nombre)}</div><div class="sub">${esc(sub)}</div></div>
+        ${pend > 0 ? `<div class="amount"><span class="badge pendiente">Debe ${esc(fmt(pend))}</span></div>` : ''}</button>`;
+    }).join('');
+    $$('.row', el).forEach(r => r.addEventListener('click', () => openClient(r.dataset.id)));
+  }
+
+  let openClientId = null;
+  $('#b-new-client').addEventListener('click', () => openClient(null));
+  function openClient(id) {
+    openClientId = id;
+    const c = clientes.find(x => x.id === id) || {};
+    const form = $('#f-client'); form.reset();
+    ['nombre', 'rnc', 'telefono', 'correo', 'direccion', 'notas'].forEach(k => form.elements[k].value = c[k] || '');
+    $('#dc-title').textContent = id ? c.nombre : 'Nuevo cliente';
+    $('#dc-delete').hidden = !id;
+    $('#dc-invoices').hidden = !id;
+    if (id) renderClientInvoices(id);
+    $('#d-client').showModal();
+  }
+  function renderClientInvoices(id) {
+    const fs = facturas.filter(f => f.cliente_id === id);
+    const el = $('#dc-list');
+    el.innerHTML = fs.length ? fs.map(invoiceRow).join('') : '<div class="empty" style="padding:14px">Este cliente aún no tiene facturas.</div>';
+    bindInvoiceRows(el);
+  }
+  $('#dc-add-invoice').addEventListener('click', () => openInvoice(null, openClientId));
+
+  $('#f-client').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, data = {};
+    ['nombre', 'rnc', 'telefono', 'correo', 'direccion', 'notas'].forEach(k => data[k] = f.elements[k].value.trim() || null);
+    const q = openClientId ? sb.from('clientes').update(data).eq('id', openClientId).select().single()
+                           : sb.from('clientes').insert(data).select().single();
+    const { data: saved, error } = await q;
+    if (error) return toast(errText(error), true);
+    toast(openClientId ? 'Cliente actualizado' : 'Cliente guardado');
+    const wasNew = !openClientId;
+    await load();
+    if (wasNew) openClient(saved.id); else { $('#dc-title').textContent = saved.nombre; }
+  });
+
+  $('#dc-delete').addEventListener('click', async () => {
+    const c = clientes.find(x => x.id === openClientId); if (!c) return;
+    const fs = facturas.filter(f => f.cliente_id === c.id);
+    if (!confirm(`¿Borrar a "${c.nombre}"${fs.length ? ` y sus ${fs.length} factura(s)` : ''}? No se puede deshacer.`)) return;
+    const files = fs.map(f => f.archivo).filter(Boolean);
+    if (files.length) await sb.storage.from(BUCKET).remove(files);
+    const { error } = await sb.from('clientes').delete().eq('id', c.id);
+    if (error) return toast(errText(error), true);
+    $('#d-client').close(); toast('Cliente borrado'); load();
+  });
+
+  // ---------- Facturas ----------
+  ['#s-facturas', '#s-estado', '#s-mes'].forEach(s => $(s).addEventListener('input', renderFacturas));
+
+  function fillMonths() {
+    const sel = $('#s-mes'), cur = sel.value;
+    const months = [...new Set(facturas.map(f => (f.fecha || '').slice(0, 7)).filter(Boolean))].sort().reverse();
+    sel.innerHTML = '<option value="">Todo el tiempo</option>' + months.map(m => {
+      const label = new Date(m + '-15T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+      return `<option value="${m}">${esc(label.charAt(0).toUpperCase() + label.slice(1))}</option>`;
+    }).join('');
+    if (months.includes(cur)) sel.value = cur;
+  }
+
+  function invoiceRow(f) {
+    const sub = [fdate(f.fecha), f.numero && '#' + f.numero, f.archivo && '📎'].filter(Boolean).join(' · ');
+    return `<button class="row" data-inv="${f.id}"><div class="main">
+      <div class="title">${esc(clientName(f.cliente_id))}</div><div class="sub">${esc(sub)}</div></div>
+      <div class="amount">${esc(fmt(Number(f.monto)))}<br><span class="badge ${f.estado === 'pagada' ? 'pagada' : 'pendiente'}">${f.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</span></div></button>`;
+  }
+  function bindInvoiceRows(el) { $$('[data-inv]', el).forEach(r => r.addEventListener('click', () => openInvoice(r.dataset.inv))); }
+
+  function renderFacturas() {
+    const q = norm($('#s-facturas').value), est = $('#s-estado').value, mes = $('#s-mes').value;
+    const list = facturas.filter(f =>
+      (!est || f.estado === est) && (!mes || (f.fecha || '').startsWith(mes)) &&
+      (!q || norm(clientName(f.cliente_id) + ' ' + (f.numero || '')).includes(q)));
+    const total = list.reduce((s, f) => s + Number(f.monto || 0), 0);
+    const conCosto = list.filter(f => f.costo !== null && f.costo !== undefined);
+    const gan = conCosto.reduce((s, f) => s + Number(f.monto || 0) - Number(f.costo || 0), 0);
+    const ventaConCosto = conCosto.reduce((s, f) => s + Number(f.monto || 0), 0);
+    const pend = list.filter(f => f.estado === 'pendiente').reduce((s, f) => s + Number(f.monto || 0), 0);
+    $('#f-totals').innerHTML =
+      `<div class="stat"><div class="k">Total facturado</div><div class="v">${fmt(total)}</div></div>
+       <div class="stat"><div class="k">Ganancia${ventaConCosto ? ' (' + pct(gan / ventaConCosto * 100) + ')' : ''}</div><div class="v${gan < 0 ? ' neg' : ''}">${conCosto.length ? fmt(gan) : '—'}</div></div>
+       <div class="stat"><div class="k">Por cobrar</div><div class="v">${fmt(pend)}</div></div>`;
+    const el = $('#l-facturas');
+    if (!facturas.length) el.innerHTML = '<div class="empty">Aún no hay facturas. Pulsa <b>+ Nueva factura</b> para subir la primera.</div>';
+    else if (!list.length) el.innerHTML = '<div class="empty">Ninguna factura coincide con el filtro.</div>';
+    else { el.innerHTML = list.map(invoiceRow).join(''); bindInvoiceRows(el); }
+  }
+
+  let openInvoiceId = null;
+  $('#b-new-invoice').addEventListener('click', () => {
+    if (!clientes.length) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
+    openInvoice(null);
+  });
+
+  function openInvoice(id, clienteId) {
+    openInvoiceId = id;
+    const f = facturas.find(x => x.id === id) || { fecha: today(), estado: 'pendiente', cliente_id: clienteId || '' };
+    const form = $('#f-invoice'); form.reset();
+    form.elements.cliente_id.innerHTML = '<option value="">— Elige un cliente —</option>' +
+      clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    form.elements.cliente_id.value = f.cliente_id || '';
+    form.elements.numero.value = f.numero || '';
+    form.elements.fecha.value = f.fecha || today();
+    form.elements.monto.value = f.monto ?? '';
+    form.elements.costo.value = f.costo ?? '';
+    form.elements.estado.value = f.estado || 'pendiente';
+    form.elements.notas.value = f.notas || '';
+    $('#di-title').textContent = id ? 'Factura' + (f.numero ? ' #' + f.numero : '') : 'Nueva factura';
+    $('#di-delete').hidden = !id;
+    $('#di-file').innerHTML = f.archivo
+      ? `Archivo guardado: <a href="#" id="di-open">ver archivo</a>. Si eliges otro, se reemplaza.`
+      : 'Puedes tomar una foto con el teléfono o subir un PDF.';
+    if (f.archivo) $('#di-open').addEventListener('click', ev => { ev.preventDefault(); openFile(f.archivo); });
+    profitLine();
+    $('#d-invoice').showModal();
+  }
+  ['monto', 'costo'].forEach(k => $('#f-invoice').elements[k].addEventListener('input', profitLine));
+  function profitLine() {
+    const form = $('#f-invoice'), m = num(form.elements.monto.value), c = num(form.elements.costo.value);
+    const el = $('#di-profit');
+    if (Number.isFinite(m) && Number.isFinite(c) && m > 0) {
+      const g = m - c;
+      el.innerHTML = `Ganancia: <span style="color:${g < 0 ? 'var(--bad)' : 'var(--ok)'}">${esc(fmt(g))} (${esc(pct(g / m * 100))})</span>`;
+    } else el.textContent = '';
+  }
+
+  async function openFile(path) {
+    const w = window.open('', '_blank');
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (error) { if (w) w.close(); return toast(errText(error), true); }
+    if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
+  }
+
+  $('#f-invoice').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target, btn = $('#di-save');
+    const costo = num(form.elements.costo.value);
+    const data = {
+      cliente_id: form.elements.cliente_id.value || null,
+      numero: form.elements.numero.value.trim() || null,
+      fecha: form.elements.fecha.value || today(),
+      monto: num(form.elements.monto.value) || 0,
+      costo: Number.isFinite(costo) ? costo : null,
+      estado: form.elements.estado.value,
+      notas: form.elements.notas.value.trim() || null,
+    };
+    const file = form.elements.archivo.files[0];
+    btn.disabled = true; btn.textContent = file ? 'Subiendo…' : 'Guardando…';
+    try {
+      const prev = facturas.find(x => x.id === openInvoiceId);
+      const res = openInvoiceId ? await sb.from('facturas').update(data).eq('id', openInvoiceId).select().single()
+                                : await sb.from('facturas').insert(data).select().single();
+      if (res.error) throw res.error;
+      const saved = res.data;
+      if (file) {
+        const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+        const path = `${saved.id}/${Date.now()}-${safe}`;
+        const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
+        if (up.error) throw up.error;
+        const u2 = await sb.from('facturas').update({ archivo: path }).eq('id', saved.id);
+        if (u2.error) throw u2.error;
+        if (prev && prev.archivo) await sb.storage.from(BUCKET).remove([prev.archivo]);
+      }
+      $('#d-invoice').close();
+      toast(openInvoiceId ? 'Factura actualizada' : 'Factura guardada');
+      await load();
+    } catch (er) { toast(errText(er), true); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+
+  $('#di-delete').addEventListener('click', async () => {
+    const f = facturas.find(x => x.id === openInvoiceId); if (!f) return;
+    if (!confirm('¿Borrar esta factura y su archivo? No se puede deshacer.')) return;
+    if (f.archivo) await sb.storage.from(BUCKET).remove([f.archivo]);
+    const { error } = await sb.from('facturas').delete().eq('id', f.id);
+    if (error) return toast(errText(error), true);
+    $('#d-invoice').close(); toast('Factura borrada'); load();
+  });
+
+  // Cerrar ventanas
+  $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+  $$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+})();
+</script>
+</body>
+</html>
