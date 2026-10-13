@@ -34,3 +34,9 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - Todo es gratis: unos 500 MB de datos y 1 GB de archivos (más o menos 1,000 a 2,000 facturas en PDF).
 - Si nadie usa la página en 7 días, Supabase la pone "en pausa". No se pierde nada: entras a supabase.com y pulsas **Restore project**.
 - En el teléfono puedes poner la página como si fuera una app: ábrela en el navegador → **Compartir** → **Agregar a pantalla de inicio**.
+
+## Suplidores (comparar precios)
+- Pestaña **Suplidores**. La primera vez te pedirá pegar un texto en **SQL Editor** (el mismo botón **Copiar texto** te lo da) y luego pulsar **Cargar precios de la plantilla**.
+- Todo se compara con ITBIS y por unidad, igual que la plantilla de Excel.
+- Toca un producto para ver todos los precios, editarlos o pasarlos a la calculadora.
+- En **Mis suplidores** puedes indicar si cada suplidor cotiza con o sin ITBIS.

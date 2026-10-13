@@ -84,7 +84,7 @@
   nav.tabs { display: flex; gap: 4px; padding-bottom: 10px; overflow-x: auto; }
   nav.tabs button {
     flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted);
-    padding: 9px 12px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+    padding: 9px 8px; border-radius: 10px; font: inherit; font-size: .95rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
   nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
 
@@ -168,6 +168,25 @@
   .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
   .filters select { width: auto; flex: 0 1 auto; }
 
+  /* Suplidores */
+  .cat-head { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 20px 0 8px; }
+  .prod { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+  .prod + .prod { margin-top: 8px; }
+  .prod:hover { border-color: var(--accent); }
+  .prod-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  .prod-head .title { font-weight: 600; min-width: 0; }
+  .badge.save { background: var(--accent-soft); color: var(--accent-text); white-space: nowrap; }
+  .offers { display: grid; gap: 3px; }
+  .offer { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; color: var(--muted); }
+  .offer .p { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .offer.best { color: var(--ok); font-weight: 700; }
+  .offer.mine { color: var(--text); }
+  .offer.best.mine { color: var(--ok); }
+  .sql { width: 100%; min-height: 150px; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .calc-line { margin-top: 6px; font-size: .9rem; color: var(--muted); }
+  .calc-line b { color: var(--text); }
+
   /* Ventanas emergentes */
   dialog {
     border: 0; padding: 0; border-radius: 18px; background: var(--surface); color: var(--text);
@@ -240,9 +259,10 @@
     </div>
     <div class="wrap">
       <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="calc" aria-selected="true">Calculadora</button>
+        <button role="tab" data-tab="calc" aria-selected="true">Calcular</button>
         <button role="tab" data-tab="clientes" aria-selected="false">Clientes</button>
         <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
+        <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
       </nav>
     </div>
   </header>
@@ -297,6 +317,49 @@
         <select id="s-mes"><option value="">Todo el tiempo</option></select>
       </div>
       <div class="list" id="l-facturas"></div>
+    </section>
+
+    <!-- Suplidores -->
+    <section id="t-suplidores" hidden>
+      <div class="section-head">
+        <div><h2>Suplidores</h2><p class="hint">Precios con ITBIS y por unidad, para comparar paquetes distintos.</p></div>
+        <div class="spacer"></div>
+        <button class="btn primary" id="b-new-price">+ Agregar precio</button>
+      </div>
+
+      <div class="card" id="sp-setup" hidden>
+        <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
+        <p class="hint">Para guardar suplidores y precios hay que preparar dos "cajones" nuevos. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego vuelve aquí y recarga la página.</p>
+        <textarea class="sql" id="sp-sql" readonly></textarea>
+        <div class="actions"><button class="btn primary" id="b-copy-sql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
+      </div>
+
+      <div class="card" id="sp-import" hidden>
+        <h3 style="font-size:1.1rem">Cargar tus precios</h3>
+        <p class="hint" id="sp-import-text">Tengo listos los precios de tu plantilla de Excel. Pulsa el botón para guardarlos (solo se hace una vez).</p>
+        <div class="actions"><button class="btn primary" id="b-import">Cargar precios de la plantilla</button></div>
+      </div>
+
+      <div id="sp-main" hidden>
+        <div class="seg" role="group" id="sp-seg">
+          <button type="button" data-view="comparar" aria-pressed="true">Comparar precios</button>
+          <button type="button" data-view="lista" aria-pressed="false">Mis suplidores</button>
+        </div>
+        <div id="sp-comparar">
+          <div class="totals" id="sp-summary"></div>
+          <div class="filters">
+            <input class="search" id="s-prod" type="search" placeholder="Buscar producto…">
+            <select id="s-cat"><option value="">Todas las categorías</option></select>
+            <select id="s-prov"><option value="">Todos los suplidores</option></select>
+          </div>
+          <label class="check" style="margin:0 0 4px"><input type="checkbox" id="s-multi"> Solo productos que venden 2 o más suplidores</label>
+          <div id="l-prod"></div>
+        </div>
+        <div id="sp-lista" hidden>
+          <div class="actions" style="margin:0 0 12px"><button class="btn" id="b-new-prov">+ Nuevo suplidor</button></div>
+          <div class="list" id="l-prov"></div>
+        </div>
+      </div>
     </section>
   </main>
 </div>
@@ -355,6 +418,72 @@
   </div>
 </dialog>
 
+<!-- Ventana: producto -->
+<dialog id="d-prod">
+  <div class="dlg-head"><h3 id="dp-title">Producto</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <p class="hint" id="dp-sub" style="margin:0 0 12px"></p>
+    <div class="list" id="dp-list"></div>
+    <div class="actions">
+      <button class="btn" id="dp-add">+ Agregar precio</button>
+      <span class="push"></span>
+      <button class="btn primary" id="dp-calc">Calcular margen con el mejor precio</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Ventana: precio -->
+<dialog id="d-price">
+  <div class="dlg-head"><h3 id="dpr-title">Precio</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-price">
+      <div class="grid">
+        <label class="field full"><span>Suplidor *</span><select name="proveedor_id" required></select></label>
+        <label class="field full"><span>Producto * <small>(usa el mismo nombre para comparar entre suplidores)</small></span><input name="producto" list="dl-prod" required></label>
+        <label class="field"><span>Categoría</span><input name="categoria" list="dl-cat"></label>
+        <label class="field"><span>Referencia / código</span><input name="referencia"></label>
+        <label class="field full"><span>Descripción del suplidor</span><input name="descripcion"></label>
+        <label class="field"><span>Presentación</span><input name="presentacion" placeholder="Ej. 1/500 o 2/100"></label>
+        <label class="field"><span>Unidades por paquete</span><input name="unidades" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 500"></label>
+        <label class="field full"><span>Precio del paquete (RD$, como lo cotiza el suplidor)</span><input name="precio" type="number" inputmode="decimal" step="any" min="0">
+          <div class="calc-line" id="dpr-calc"></div></label>
+        <label class="check full" style="margin:0"><input type="checkbox" name="asumida"> Presentación por confirmar con el suplidor</label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="dpr-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+<datalist id="dl-prod"></datalist>
+<datalist id="dl-cat"></datalist>
+
+<!-- Ventana: suplidor -->
+<dialog id="d-prov">
+  <div class="dlg-head"><h3 id="dv-title">Suplidor</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-prov">
+      <div class="grid">
+        <label class="field full"><span>Nombre *</span><input name="nombre" required></label>
+        <label class="field full"><span>¿Sus precios ya incluyen ITBIS?</span><select name="incluye_itbis"><option value="si">Sí, ya incluyen ITBIS</option><option value="no">No, hay que sumarle el 18%</option></select></label>
+        <label class="field"><span>Persona de contacto</span><input name="contacto"></label>
+        <label class="field"><span>Teléfono</span><input name="telefono" type="tel"></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="dv-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" hidden></div>
 
 <script src="config.js"></script>
@@ -393,9 +522,9 @@
 
   // ---------- Calculadora (funciona sin conexión) ----------
   let mode = 'precio';
-  $$('.seg button').forEach(b => b.addEventListener('click', () => {
+  $$('#t-calc .seg button').forEach(b => b.addEventListener('click', () => {
     mode = b.dataset.mode;
-    $$('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    $$('#t-calc .seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
     $('#w-precio').hidden = mode !== 'precio';
     $('#w-margen').hidden = mode !== 'margen';
     calc();
@@ -449,7 +578,7 @@
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
     $$('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab));
-    ['calc', 'clientes', 'facturas'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    ['calc', 'clientes', 'facturas', 'suplidores'].forEach(t => $('#t-' + t).hidden = t !== tab);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -506,6 +635,7 @@
     clientes = c.data; facturas = f.data;
     renderClientes(); renderFacturas(); fillMonths();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
+    loadSup();
   }
   const clientName = id => (clientes.find(c => c.id === id) || {}).nombre || 'Sin cliente';
 
@@ -704,6 +834,306 @@
     const { error } = await sb.from('facturas').delete().eq('id', f.id);
     if (error) return toast(errText(error), true);
     $('#d-invoice').close(); toast('Factura borrada'); load();
+  });
+
+  // ---------- Suplidores y precios ----------
+  const ITBIS = 0.18;
+  const SUP_SQL = `create table if not exists proveedores (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  nombre text not null,
+  incluye_itbis boolean not null default true,
+  contacto text, telefono text, notas text
+);
+create table if not exists precios (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  actualizado timestamptz not null default now(),
+  proveedor_id uuid not null references proveedores(id) on delete cascade,
+  categoria text, producto text not null, referencia text, descripcion text,
+  presentacion text, unidades numeric, precio numeric,
+  asumida boolean not null default false, fuente text, notas text
+);
+alter table proveedores enable row level security;
+alter table precios enable row level security;
+drop policy if exists "usuarios_proveedores" on proveedores;
+create policy "usuarios_proveedores" on proveedores for all to authenticated using (true) with check (true);
+drop policy if exists "usuarios_precios" on precios;
+create policy "usuarios_precios" on precios for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on proveedores, precios to authenticated;`;
+  $('#sp-sql').value = SUP_SQL;
+  $('#b-copy-sql').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(SUP_SQL); toast('Texto copiado'); }
+    catch (e) { $('#sp-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
+  });
+
+  let proveedores = [], precios = [], productos = [], provById = {};
+  const missingTable = e => e && (/PGRST205|42P01/.test(e.code || '') || /could not find the table|does not exist/i.test(e.message || ''));
+
+  async function loadSup() {
+    const [v, p] = await Promise.all([
+      sb.from('proveedores').select('*').order('nombre'),
+      sb.from('precios').select('*').order('producto').range(0, 9999),
+    ]);
+    const err = v.error || p.error;
+    $('#sp-setup').hidden = !missingTable(err);
+    $('#b-new-price').hidden = !!err;
+    if (err) { $('#sp-main').hidden = true; $('#sp-import').hidden = true; if (!missingTable(err)) toast(errText(err), true); return; }
+    proveedores = v.data; precios = p.data;
+    provById = Object.fromEntries(proveedores.map(x => [x.id, x]));
+    $('#sp-import').hidden = precios.length > 0;
+    $('#sp-main').hidden = precios.length === 0 && proveedores.length === 0;
+    buildProductos(); fillSupFilters(); renderProductos(); renderProveedores();
+    if (openProd && $('#d-prod').open) renderProdDetail();
+  }
+
+  // Precio del paquete con ITBIS y precio por unidad (igual que en la plantilla de Excel)
+  function pkgItbis(r) {
+    if (r.precio === null || r.precio === undefined || r.precio === '') return NaN;
+    const prov = provById[r.proveedor_id];
+    return Number(r.precio) * (prov && prov.incluye_itbis === false ? 1 + ITBIS : 1);
+  }
+  function unitItbis(r) { const u = Number(r.unidades); return u > 0 ? pkgItbis(r) / u : NaN; }
+
+  function buildProductos() {
+    const map = new Map();
+    precios.forEach(r => {
+      const k = r.producto;
+      if (!map.has(k)) map.set(k, { nombre: k, categoria: r.categoria || 'Sin categoría', rows: [], bySup: {} });
+      const g = map.get(k); g.rows.push(r);
+      const u = unitItbis(r);
+      if (Number.isFinite(u) && (!(r.proveedor_id in g.bySup) || u < g.bySup[r.proveedor_id])) g.bySup[r.proveedor_id] = u;
+    });
+    productos = [...map.values()].map(g => {
+      const vals = Object.values(g.bySup);
+      g.best = vals.length ? Math.min(...vals) : NaN;
+      g.worst = vals.length ? Math.max(...vals) : NaN;
+      g.nSup = vals.length;
+      g.ganadores = Object.keys(g.bySup).filter(id => Math.abs(g.bySup[id] - g.best) < 1e-9);
+      g.perdedores = g.best === g.worst ? [] : Object.keys(g.bySup).filter(id => Math.abs(g.bySup[id] - g.worst) < 1e-9);
+      g.ahorro = g.nSup >= 2 && g.worst > 0 ? (g.worst - g.best) / g.worst : NaN;
+      return g;
+    }).sort((a, b) => a.categoria.localeCompare(b.categoria, 'es') || a.nombre.localeCompare(b.nombre, 'es'));
+  }
+
+  const provName = id => (provById[id] || {}).nombre || '—';
+  const unitFmt = n => {
+    if (!Number.isFinite(n)) return 'sin precio por unidad';
+    return 'RD$' + n.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: n < 1 ? 4 : 2 }) + ' c/u';
+  };
+
+  function fillSupFilters() {
+    const cat = $('#s-cat'), prov = $('#s-prov'), cv = cat.value, pv = prov.value;
+    const cats = [...new Set(productos.map(p => p.categoria))];
+    cat.innerHTML = '<option value="">Todas las categorías</option>' + cats.map(c => `<option>${esc(c)}</option>`).join('');
+    prov.innerHTML = '<option value="">Todos los suplidores</option>' + proveedores.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+    if (cats.includes(cv)) cat.value = cv;
+    if (provById[pv]) prov.value = pv;
+    $('#dl-cat').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+    $('#dl-prod').innerHTML = productos.map(p => `<option value="${esc(p.nombre)}">`).join('');
+  }
+
+  $$('#sp-seg button').forEach(b => b.addEventListener('click', () => {
+    $$('#sp-seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    $('#sp-comparar').hidden = b.dataset.view !== 'comparar';
+    $('#sp-lista').hidden = b.dataset.view !== 'lista';
+  }));
+  ['#s-prod', '#s-cat', '#s-prov', '#s-multi'].forEach(s => $(s).addEventListener('input', renderProductos));
+
+  function renderProductos() {
+    const multi = productos.filter(p => p.nSup >= 2);
+    const ah = multi.map(p => p.ahorro).filter(Number.isFinite);
+    $('#sp-summary').innerHTML =
+      `<div class="stat"><div class="k">Productos</div><div class="v">${productos.length}</div></div>
+       <div class="stat"><div class="k">Con 2+ suplidores</div><div class="v">${multi.length}</div></div>
+       <div class="stat"><div class="k">Ahorro promedio</div><div class="v">${ah.length ? pct(ah.reduce((a, b) => a + b, 0) / ah.length * 100) : '—'}</div></div>`;
+    const q = norm($('#s-prod').value), cat = $('#s-cat').value, prov = $('#s-prov').value, only = $('#s-multi').checked;
+    const list = productos.filter(p => (!cat || p.categoria === cat) && (!only || p.nSup >= 2) &&
+      (!prov || p.rows.some(r => r.proveedor_id === prov)) &&
+      (!q || norm(p.nombre + ' ' + p.rows.map(r => (r.descripcion || '') + ' ' + (r.referencia || '')).join(' ')).includes(q)));
+    const el = $('#l-prod');
+    if (!list.length) { el.innerHTML = `<div class="empty">${productos.length ? 'Ningún producto coincide con la búsqueda.' : 'Aún no hay precios.'}</div>`; return; }
+    let html = '', lastCat = null;
+    list.forEach(p => {
+      if (p.categoria !== lastCat) { html += `<div class="cat-head">${esc(p.categoria)}</div>`; lastCat = p.categoria; }
+      const sups = Object.keys(p.bySup).sort((a, b) => p.bySup[a] - p.bySup[b]);
+      const sinUnidad = [...new Set(p.rows.filter(r => !Number.isFinite(unitItbis(r))).map(r => r.proveedor_id))].filter(id => !(id in p.bySup));
+      const offers = sups.map(id => {
+        const best = p.nSup >= 2 && p.ganadores.includes(id);
+        return `<div class="offer${best ? ' best' : ''}${id === prov ? ' mine' : ''}"><span>${best ? '✓ ' : ''}${esc(provName(id))}</span><span class="p">${esc(unitFmt(p.bySup[id]))}</span></div>`;
+      }).concat(sinUnidad.map(id => `<div class="offer${id === prov ? ' mine' : ''}"><span>${esc(provName(id))}</span><span class="p">presentación no indicada</span></div>`)).join('');
+      html += `<button class="prod" data-prod="${productos.indexOf(p)}"><div class="prod-head"><span class="title">${esc(p.nombre)}</span>
+        ${Number.isFinite(p.ahorro) && p.ahorro > 0 ? `<span class="badge save">Ahorras ${esc(pct(p.ahorro * 100))}</span>` : ''}</div>
+        <div class="offers">${offers}</div></button>`;
+    });
+    el.innerHTML = html;
+    $$('.prod', el).forEach(b => b.addEventListener('click', () => openProduct(productos[+b.dataset.prod].nombre)));
+  }
+
+  function renderProveedores() {
+    const multi = productos.filter(p => p.nSup >= 2);
+    const el = $('#l-prov');
+    if (!proveedores.length) { el.innerHTML = '<div class="empty">Aún no hay suplidores.</div>'; return; }
+    el.innerHTML = proveedores.map(v => {
+      const n = new Set(precios.filter(r => r.proveedor_id === v.id).map(r => r.producto)).size;
+      const comp = multi.filter(p => v.id in p.bySup).length;
+      const gana = multi.filter(p => p.ganadores.includes(v.id)).length;
+      const sub = [n + (n === 1 ? ' producto' : ' productos'), comp ? `más barato en ${gana} de ${comp} comparados` : null,
+        v.incluye_itbis === false ? 'cotiza sin ITBIS' : 'cotiza con ITBIS'].filter(Boolean).join(' · ');
+      return `<button class="row" data-prov="${v.id}"><div class="avatar">${esc(initials(v.nombre))}</div>
+        <div class="main"><div class="title">${esc(v.nombre)}</div><div class="sub">${esc(sub)}</div></div>
+        ${comp ? `<div class="amount"><span class="badge ${gana / comp >= .5 ? 'pagada' : 'pendiente'}">${esc(pct(gana / comp * 100))}</span></div>` : ''}</button>`;
+    }).join('');
+    $$('[data-prov]', el).forEach(r => r.addEventListener('click', () => openProv(r.dataset.prov)));
+  }
+
+  // Detalle de un producto
+  let openProd = null;
+  function openProduct(nombre) { openProd = nombre; renderProdDetail(); if (!$('#d-prod').open) $('#d-prod').showModal(); }
+  function renderProdDetail() {
+    const p = productos.find(x => x.nombre === openProd);
+    if (!p) { $('#d-prod').close(); return; }
+    $('#dp-title').textContent = p.nombre;
+    $('#dp-sub').textContent = p.categoria + (Number.isFinite(p.ahorro) && p.ahorro > 0 ? ` · Comprando al más barato ahorras ${pct(p.ahorro * 100)} frente al más caro` : '');
+    const rows = [...p.rows].sort((a, b) => (unitItbis(a) || Infinity) - (unitItbis(b) || Infinity));
+    $('#dp-list').innerHTML = rows.map(r => {
+      const u = unitItbis(r), best = p.nSup >= 2 && Number.isFinite(u) && Math.abs(u - p.best) < 1e-9;
+      const sub = [r.descripcion, r.presentacion && 'Pres. ' + r.presentacion + (r.asumida ? ' (por confirmar)' : ''),
+        Number.isFinite(pkgItbis(r)) && 'Paquete ' + fmt(pkgItbis(r)), r.notas].filter(Boolean).join(' · ');
+      return `<button class="row" data-price="${r.id}"><div class="main"><div class="title">${best ? '✓ ' : ''}${esc(provName(r.proveedor_id))}</div>
+        <div class="sub" style="white-space:normal">${esc(sub)}</div></div>
+        <div class="amount" style="${best ? 'color:var(--ok)' : ''}">${esc(unitFmt(u))}<br><span class="sub" style="font-weight:500">Editar</span></div></button>`;
+    }).join('');
+    $$('[data-price]', $('#dp-list')).forEach(b => b.addEventListener('click', () => openPrice(b.dataset.price)));
+    $('#dp-calc').hidden = !Number.isFinite(p.best);
+  }
+  $('#dp-add').addEventListener('click', () => {
+    const p = productos.find(x => x.nombre === openProd);
+    openPrice(null, p && { producto: p.nombre, categoria: p.categoria === 'Sin categoría' ? '' : p.categoria });
+  });
+  $('#dp-calc').addEventListener('click', () => {
+    const p = productos.find(x => x.nombre === openProd); if (!p) return;
+    $('#c-costo').value = Math.round(p.best * 10000) / 10000;
+    $('#d-prod').close(); openTab('calc'); calc();
+    window.scrollTo(0, 0);
+    toast('Costo puesto: ' + unitFmt(p.best) + ' (con ITBIS)');
+  });
+
+  // Agregar / editar un precio
+  let openPriceId = null;
+  $('#b-new-price').addEventListener('click', () => {
+    if (!proveedores.length) { toast('Primero agrega un suplidor en "Mis suplidores".', true); return; }
+    openPrice(null);
+  });
+  function openPrice(id, preset) {
+    openPriceId = id;
+    const r = precios.find(x => x.id === id) || preset || {};
+    const f = $('#f-price'); f.reset();
+    f.elements.proveedor_id.innerHTML = '<option value="">— Elige un suplidor —</option>' + proveedores.map(v => `<option value="${v.id}">${esc(v.nombre)}</option>`).join('');
+    ['proveedor_id', 'producto', 'categoria', 'referencia', 'descripcion', 'presentacion', 'unidades', 'precio', 'notas'].forEach(k => f.elements[k].value = r[k] ?? '');
+    f.elements.asumida.checked = !!r.asumida;
+    $('#dpr-title').textContent = id ? 'Editar precio' : 'Nuevo precio';
+    $('#dpr-delete').hidden = !id;
+    priceCalc();
+    $('#d-price').showModal();
+  }
+  ['proveedor_id', 'unidades', 'precio'].forEach(k => $('#f-price').elements[k].addEventListener('input', priceCalc));
+  function priceCalc() {
+    const f = $('#f-price'), prov = provById[f.elements.proveedor_id.value];
+    const r = { proveedor_id: f.elements.proveedor_id.value, unidades: num(f.elements.unidades.value), precio: f.elements.precio.value === '' ? null : num(f.elements.precio.value) };
+    const pk = pkgItbis(r), u = unitItbis(r);
+    let t = prov ? (prov.incluye_itbis === false ? 'Este suplidor cotiza <b>sin ITBIS</b>: se le suma el 18%. ' : 'Este suplidor cotiza <b>con ITBIS</b> incluido. ') : '';
+    if (Number.isFinite(pk)) t += `Con ITBIS: <b>${esc(fmt(pk))}</b> el paquete` + (Number.isFinite(u) ? ` · <b>${esc(unitFmt(u))}</b>` : '');
+    $('#dpr-calc').innerHTML = t;
+  }
+  $('#f-price').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, u = num(f.elements.unidades.value), pr = num(f.elements.precio.value);
+    const data = {
+      proveedor_id: f.elements.proveedor_id.value,
+      producto: f.elements.producto.value.trim(),
+      categoria: f.elements.categoria.value.trim() || null,
+      referencia: f.elements.referencia.value.trim() || null,
+      descripcion: f.elements.descripcion.value.trim() || null,
+      presentacion: f.elements.presentacion.value.trim() || null,
+      unidades: Number.isFinite(u) ? u : null,
+      precio: Number.isFinite(pr) ? pr : null,
+      asumida: f.elements.asumida.checked,
+      notas: f.elements.notas.value.trim() || null,
+      actualizado: new Date().toISOString(),
+    };
+    const res = openPriceId ? await sb.from('precios').update(data).eq('id', openPriceId) : await sb.from('precios').insert(data);
+    if (res.error) return toast(errText(res.error), true);
+    $('#d-price').close();
+    toast(openPriceId ? 'Precio actualizado' : 'Precio guardado');
+    if ($('#d-prod').open && openProd !== data.producto) openProd = data.producto;
+    loadSup();
+  });
+  $('#dpr-delete').addEventListener('click', async () => {
+    if (!confirm('¿Borrar este precio? No se puede deshacer.')) return;
+    const { error } = await sb.from('precios').delete().eq('id', openPriceId);
+    if (error) return toast(errText(error), true);
+    $('#d-price').close(); toast('Precio borrado'); loadSup();
+  });
+
+  // Agregar / editar un suplidor
+  let openProvId = null;
+  $('#b-new-prov').addEventListener('click', () => openProv(null));
+  function openProv(id) {
+    openProvId = id;
+    const v = provById[id] || {};
+    const f = $('#f-prov'); f.reset();
+    ['nombre', 'contacto', 'telefono', 'notas'].forEach(k => f.elements[k].value = v[k] || '');
+    f.elements.incluye_itbis.value = v.incluye_itbis === false ? 'no' : 'si';
+    $('#dv-title').textContent = id ? v.nombre : 'Nuevo suplidor';
+    $('#dv-delete').hidden = !id;
+    $('#d-prov').showModal();
+  }
+  $('#f-prov').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, data = { incluye_itbis: f.elements.incluye_itbis.value === 'si' };
+    ['nombre', 'contacto', 'telefono', 'notas'].forEach(k => data[k] = f.elements[k].value.trim() || null);
+    const res = openProvId ? await sb.from('proveedores').update(data).eq('id', openProvId) : await sb.from('proveedores').insert(data);
+    if (res.error) return toast(errText(res.error), true);
+    $('#d-prov').close(); toast(openProvId ? 'Suplidor actualizado' : 'Suplidor guardado'); loadSup();
+  });
+  $('#dv-delete').addEventListener('click', async () => {
+    const v = provById[openProvId]; if (!v) return;
+    const n = precios.filter(r => r.proveedor_id === v.id).length;
+    if (!confirm(`¿Borrar a "${v.nombre}"${n ? ` y sus ${n} precio(s)` : ''}? No se puede deshacer.`)) return;
+    const { error } = await sb.from('proveedores').delete().eq('id', v.id);
+    if (error) return toast(errText(error), true);
+    $('#d-prov').close(); toast('Suplidor borrado'); loadSup();
+  });
+
+  // Cargar los precios de la plantilla de Excel (una sola vez)
+  $('#b-import').addEventListener('click', async () => {
+    const btn = $('#b-import');
+    btn.disabled = true; btn.textContent = 'Cargando…';
+    try {
+      const res = await fetch('precios-plantilla.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('No se encontró el archivo de la plantilla.');
+      const plantilla = await res.json();
+      const ids = Object.fromEntries(proveedores.map(v => [v.nombre, v.id]));
+      const nuevos = plantilla.proveedores.filter(v => !ids[v.nombre]);
+      if (nuevos.length) {
+        const ins = await sb.from('proveedores').insert(nuevos).select();
+        if (ins.error) throw ins.error;
+        ins.data.forEach(v => ids[v.nombre] = v.id);
+      }
+      const filas = plantilla.precios.map(r => ({
+        proveedor_id: ids[r.proveedor], categoria: r.categoria, producto: r.producto, referencia: r.referencia,
+        descripcion: r.descripcion, presentacion: r.presentacion, unidades: r.unidades, precio: r.precio,
+        asumida: !!r.asumida, fuente: r.fuente, notas: r.notas,
+      }));
+      for (let i = 0; i < filas.length; i += 100) {
+        const ins = await sb.from('precios').insert(filas.slice(i, i + 100));
+        if (ins.error) throw ins.error;
+      }
+      toast(`Listo: ${filas.length} precios cargados`);
+      await loadSup();
+    } catch (er) { toast(errText(er), true); }
+    finally { btn.disabled = false; btn.textContent = 'Cargar precios de la plantilla'; }
   });
 
   // Cerrar ventanas
