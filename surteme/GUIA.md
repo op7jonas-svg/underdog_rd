@@ -40,3 +40,9 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - Todo se compara con ITBIS y por unidad, igual que la plantilla de Excel.
 - Toca un producto para ver todos los precios, editarlos o pasarlos a la calculadora.
 - En **Mis suplidores** puedes indicar si cada suplidor cotiza con o sin ITBIS.
+
+## Gastos y combustible
+- Pestaña **Gastos**. La primera vez te pedirá pegar un texto en **SQL Editor** (botón **Copiar texto**).
+- **Mis gastos:** anota cada gasto (combustible, peajes, sueldos, alquiler, etc.) con foto del recibo. Ves el total del mes y la **ganancia real** (lo que ganaste en facturas menos los gastos).
+- **Calcular combustible:** distancia, cuánto rinde el vehículo y precio del galón → cuánto cuesta el viaje y cuánto por entrega.
+- Si en cada tanqueada anotas galones y kilometraje, la página calcula sola cuánto rinde tu vehículo.

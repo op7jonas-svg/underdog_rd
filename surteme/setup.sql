@@ -72,3 +72,19 @@ create policy "usuarios_proveedores" on proveedores for all to authenticated usi
 drop policy if exists "usuarios_precios" on precios;
 create policy "usuarios_precios" on precios for all to authenticated using (true) with check (true);
 grant select, insert, update, delete on proveedores, precios to authenticated;
+
+-- ===== Gastos (agregado después) =====
+create table if not exists gastos (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  fecha date not null default current_date,
+  categoria text not null default 'Otros',
+  descripcion text,
+  monto numeric not null default 0,
+  galones numeric, precio_galon numeric, km numeric, vehiculo text,
+  archivo text, notas text
+);
+alter table gastos enable row level security;
+drop policy if exists "usuarios_gastos" on gastos;
+create policy "usuarios_gastos" on gastos for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on gastos to authenticated;

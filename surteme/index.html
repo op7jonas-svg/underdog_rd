@@ -84,8 +84,9 @@
   nav.tabs { display: flex; gap: 4px; padding-bottom: 10px; overflow-x: auto; }
   nav.tabs button {
     flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted);
-    padding: 9px 8px; border-radius: 10px; font: inherit; font-size: .95rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+    padding: 9px 6px; border-radius: 10px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
+  @media (max-width: 440px) { nav.tabs { gap: 2px; } nav.tabs button { font-size: .8rem; padding: 8px 2px; } }
   nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
 
   main { padding-top: 20px; padding-bottom: 60px; }
@@ -187,6 +188,13 @@
   .calc-line { margin-top: 6px; font-size: .9rem; color: var(--muted); }
   .calc-line b { color: var(--text); }
 
+  /* Gastos */
+  .bars { display: grid; gap: 8px; margin-bottom: 14px; }
+  .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: .9rem; }
+  .bar-row .amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
   /* Ventanas emergentes */
   dialog {
     border: 0; padding: 0; border-radius: 18px; background: var(--surface); color: var(--text);
@@ -263,6 +271,7 @@
         <button role="tab" data-tab="clientes" aria-selected="false">Clientes</button>
         <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
+        <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
       </nav>
     </div>
   </header>
@@ -361,6 +370,56 @@
         </div>
       </div>
     </section>
+
+    <!-- Gastos -->
+    <section id="t-gastos" hidden>
+      <div class="section-head">
+        <h2>Gastos</h2>
+        <div class="spacer"></div>
+        <button class="btn primary" id="b-new-gasto">+ Nuevo gasto</button>
+      </div>
+
+      <div class="card" id="g-setup" hidden style="margin-bottom:14px">
+        <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
+        <p class="hint">Para guardar gastos hay que preparar un "cajón" nuevo. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego vuelve aquí y recarga la página. (La calculadora de combustible ya funciona.)</p>
+        <textarea class="sql" id="g-sql" readonly></textarea>
+        <div class="actions"><button class="btn primary" id="b-copy-gsql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
+      </div>
+
+      <div class="seg" role="group" id="g-seg">
+        <button type="button" data-view="lista" aria-pressed="true">Mis gastos</button>
+        <button type="button" data-view="fuel" aria-pressed="false">Calcular combustible</button>
+      </div>
+
+      <div id="g-lista">
+        <div class="filters">
+          <select id="g-mes"></select>
+          <select id="g-cat"><option value="">Todas las categorías</option></select>
+        </div>
+        <div class="totals" id="g-totals"></div>
+        <p class="hint" id="g-neta-hint" style="margin:-6px 0 14px"></p>
+        <div class="bars" id="g-bars"></div>
+        <div class="list" id="l-gastos"></div>
+      </div>
+
+      <div id="g-fuel" hidden>
+        <div class="card">
+          <h3 style="font-size:1.1rem">¿Cuánto cuesta un viaje en combustible?</h3>
+          <p class="hint">Para saber cuánto te cuesta llevar un pedido y cobrarlo bien.</p>
+          <div class="grid" style="margin-top:14px">
+            <label class="field"><span>Distancia (km)</span><input id="fu-km" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 25"></label>
+            <label class="field"><span>Entregas en ese viaje</span><input id="fu-ent" type="number" inputmode="numeric" step="1" min="1" value="1"></label>
+            <label class="field"><span>Tu vehículo rinde (km por galón)</span><input id="fu-rend" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 35">
+              <div class="chips" id="fu-rend-chips"></div></label>
+            <label class="field"><span>Precio del galón (RD$)</span><input id="fu-precio" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 290"></label>
+          </div>
+          <label class="check"><input type="checkbox" id="fu-ida" checked> Contar ida y vuelta (la distancia se duplica)</label>
+          <div class="results" id="fu-results"></div>
+          <div class="actions"><button class="btn primary" id="fu-save" hidden>Guardar como gasto de combustible</button></div>
+          <p class="explain"><b>¿No sabes cuánto rinde tu vehículo?</b> Cada vez que eches combustible, anota en el gasto los galones y el kilometraje (el número del odómetro). Después de dos tanqueadas, la página lo calcula sola y te sale como botón aquí arriba.</p>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -417,6 +476,35 @@
     </form>
   </div>
 </dialog>
+
+<!-- Ventana: gasto -->
+<dialog id="d-gasto">
+  <div class="dlg-head"><h3 id="dg-title">Gasto</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-gasto">
+      <div class="grid">
+        <label class="field"><span>Categoría *</span><select name="categoria" required></select></label>
+        <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
+        <label class="field fuel-only"><span>Galones</span><input name="galones" type="number" inputmode="decimal" step="any" min="0"></label>
+        <label class="field fuel-only"><span>Precio del galón (RD$)</span><input name="precio_galon" type="number" inputmode="decimal" step="any" min="0"></label>
+        <label class="field full"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
+        <label class="field fuel-only"><span>Kilometraje (odómetro)</span><input name="km" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+        <label class="field fuel-only"><span>Vehículo</span><input name="vehiculo" list="dl-veh" placeholder="Ej. Camioneta"></label>
+        <label class="field full"><span>Descripción</span><input name="descripcion" placeholder="Ej. Gasolina para entregas"></label>
+        <label class="field full"><span>Recibo (foto o PDF)</span><input name="archivo" type="file" accept="application/pdf,image/*">
+          <div class="file-now" id="dg-file"></div></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="dg-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary" id="dg-save">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+<datalist id="dl-veh"></datalist>
 
 <!-- Ventana: producto -->
 <dialog id="d-prod">
@@ -577,8 +665,8 @@
   // ---------- Pestañas ----------
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
-    $$('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === tab));
-    ['calc', 'clientes', 'facturas', 'suplidores'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    $$('nav.tabs button').forEach(x => { x.setAttribute('aria-selected', x.dataset.tab === tab); if (x.dataset.tab === tab && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
+    ['calc', 'clientes', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -635,7 +723,7 @@
     clientes = c.data; facturas = f.data;
     renderClientes(); renderFacturas(); fillMonths();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
-    loadSup();
+    loadSup(); loadGastos();
   }
   const clientName = id => (clientes.find(c => c.id === id) || {}).nombre || 'Sin cliente';
 
@@ -1134,6 +1222,237 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
       await loadSup();
     } catch (er) { toast(errText(er), true); }
     finally { btn.disabled = false; btn.textContent = 'Cargar precios de la plantilla'; }
+  });
+
+  // ---------- Gastos ----------
+  const G_SQL = `create table if not exists gastos (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  fecha date not null default current_date,
+  categoria text not null default 'Otros',
+  descripcion text,
+  monto numeric not null default 0,
+  galones numeric, precio_galon numeric, km numeric, vehiculo text,
+  archivo text, notas text
+);
+alter table gastos enable row level security;
+drop policy if exists "usuarios_gastos" on gastos;
+create policy "usuarios_gastos" on gastos for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on gastos to authenticated;`;
+  const FUEL = 'Combustible';
+  const G_CATS = [FUEL, 'Mantenimiento del vehículo', 'Peajes y parqueo', 'Sueldos y ayudantes', 'Alquiler del local',
+    'Luz, agua e internet', 'Teléfono', 'Bolsas y empaques', 'Impuestos y bancos', 'Otros'];
+  const round2 = n => Math.round(n * 100) / 100;
+  $('#g-sql').value = G_SQL;
+  $('#b-copy-gsql').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(G_SQL); toast('Texto copiado'); }
+    catch (e) { $('#g-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
+  });
+
+  let gastos = [], gView = 'lista', gTablaFalta = false, gMes = today().slice(0, 7);
+  $$('#g-seg button').forEach(b => b.addEventListener('click', () => {
+    gView = b.dataset.view;
+    $$('#g-seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    showGastoViews();
+    if (gView === 'fuel') fuelCalc();
+  }));
+  function showGastoViews() {
+    $('#g-lista').hidden = gView !== 'lista' || gTablaFalta;
+    $('#g-fuel').hidden = gView !== 'fuel';
+    $('#b-new-gasto').hidden = gTablaFalta;
+  }
+
+  async function loadGastos() {
+    const r = await sb.from('gastos').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 9999);
+    gTablaFalta = missingTable(r.error);
+    $('#g-setup').hidden = !gTablaFalta;
+    if (r.error) { gastos = []; if (!gTablaFalta) toast(errText(r.error), true); }
+    else gastos = r.data;
+    showGastoViews(); fillGastoFilters(); renderGastos(); fuelChips();
+  }
+
+  const catsEnUso = () => [...new Set([...G_CATS, ...gastos.map(g => g.categoria).filter(Boolean)])];
+  function fillGastoFilters() {
+    const mes = $('#g-mes'), cat = $('#g-cat'), cv = cat.value;
+    const months = [...new Set([today().slice(0, 7), ...gastos.map(g => (g.fecha || '').slice(0, 7)), ...facturas.map(f => (f.fecha || '').slice(0, 7))].filter(Boolean))].sort().reverse();
+    mes.innerHTML = months.map(m => {
+      const label = new Date(m + '-15T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+      return `<option value="${m}">${esc(label.charAt(0).toUpperCase() + label.slice(1))}</option>`;
+    }).join('') + '<option value="">Todo el tiempo</option>';
+    mes.value = months.includes(gMes) || gMes === '' ? gMes : months[0];
+    cat.innerHTML = '<option value="">Todas las categorías</option>' + catsEnUso().map(c => `<option>${esc(c)}</option>`).join('');
+    if (catsEnUso().includes(cv)) cat.value = cv;
+    $('#dl-veh').innerHTML = [...new Set(gastos.map(g => g.vehiculo).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
+  }
+  $('#g-mes').addEventListener('input', () => { gMes = $('#g-mes').value; renderGastos(); });
+  $('#g-cat').addEventListener('input', renderGastos);
+
+  function renderGastos() {
+    const mes = $('#g-mes').value, cat = $('#g-cat').value;
+    const inMes = x => !mes || (x.fecha || '').startsWith(mes);
+    const gm = gastos.filter(inMes);
+    const total = gm.reduce((s, g) => s + Number(g.monto || 0), 0);
+    const fuel = gm.filter(g => g.categoria === FUEL).reduce((s, g) => s + Number(g.monto || 0), 0);
+    const fm = facturas.filter(inMes), conCosto = fm.filter(f => f.costo !== null && f.costo !== undefined);
+    const ganFact = conCosto.reduce((s, f) => s + Number(f.monto || 0) - Number(f.costo || 0), 0);
+    const neta = ganFact - total;
+    $('#g-totals').innerHTML =
+      `<div class="stat"><div class="k">Gastos</div><div class="v">${fmt(total)}</div></div>
+       <div class="stat"><div class="k">Combustible</div><div class="v">${fmt(fuel)}</div></div>
+       ${conCosto.length
+        ? `<div class="stat"><div class="k">Ganancia real</div><div class="v${neta < 0 ? ' neg' : ''}">${fmt(neta)}</div></div>`
+        : `<div class="stat"><div class="k">Facturado</div><div class="v">${fmt(fm.reduce((s, f) => s + Number(f.monto || 0), 0))}</div></div>`}`;
+    $('#g-neta-hint').innerHTML = conCosto.length
+      ? `<b>Ganancia real</b> = lo que ganaste en tus facturas (${esc(fmt(ganFact))}) menos los gastos.`
+      : 'Para ver tu <b>ganancia real</b>, pon "lo que te costó" en cada factura.';
+    const porCat = {};
+    gm.forEach(g => porCat[g.categoria] = (porCat[g.categoria] || 0) + Number(g.monto || 0));
+    const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+    $('#g-bars').innerHTML = cats.length > 1 ? cats.map(([c, v]) => `<div class="bar-row"><span>${esc(c)}</span><span class="amt">${esc(fmt(v))}</span>
+      <div class="bar"><span style="width:${total > 0 ? Math.max(2, v / total * 100) : 0}%"></span></div></div>`).join('') : '';
+    const list = gm.filter(g => !cat || g.categoria === cat);
+    const el = $('#l-gastos');
+    if (!gastos.length) { el.innerHTML = '<div class="empty">Aún no hay gastos. Pulsa <b>+ Nuevo gasto</b> para anotar el primero.</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty">No hay gastos en este periodo.</div>'; return; }
+    el.innerHTML = list.map(g => {
+      const sub = [fdate(g.fecha), g.descripcion ? g.categoria : null, Number(g.galones) > 0 && `${Number(g.galones).toLocaleString('es-DO', { maximumFractionDigits: 2 })} gal`,
+        g.vehiculo, g.archivo && '📎'].filter(Boolean).join(' · ');
+      return `<button class="row" data-gasto="${g.id}"><div class="main"><div class="title">${esc(g.descripcion || g.categoria)}</div>
+        <div class="sub">${esc(sub)}</div></div><div class="amount">${esc(fmt(Number(g.monto)))}</div></button>`;
+    }).join('');
+    $$('[data-gasto]', el).forEach(r => r.addEventListener('click', () => openGasto(r.dataset.gasto)));
+  }
+
+  // Rendimiento real (km por galón) a partir de las tanqueadas con kilometraje
+  function rendimientos() {
+    const byVeh = {};
+    gastos.filter(g => g.categoria === FUEL && Number(g.km) > 0 && Number(g.galones) > 0)
+      .forEach(g => (byVeh[g.vehiculo || 'Mi vehículo'] = byVeh[g.vehiculo || 'Mi vehículo'] || []).push(g));
+    return Object.entries(byVeh).map(([veh, arr]) => {
+      arr.sort((a, b) => Number(a.km) - Number(b.km));
+      let km = 0, gal = 0;
+      for (let i = 1; i < arr.length; i++) { km += Number(arr[i].km) - Number(arr[i - 1].km); gal += Number(arr[i].galones); }
+      return { veh, rend: gal > 0 && km > 0 ? km / gal : NaN };
+    }).filter(x => Number.isFinite(x.rend));
+  }
+  function fuelChips() {
+    const el = $('#fu-rend-chips');
+    el.innerHTML = rendimientos().map(r => `<button type="button" data-r="${r.rend.toFixed(1)}">${esc(r.veh)}: ${r.rend.toLocaleString('es-DO', { maximumFractionDigits: 1 })} km/gal</button>`).join('');
+    $$('button', el).forEach(b => b.addEventListener('click', () => { $('#fu-rend').value = b.dataset.r; fuelCalc(); }));
+    if (!$('#fu-precio').value) {
+      const ult = gastos.find(g => g.categoria === FUEL && Number(g.precio_galon) > 0);
+      if (ult) $('#fu-precio').value = Number(ult.precio_galon);
+    }
+  }
+
+  // Calculadora de combustible
+  try {
+    $('#fu-rend').value = localStorage.getItem('surteme_rend') || '';
+    $('#fu-precio').value = localStorage.getItem('surteme_galon') || '';
+  } catch (e) {}
+  ['#fu-km', '#fu-ent', '#fu-rend', '#fu-precio', '#fu-ida'].forEach(s => $(s).addEventListener('input', fuelCalc));
+  let lastFuel = null;
+  function fuelCalc() {
+    const km = num($('#fu-km').value), rend = num($('#fu-rend').value), precio = num($('#fu-precio').value);
+    const ent = Math.max(1, Math.round(num($('#fu-ent').value)) || 1);
+    try { localStorage.setItem('surteme_rend', $('#fu-rend').value); localStorage.setItem('surteme_galon', $('#fu-precio').value); } catch (e) {}
+    const box = $('#fu-results');
+    if (!(km > 0 && rend > 0 && precio > 0)) {
+      lastFuel = null; $('#fu-save').hidden = true;
+      box.innerHTML = '<div class="stat big"><div class="k">Resultado</div><div class="v" style="font-size:1.05rem;color:var(--muted)">Escribe la distancia, cuánto rinde tu vehículo y el precio del galón.</div></div>';
+      return;
+    }
+    const dist = km * ($('#fu-ida').checked ? 2 : 1), gal = dist / rend, costo = gal * precio;
+    lastFuel = { dist, gal, precio, costo };
+    box.innerHTML =
+      `<div class="stat big"><div class="k">Costo del viaje en combustible</div><div class="v">${fmt(costo)}</div></div>
+       <div class="stat"><div class="k">Por entrega${ent > 1 ? ` (${ent})` : ''}</div><div class="v">${fmt(costo / ent)}</div></div>
+       <div class="stat"><div class="k">Galones</div><div class="v">${gal.toLocaleString('es-DO', { maximumFractionDigits: 2 })}</div></div>
+       <div class="stat"><div class="k">Distancia total</div><div class="v">${dist.toLocaleString('es-DO', { maximumFractionDigits: 1 })} km</div></div>
+       <div class="stat"><div class="k">Costo por km</div><div class="v">${fmt(costo / dist)}</div></div>`;
+    $('#fu-save').hidden = gTablaFalta;
+  }
+  fuelCalc();
+  $('#fu-save').addEventListener('click', () => {
+    if (!lastFuel) return;
+    openGasto(null, { categoria: FUEL, galones: round2(lastFuel.gal), precio_galon: lastFuel.precio, monto: round2(lastFuel.costo),
+      descripcion: `Viaje de ${lastFuel.dist.toLocaleString('es-DO', { maximumFractionDigits: 1 })} km` });
+  });
+
+  // Agregar / editar un gasto
+  let openGastoId = null;
+  $('#b-new-gasto').addEventListener('click', () => openGasto(null));
+  function openGasto(id, preset) {
+    openGastoId = id;
+    const g = gastos.find(x => x.id === id) || preset || {};
+    const f = $('#f-gasto'); f.reset();
+    f.elements.categoria.innerHTML = catsEnUso().map(c => `<option>${esc(c)}</option>`).join('');
+    f.elements.categoria.value = g.categoria || FUEL;
+    f.elements.fecha.value = g.fecha || today();
+    ['galones', 'precio_galon', 'monto', 'km', 'vehiculo', 'descripcion', 'notas'].forEach(k => f.elements[k].value = g[k] ?? '');
+    if (!id && !preset) {
+      const ult = gastos.find(x => x.categoria === FUEL && Number(x.precio_galon) > 0);
+      if (ult) { f.elements.precio_galon.value = Number(ult.precio_galon); f.elements.vehiculo.value = ult.vehiculo || ''; }
+    }
+    $('#dg-title').textContent = id ? 'Editar gasto' : 'Nuevo gasto';
+    $('#dg-delete').hidden = !id;
+    $('#dg-file').innerHTML = g.archivo ? 'Recibo guardado: <a href="#" id="dg-open">ver recibo</a>. Si eliges otro, se reemplaza.' : 'Puedes tomarle una foto al recibo.';
+    if (g.archivo) $('#dg-open').addEventListener('click', ev => { ev.preventDefault(); openFile(g.archivo); });
+    toggleFuel();
+    $('#d-gasto').showModal();
+  }
+  function toggleFuel() {
+    const isFuel = $('#f-gasto').elements.categoria.value === FUEL;
+    $$('#f-gasto .fuel-only').forEach(el => el.hidden = !isFuel);
+  }
+  $('#f-gasto').elements.categoria.addEventListener('input', toggleFuel);
+  ['galones', 'precio_galon'].forEach(k => $('#f-gasto').elements[k].addEventListener('input', () => {
+    const f = $('#f-gasto'), gal = num(f.elements.galones.value), pg = num(f.elements.precio_galon.value);
+    if (gal > 0 && pg > 0) f.elements.monto.value = round2(gal * pg);
+  }));
+  $('#f-gasto').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, btn = $('#dg-save'), isFuel = f.elements.categoria.value === FUEL;
+    const n = k => { const v = num(f.elements[k].value); return isFuel && Number.isFinite(v) ? v : null; };
+    const data = {
+      categoria: f.elements.categoria.value,
+      fecha: f.elements.fecha.value || today(),
+      monto: num(f.elements.monto.value) || 0,
+      descripcion: f.elements.descripcion.value.trim() || null,
+      galones: n('galones'), precio_galon: n('precio_galon'), km: n('km'),
+      vehiculo: isFuel ? f.elements.vehiculo.value.trim() || null : null,
+      notas: f.elements.notas.value.trim() || null,
+    };
+    const file = f.elements.archivo.files[0];
+    btn.disabled = true; btn.textContent = file ? 'Subiendo…' : 'Guardando…';
+    try {
+      const prev = gastos.find(x => x.id === openGastoId);
+      const res = openGastoId ? await sb.from('gastos').update(data).eq('id', openGastoId).select().single()
+                              : await sb.from('gastos').insert(data).select().single();
+      if (res.error) throw res.error;
+      if (file) {
+        const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+        const path = `gastos/${res.data.id}/${Date.now()}-${safe}`;
+        const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
+        if (up.error) throw up.error;
+        const u2 = await sb.from('gastos').update({ archivo: path }).eq('id', res.data.id);
+        if (u2.error) throw u2.error;
+        if (prev && prev.archivo) await sb.storage.from(BUCKET).remove([prev.archivo]);
+      }
+      $('#d-gasto').close();
+      toast(openGastoId ? 'Gasto actualizado' : 'Gasto guardado');
+      gMes = data.fecha.slice(0, 7);
+      await loadGastos();
+    } catch (er) { toast(errText(er), true); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+  $('#dg-delete').addEventListener('click', async () => {
+    const g = gastos.find(x => x.id === openGastoId); if (!g) return;
+    if (!confirm('¿Borrar este gasto? No se puede deshacer.')) return;
+    if (g.archivo) await sb.storage.from(BUCKET).remove([g.archivo]);
+    const { error } = await sb.from('gastos').delete().eq('id', g.id);
+    if (error) return toast(errText(error), true);
+    $('#d-gasto').close(); toast('Gasto borrado'); loadGastos();
   });
 
   // Cerrar ventanas
