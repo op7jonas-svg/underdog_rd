@@ -148,7 +148,7 @@
 
   /* Listas */
   .search { position: relative; flex: 1; min-width: 180px; }
-  .list { display: grid; gap: 8px; }
+  .list { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
   .row {
     display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface);
     border: 1px solid var(--line); border-radius: 12px; cursor: pointer; text-align: left; width: 100%; font: inherit; color: inherit;
@@ -163,6 +163,9 @@
   .badge { display: inline-block; font-size: .78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   .badge.pagada { background: var(--ok-soft); color: var(--ok); }
   .badge.pendiente { background: var(--warn-soft); color: var(--warn); }
+  .badge.abonada { background: var(--accent-soft); color: var(--accent-text); }
+  .btn.wa { background: #25d366; border-color: #25d366; color: #073b1d; }
+  .btn.wa:hover { background: #1fbe5b; }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
   .totals { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 14px; }
   @media (max-width: 560px) { .totals { grid-template-columns: 1fr 1fr; } .totals .stat:first-child { grid-column: 1 / -1; } }
@@ -319,10 +322,16 @@
         <div class="spacer"></div>
         <button class="btn primary" id="b-new-invoice">+ Nueva factura</button>
       </div>
+      <div class="card" id="ab-setup" hidden style="margin-bottom:14px">
+        <h3 style="font-size:1.1rem">Falta un paso para los abonos</h3>
+        <p class="hint">Para anotar abonos (pagos parciales) hay que preparar un "cajón" nuevo. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
+        <textarea class="sql" id="ab-sql" readonly></textarea>
+        <div class="actions"><button class="btn primary" id="b-copy-absql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
+      </div>
       <div class="totals" id="f-totals"></div>
       <div class="filters">
         <input class="search" id="s-facturas" type="search" placeholder="Buscar por cliente o número…">
-        <select id="s-estado"><option value="">Todas</option><option value="pendiente">Pendientes</option><option value="pagada">Pagadas</option></select>
+        <select id="s-estado"><option value="">Todas</option><option value="cobrar">Por cobrar</option><option value="pendiente">Sin abonos</option><option value="abonada">Abonadas</option><option value="pagada">Pagadas</option></select>
         <select id="s-mes"><option value="">Todo el tiempo</option></select>
       </div>
       <div class="list" id="l-facturas"></div>
@@ -445,6 +454,7 @@
     </form>
     <div id="dc-invoices" hidden>
       <h4 class="sub-title"><span>Facturas de este cliente</span><button class="btn small" id="dc-add-invoice">+ Agregar factura</button></h4>
+      <div class="actions" id="dc-wa-box" style="margin:0 0 10px" hidden><button class="btn wa" id="dc-wa">Recordar pago por WhatsApp</button><span class="hint" id="dc-debe" style="align-self:center;margin:0"></span></div>
       <div class="list" id="dc-list"></div>
     </div>
   </div>
@@ -462,7 +472,7 @@
         <label class="field"><span>Total cobrado (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
         <label class="field"><span>Lo que te costó (RD$)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
         <div class="full profit-line" id="di-profit"></div>
-        <label class="field"><span>Estado</span><select name="estado"><option value="pendiente">Pendiente de cobro</option><option value="pagada">Pagada</option></select></label>
+        <label class="field"><span>Estado</span><select name="estado"><option value="pendiente">Pendiente de cobro</option><option value="pagada">Pagada completa</option></select></label>
         <label class="field"><span>Archivo (PDF o foto)</span><input name="archivo" type="file" accept="application/pdf,image/*">
           <div class="file-now" id="di-file"></div></label>
         <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
@@ -472,6 +482,36 @@
         <span class="push"></span>
         <button type="button" class="btn" data-close>Cancelar</button>
         <button class="btn primary" id="di-save">Guardar</button>
+      </div>
+    </form>
+    <div id="di-pagos" hidden>
+      <h4 class="sub-title"><span>Pagos de esta factura</span><button class="btn small" id="di-add-abono">+ Agregar abono</button></h4>
+      <div class="totals" id="di-saldo"></div>
+      <div class="list" id="di-abonos"></div>
+      <div class="actions"><button class="btn wa" id="di-wa">Recordar pago por WhatsApp</button></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Ventana: abono -->
+<dialog id="d-abono">
+  <div class="dlg-head"><h3 id="da-title">Abono</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <p class="hint" id="da-sub" style="margin:0 0 12px"></p>
+    <form id="f-abono">
+      <div class="grid">
+        <label class="field"><span>¿Cuánto te pagaron? (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
+        <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
+        <label class="field full"><span>¿Cómo pagó?</span><select name="metodo"><option>Efectivo</option><option>Transferencia</option><option>Cheque</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label class="field full"><span>Comprobante (foto o PDF)</span><input name="archivo" type="file" accept="application/pdf,image/*">
+          <div class="file-now" id="da-file"></div></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="da-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary" id="da-save">Guardar</button>
       </div>
     </form>
   </div>
@@ -686,7 +726,7 @@
   if (!window.supabase) { show('v-login'); $('#login-msg').hidden = false; $('#login-msg').textContent = 'No se pudo cargar. Revisa tu conexión a internet y recarga la página.'; return; }
   const sb = window.supabase.createClient(url, key);
 
-  let clientes = [], facturas = [], started = false;
+  let clientes = [], facturas = [], abonos = [], abTablaFalta = false, started = false;
 
   $('#f-login').addEventListener('submit', async e => {
     e.preventDefault();
@@ -715,12 +755,17 @@
   });
 
   async function load() {
-    const [c, f] = await Promise.all([
+    const [c, f, a] = await Promise.all([
       sb.from('clientes').select('*').order('nombre'),
-      sb.from('facturas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }),
+      sb.from('facturas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 9999),
+      sb.from('abonos').select('*').range(0, 9999),
     ]);
     if (c.error || f.error) { toast(errText(c.error || f.error), true); return; }
     clientes = c.data; facturas = f.data;
+    abTablaFalta = missingTable(a.error);
+    abonos = a.error ? [] : a.data;
+    $('#ab-setup').hidden = !abTablaFalta;
+    if (a.error && !abTablaFalta) toast(errText(a.error), true);
     renderClientes(); renderFacturas(); fillMonths();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
     loadSup(); loadGastos();
@@ -737,7 +782,7 @@
     if (!list.length) { el.innerHTML = '<div class="empty">No se encontró ningún cliente con esa búsqueda.</div>'; return; }
     el.innerHTML = list.map(c => {
       const fs = facturas.filter(f => f.cliente_id === c.id);
-      const pend = fs.filter(f => f.estado === 'pendiente').reduce((s, f) => s + Number(f.monto || 0), 0);
+      const pend = deudaCliente(c.id);
       const sub = [c.telefono, c.rnc && 'RNC ' + c.rnc, fs.length + (fs.length === 1 ? ' factura' : ' facturas')].filter(Boolean).join(' · ');
       return `<button class="row" data-id="${c.id}"><div class="avatar">${esc(initials(c.nombre))}</div>
         <div class="main"><div class="title">${esc(c.nombre)}</div><div class="sub">${esc(sub)}</div></div>
@@ -761,8 +806,11 @@
   }
   function renderClientInvoices(id) {
     const fs = facturas.filter(f => f.cliente_id === id);
+    const debe = deudaCliente(id);
+    $('#dc-wa-box').hidden = !(debe > 0);
+    $('#dc-debe').textContent = debe > 0 ? 'Debe ' + fmt(debe) : '';
     const el = $('#dc-list');
-    el.innerHTML = fs.length ? fs.map(invoiceRow).join('') : '<div class="empty" style="padding:14px">Este cliente aún no tiene facturas.</div>';
+    el.innerHTML = fs.length ? fs.map(f => invoiceRow(f, true)).join('') : '<div class="empty" style="padding:14px">Este cliente aún no tiene facturas.</div>';
     bindInvoiceRows(el);
   }
   $('#dc-add-invoice').addEventListener('click', () => openInvoice(null, openClientId));
@@ -785,7 +833,8 @@
     const c = clientes.find(x => x.id === openClientId); if (!c) return;
     const fs = facturas.filter(f => f.cliente_id === c.id);
     if (!confirm(`¿Borrar a "${c.nombre}"${fs.length ? ` y sus ${fs.length} factura(s)` : ''}? No se puede deshacer.`)) return;
-    const files = fs.map(f => f.archivo).filter(Boolean);
+    const ids = fs.map(f => f.id);
+    const files = [...fs.map(f => f.archivo), ...abonos.filter(a => ids.includes(a.factura_id)).map(a => a.archivo)].filter(Boolean);
     if (files.length) await sb.storage.from(BUCKET).remove(files);
     const { error } = await sb.from('clientes').delete().eq('id', c.id);
     if (error) return toast(errText(error), true);
@@ -805,24 +854,25 @@
     if (months.includes(cur)) sel.value = cur;
   }
 
-  function invoiceRow(f) {
-    const sub = [fdate(f.fecha), f.numero && '#' + f.numero, f.archivo && '📎'].filter(Boolean).join(' · ');
+  function invoiceRow(f, enCliente) {
+    const s = saldo(f);
+    const sub = [fdate(f.fecha), !enCliente && f.numero && '#' + f.numero, f.archivo && '📎'].filter(Boolean).join(' · ');
     return `<button class="row" data-inv="${f.id}"><div class="main">
-      <div class="title">${esc(clientName(f.cliente_id))}</div><div class="sub">${esc(sub)}</div></div>
-      <div class="amount">${esc(fmt(Number(f.monto)))}<br><span class="badge ${f.estado === 'pagada' ? 'pagada' : 'pendiente'}">${f.estado === 'pagada' ? 'Pagada' : 'Pendiente'}</span></div></button>`;
+      <div class="title">${esc(enCliente ? 'Factura' + (f.numero ? ' #' + f.numero : '') : clientName(f.cliente_id))}</div><div class="sub">${esc(sub)}</div></div>
+      <div class="amount">${esc(fmt(Number(f.monto)))}<br><span class="badge ${s.estado}">${s.estado === 'abonada' ? 'Falta ' + esc(fmt(s.falta)) : ESTADO_TXT[s.estado]}</span></div></button>`;
   }
   function bindInvoiceRows(el) { $$('[data-inv]', el).forEach(r => r.addEventListener('click', () => openInvoice(r.dataset.inv))); }
 
   function renderFacturas() {
     const q = norm($('#s-facturas').value), est = $('#s-estado').value, mes = $('#s-mes').value;
     const list = facturas.filter(f =>
-      (!est || f.estado === est) && (!mes || (f.fecha || '').startsWith(mes)) &&
+      (!est || (est === 'cobrar' ? saldo(f).falta > 0 : saldo(f).estado === est)) && (!mes || (f.fecha || '').startsWith(mes)) &&
       (!q || norm(clientName(f.cliente_id) + ' ' + (f.numero || '')).includes(q)));
     const total = list.reduce((s, f) => s + Number(f.monto || 0), 0);
     const conCosto = list.filter(f => f.costo !== null && f.costo !== undefined);
     const gan = conCosto.reduce((s, f) => s + Number(f.monto || 0) - Number(f.costo || 0), 0);
     const ventaConCosto = conCosto.reduce((s, f) => s + Number(f.monto || 0), 0);
-    const pend = list.filter(f => f.estado === 'pendiente').reduce((s, f) => s + Number(f.monto || 0), 0);
+    const pend = list.reduce((s, f) => s + saldo(f).falta, 0);
     $('#f-totals').innerHTML =
       `<div class="stat"><div class="k">Total facturado</div><div class="v">${fmt(total)}</div></div>
        <div class="stat"><div class="k">Ganancia${ventaConCosto ? ' (' + pct(gan / ventaConCosto * 100) + ')' : ''}</div><div class="v${gan < 0 ? ' neg' : ''}">${conCosto.length ? fmt(gan) : '—'}</div></div>
@@ -859,6 +909,7 @@
       : 'Puedes tomar una foto con el teléfono o subir un PDF.';
     if (f.archivo) $('#di-open').addEventListener('click', ev => { ev.preventDefault(); openFile(f.archivo); });
     profitLine();
+    renderInvoicePagos();
     $('#d-invoice').showModal();
   }
   ['monto', 'costo'].forEach(k => $('#f-invoice').elements[k].addEventListener('input', profitLine));
@@ -918,10 +969,173 @@
   $('#di-delete').addEventListener('click', async () => {
     const f = facturas.find(x => x.id === openInvoiceId); if (!f) return;
     if (!confirm('¿Borrar esta factura y su archivo? No se puede deshacer.')) return;
-    if (f.archivo) await sb.storage.from(BUCKET).remove([f.archivo]);
+    const files = [f.archivo, ...abonos.filter(a => a.factura_id === f.id).map(a => a.archivo)].filter(Boolean);
+    if (files.length) await sb.storage.from(BUCKET).remove(files);
     const { error } = await sb.from('facturas').delete().eq('id', f.id);
     if (error) return toast(errText(error), true);
     $('#d-invoice').close(); toast('Factura borrada'); load();
+  });
+
+  // ---------- Abonos (pagos parciales) y cobros por WhatsApp ----------
+  const AB_SQL = `create table if not exists abonos (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  factura_id uuid not null references facturas(id) on delete cascade,
+  fecha date not null default current_date,
+  monto numeric not null default 0,
+  metodo text,
+  archivo text,
+  notas text
+);
+alter table abonos enable row level security;
+drop policy if exists "usuarios_abonos" on abonos;
+create policy "usuarios_abonos" on abonos for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on abonos to authenticated;`;
+  $('#ab-sql').value = AB_SQL;
+  $('#b-copy-absql').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(AB_SQL); toast('Texto copiado'); }
+    catch (e) { $('#ab-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
+  });
+
+  // Cuánto se ha pagado y cuánto falta de una factura
+  function saldo(f) {
+    const total = Number(f.monto || 0);
+    const pagado = abonos.filter(a => a.factura_id === f.id).reduce((s, a) => s + Number(a.monto || 0), 0);
+    if (f.estado === 'pagada') return { total, pagado, falta: 0, estado: 'pagada' };
+    const falta = Math.max(0, round2(total - pagado));
+    return { total, pagado, falta, estado: falta <= 0 ? 'pagada' : pagado > 0 ? 'abonada' : 'pendiente' };
+  }
+  const ESTADO_TXT = { pendiente: 'Pendiente', abonada: 'Abonada', pagada: 'Pagada' };
+  const deudaCliente = id => facturas.filter(f => f.cliente_id === id).reduce((s, f) => s + saldo(f).falta, 0);
+
+  // Pagos dentro de la ventana de la factura
+  function renderInvoicePagos() {
+    const box = $('#di-pagos');
+    const f = facturas.find(x => x.id === openInvoiceId);
+    box.hidden = !f || abTablaFalta;
+    if (!f || abTablaFalta) return;
+    const s = saldo(f);
+    $('#di-saldo').innerHTML =
+      `<div class="stat"><div class="k">Total</div><div class="v">${fmt(s.total)}</div></div>
+       <div class="stat"><div class="k">Pagado</div><div class="v" style="color:var(--ok)">${fmt(Math.min(s.pagado, s.total) || (s.estado === 'pagada' ? s.total : 0))}</div></div>
+       <div class="stat"><div class="k">Falta</div><div class="v${s.falta > 0 ? ' neg' : ''}">${fmt(s.falta)}</div></div>`;
+    const lista = abonos.filter(a => a.factura_id === f.id).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    $('#di-abonos').innerHTML = lista.length ? lista.map(a => `<button class="row" data-abono="${a.id}"><div class="main">
+        <div class="title">${esc(fmt(Number(a.monto)))}</div><div class="sub">${esc([fdate(a.fecha), a.metodo, a.archivo && '📎', a.notas].filter(Boolean).join(' · '))}</div></div>
+        <div class="amount sub" style="font-weight:500">Editar</div></button>`).join('')
+      : `<div class="empty" style="padding:10px">${s.estado === 'pagada' ? 'Marcada como pagada.' : 'Todavía no hay abonos.'}</div>`;
+    $$('[data-abono]', $('#di-abonos')).forEach(b => b.addEventListener('click', () => openAbono(b.dataset.abono)));
+    $('#di-add-abono').hidden = s.falta <= 0;
+    $('#di-wa').hidden = s.falta <= 0;
+  }
+  $('#di-add-abono').addEventListener('click', () => openAbono(null));
+  $('#di-wa').addEventListener('click', () => {
+    const f = facturas.find(x => x.id === openInvoiceId);
+    if (f) recordarPago(f.cliente_id, [f]);
+  });
+  $('#dc-wa').addEventListener('click', () => recordarPago(openClientId));
+
+  // WhatsApp: abre el chat con el mensaje ya escrito (tú solo pulsas Enviar)
+  function waNumero(tel) {
+    let d = String(tel || '').replace(/\D/g, '');
+    if (d.startsWith('00')) d = d.slice(2);
+    if (d.length === 10 && /^(809|829|849)/.test(d)) d = '1' + d;
+    return d.length >= 11 ? d : '';
+  }
+  function recordarPago(clienteId, soloEstas) {
+    const c = clientes.find(x => x.id === clienteId);
+    if (!c) return toast('Esta factura no tiene cliente.', true);
+    const tel = waNumero(c.telefono);
+    if (!tel) return toast(c.telefono ? `El teléfono de ${c.nombre} no parece válido. Revísalo en Clientes.` : `${c.nombre} no tiene teléfono guardado. Agrégalo en Clientes.`, true);
+    const pend = (soloEstas || facturas.filter(f => f.cliente_id === c.id))
+      .map(f => ({ f, s: saldo(f) })).filter(x => x.s.falta > 0)
+      .sort((a, b) => (a.f.fecha || '').localeCompare(b.f.fecha || ''));
+    if (!pend.length) return toast(`${c.nombre} no tiene nada pendiente.`);
+    const total = pend.reduce((s, x) => s + x.s.falta, 0);
+    const lineas = pend.map(({ f, s }) => `• Factura${f.numero ? ' #' + f.numero : ''} del ${fdate(f.fecha)} — ${fmt(s.falta)}` +
+      (s.pagado > 0 ? ` (abonó ${fmt(s.pagado)} de ${fmt(s.total)})` : ''));
+    const msg = `Hola ${c.nombre} 👋, le saluda Surteme. Le recordamos que tiene pendiente:\n${lineas.join('\n')}\n*Total pendiente: ${fmt(total)}*\n¡Gracias por preferirnos!`;
+    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  // Agregar / editar un abono
+  let openAbonoId = null;
+  function openAbono(id) {
+    openAbonoId = id;
+    const f = facturas.find(x => x.id === openInvoiceId); if (!f) return;
+    const a = abonos.find(x => x.id === id) || {};
+    const form = $('#f-abono'); form.reset();
+    form.elements.monto.value = id ? a.monto : saldo(f).falta;
+    form.elements.fecha.value = a.fecha || today();
+    form.elements.metodo.value = a.metodo || 'Efectivo';
+    form.elements.notas.value = a.notas || '';
+    $('#da-title').textContent = id ? 'Editar abono' : 'Nuevo abono';
+    $('#da-sub').textContent = `${clientName(f.cliente_id)}${f.numero ? ' · Factura #' + f.numero : ''} · Falta ${fmt(saldo(f).falta)}`;
+    $('#da-delete').hidden = !id;
+    $('#da-file').innerHTML = a.archivo ? 'Comprobante guardado: <a href="#" id="da-open">verlo</a>. Si eliges otro, se reemplaza.' : 'Puedes tomarle una foto al comprobante o a la transferencia.';
+    if (a.archivo) $('#da-open').addEventListener('click', ev => { ev.preventDefault(); openFile(a.archivo); });
+    $('#d-abono').showModal();
+  }
+  // Si con los abonos ya se pagó todo, marcar la factura como pagada (y al revés si se borra un abono)
+  async function syncEstado(facturaId) {
+    const f = facturas.find(x => x.id === facturaId); if (!f) return;
+    const pagado = abonos.filter(a => a.factura_id === f.id).reduce((s, a) => s + Number(a.monto || 0), 0);
+    const nuevo = pagado >= Number(f.monto || 0) - 0.005 && pagado > 0 ? 'pagada' : (f.estado === 'pagada' && pagado < Number(f.monto || 0) && abonos.some(a => a.factura_id === f.id) ? 'pendiente' : f.estado);
+    if (nuevo !== f.estado) {
+      await sb.from('facturas').update({ estado: nuevo }).eq('id', f.id);
+      f.estado = nuevo;
+      if ($('#d-invoice').open && openInvoiceId === f.id) $('#f-invoice').elements.estado.value = nuevo;
+    }
+  }
+  async function reloadAbonos(facturaId) {
+    const r = await sb.from('abonos').select('*').range(0, 9999);
+    if (!r.error) abonos = r.data;
+    await syncEstado(facturaId);
+    renderClientes(); renderFacturas(); renderInvoicePagos();
+    if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
+  }
+  $('#f-abono').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target, btn = $('#da-save');
+    const data = {
+      factura_id: openInvoiceId,
+      monto: num(form.elements.monto.value) || 0,
+      fecha: form.elements.fecha.value || today(),
+      metodo: form.elements.metodo.value,
+      notas: form.elements.notas.value.trim() || null,
+    };
+    if (!(data.monto > 0)) return toast('Escribe cuánto te pagaron.', true);
+    const file = form.elements.archivo.files[0];
+    btn.disabled = true; btn.textContent = file ? 'Subiendo…' : 'Guardando…';
+    try {
+      const prev = abonos.find(x => x.id === openAbonoId);
+      const res = openAbonoId ? await sb.from('abonos').update(data).eq('id', openAbonoId).select().single()
+                              : await sb.from('abonos').insert(data).select().single();
+      if (res.error) throw res.error;
+      if (file) {
+        const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+        const path = `abonos/${res.data.id}/${Date.now()}-${safe}`;
+        const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
+        if (up.error) throw up.error;
+        const u2 = await sb.from('abonos').update({ archivo: path }).eq('id', res.data.id);
+        if (u2.error) throw u2.error;
+        if (prev && prev.archivo) await sb.storage.from(BUCKET).remove([prev.archivo]);
+      }
+      $('#d-abono').close();
+      await reloadAbonos(openInvoiceId);
+      const f = facturas.find(x => x.id === openInvoiceId);
+      toast(f && saldo(f).falta <= 0 ? '¡Factura pagada completa!' : 'Abono guardado');
+    } catch (er) { toast(errText(er), true); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+  $('#da-delete').addEventListener('click', async () => {
+    const a = abonos.find(x => x.id === openAbonoId); if (!a) return;
+    if (!confirm('¿Borrar este abono? No se puede deshacer.')) return;
+    if (a.archivo) await sb.storage.from(BUCKET).remove([a.archivo]);
+    const { error } = await sb.from('abonos').delete().eq('id', a.id);
+    if (error) return toast(errText(error), true);
+    $('#d-abono').close(); toast('Abono borrado');
+    await reloadAbonos(openInvoiceId);
   });
 
   // ---------- Suplidores y precios ----------

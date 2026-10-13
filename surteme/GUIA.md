@@ -46,3 +46,9 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - **Mis gastos:** anota cada gasto (combustible, peajes, sueldos, alquiler, etc.) con foto del recibo. Ves el total del mes y la **ganancia real** (lo que ganaste en facturas menos los gastos).
 - **Calcular combustible:** distancia, cuánto rinde el vehículo y precio del galón → cuánto cuesta el viaje y cuánto por entrega.
 - Si en cada tanqueada anotas galones y kilometraje, la página calcula sola cuánto rinde tu vehículo.
+
+## Abonos y cobros por WhatsApp
+- La primera vez, en **Facturas** te pedirá pegar un texto en **SQL Editor** (botón **Copiar texto**).
+- Abre una factura → **+ Agregar abono**: cuánto pagó, fecha, cómo pagó y foto del comprobante. La factura queda **Pendiente**, **Abonada** (dice cuánto falta) o **Pagada** sola.
+- **Recordar pago por WhatsApp** (en el cliente o en la factura): abre WhatsApp con el mensaje listo, solo con lo que falta. Tú pulsas **Enviar**.
+- El cliente necesita tener su teléfono guardado.

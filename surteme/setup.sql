@@ -88,3 +88,19 @@ alter table gastos enable row level security;
 drop policy if exists "usuarios_gastos" on gastos;
 create policy "usuarios_gastos" on gastos for all to authenticated using (true) with check (true);
 grant select, insert, update, delete on gastos to authenticated;
+
+-- ===== Abonos (pagos parciales de facturas) =====
+create table if not exists abonos (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  factura_id uuid not null references facturas(id) on delete cascade,
+  fecha date not null default current_date,
+  monto numeric not null default 0,
+  metodo text,
+  archivo text,
+  notas text
+);
+alter table abonos enable row level security;
+drop policy if exists "usuarios_abonos" on abonos;
+create policy "usuarios_abonos" on abonos for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on abonos to authenticated;
