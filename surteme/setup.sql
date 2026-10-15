@@ -104,3 +104,37 @@ alter table abonos enable row level security;
 drop policy if exists "usuarios_abonos" on abonos;
 create policy "usuarios_abonos" on abonos for all to authenticated using (true) with check (true);
 grant select, insert, update, delete on abonos to authenticated;
+
+-- ===== Cotizaciones y facturas con diseño + datos de la empresa =====
+create table if not exists documentos (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  tipo text not null default 'cotizacion',
+  numero text,
+  fecha date not null default current_date,
+  cliente_id uuid references clientes(id) on delete set null,
+  cliente_nombre text, cliente_rnc text,
+  condiciones text, validez text, ncf text,
+  items jsonb not null default '[]',
+  itbis boolean not null default false,
+  subtotal numeric not null default 0,
+  itbis_monto numeric not null default 0,
+  total numeric not null default 0,
+  costo numeric,
+  notas text,
+  estado text not null default 'pendiente',
+  factura_id uuid references facturas(id) on delete set null,
+  origen_id uuid references documentos(id) on delete set null
+);
+create table if not exists ajustes (
+  clave text primary key,
+  valor jsonb,
+  actualizado timestamptz not null default now()
+);
+alter table documentos enable row level security;
+alter table ajustes enable row level security;
+drop policy if exists "usuarios_documentos" on documentos;
+create policy "usuarios_documentos" on documentos for all to authenticated using (true) with check (true);
+drop policy if exists "usuarios_ajustes" on ajustes;
+create policy "usuarios_ajustes" on ajustes for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on documentos, ajustes to authenticated;

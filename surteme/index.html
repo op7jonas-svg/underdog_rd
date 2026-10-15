@@ -8,6 +8,9 @@
 <meta name="theme-color" content="#f6f8f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111615" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='14' fill='%230f766e'/%3E%3Cpath d='M42 22c-2-3-6-4-10-4-6 0-10 3-10 8 0 11 20 6 20 16 0 5-4 8-10 8-4 0-8-1-11-5' stroke='white' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f6f8f7;
@@ -86,7 +89,7 @@
     flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted);
     padding: 9px 6px; border-radius: 10px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
-  @media (max-width: 440px) { nav.tabs { gap: 2px; } nav.tabs button { font-size: .8rem; padding: 8px 2px; } }
+  @media (max-width: 600px) { nav.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; } nav.tabs button { font-size: .85rem; padding: 7px 4px; } }
   nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
 
   main { padding-top: 20px; padding-bottom: 60px; }
@@ -163,6 +166,7 @@
   .badge { display: inline-block; font-size: .78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   .badge.pagada { background: var(--ok-soft); color: var(--ok); }
   .badge.pendiente { background: var(--warn-soft); color: var(--warn); }
+  .badge.rechazada { background: var(--bad-soft); color: var(--bad); }
   .badge.abonada { background: var(--accent-soft); color: var(--accent-text); }
   .btn.wa { background: #25d366; border-color: #25d366; color: #073b1d; }
   .btn.wa:hover { background: #1fbe5b; }
@@ -197,6 +201,73 @@
   .bar-row .amt { font-weight: 700; font-variant-numeric: tabular-nums; }
   .bar { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+  /* Cotizaciones y facturas */
+  .item-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface-2); }
+  .item-card + .item-card { margin-top: 10px; }
+  .item-card .grid { gap: 8px; }
+  .item-card input { min-height: 40px; padding: 8px 10px; background: var(--surface); }
+  .item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; }
+  .item-head .x { width: 30px; height: 30px; font-size: 1rem; margin-left: auto; }
+  .item-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: .9rem; color: var(--muted); }
+  .item-foot b { color: var(--text); }
+  .doc-sums { margin-top: 14px; display: grid; gap: 4px; font-size: .95rem; }
+  .doc-sums div { display: flex; justify-content: space-between; }
+  .doc-sums .t { font-size: 1.2rem; font-weight: 800; }
+  dialog.wide { width: min(760px, calc(100vw - 24px)); }
+  .doc-preview { width: 100%; overflow: hidden; border-radius: 10px; box-shadow: var(--shadow); border: 1px solid var(--line); background: #fff; }
+  .doc-preview > .doc { transform-origin: top left; }
+  #doc-capture { position: fixed; left: -12000px; top: 0; width: 816px; pointer-events: none; }
+  #print-area { display: none; }
+  @media print {
+    @page { size: letter; margin: 0; }
+    body { background: #fff; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; }
+    #print-area .doc { width: 100%; }
+  }
+
+  /* Diseño del documento (siempre en papel blanco, igual en modo oscuro) */
+  .doc { width: 816px; min-height: 1056px; background: #fff; color: #123365; position: relative; overflow: hidden;
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 70px 40px 120px; box-sizing: border-box; }
+  .doc * { box-sizing: border-box; }
+  .doc .corner { position: absolute; width: 230px; height: 90px; }
+  .doc .corner svg { display: block; width: 230px; height: 90px; }
+  .doc .corner.tl { top: 0; left: 0; }
+  .doc .corner.br { bottom: 0; right: 0; }
+  .doc-head { display: flex; align-items: stretch; gap: 28px; margin-bottom: 34px; }
+  .doc-logo { flex: 0 0 300px; display: flex; align-items: center; justify-content: center; }
+  .doc-logo img { width: 100%; height: auto; display: block; }
+  .doc-logo .alt { font-size: 52px; font-weight: 900; color: #123365; }
+  .doc-sep { width: 3px; background: #123365; border-radius: 2px; }
+  .doc-meta { flex: 1; min-width: 0; }
+  .doc-meta h1 { margin: 0; font-size: 46px; line-height: 1.05; font-weight: 900; letter-spacing: .5px; color: #123365; }
+  .doc-ul { width: 64px; height: 5px; background: #fe6c0c; border-radius: 3px; margin: 10px 0 16px; }
+  .doc-meta table { border-collapse: collapse; font-size: 15.5px; }
+  .doc-meta td { padding: 3px 0; vertical-align: top; color: #1d2b44; }
+  .doc-meta td.l { font-weight: 800; color: #123365; white-space: nowrap; padding-right: 10px; }
+  .doc-meta td.c { padding-right: 14px; color: #123365; }
+  .doc-items { width: 100%; border-collapse: separate; border-spacing: 0; border: 1.5px solid #c7d7ee; border-radius: 14px; overflow: hidden; font-size: 15px; }
+  .doc-items th { background: #123365; color: #fff; font-weight: 800; padding: 16px 10px; font-size: 16px; text-align: center; }
+  .doc-items th + th, .doc-items td + td { border-left: 1.5px solid #c7d7ee; }
+  .doc-items thead th + th { border-left-color: #2c4c86; }
+  .doc-items td { padding: 14px 12px; border-top: 1.5px solid #c7d7ee; text-align: center; color: #1d2b44; vertical-align: middle; }
+  .doc-items td.n { font-weight: 800; color: #123365; width: 60px; }
+  .doc-items td.d { text-align: left; }
+  .doc-items td.d b { display: block; font-size: 16.5px; color: #123365; font-weight: 800; }
+  .doc-items td.d span { display: block; font-size: 14px; color: #4a5a76; margin-top: 2px; }
+  .doc-items td.q { width: 130px; }
+  .doc-items td.p, .doc-items td.t { width: 150px; white-space: nowrap; }
+  .doc-sum { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 22px; }
+  .doc-sum .line { display: flex; gap: 24px; font-size: 16px; color: #123365; padding-right: 18px; }
+  .doc-sum .line b { min-width: 150px; text-align: right; }
+  .doc-total { display: flex; border-radius: 12px; overflow: hidden; font-weight: 900; }
+  .doc-total span { background: #123365; color: #fff; padding: 14px 24px; font-size: 20px; letter-spacing: .3px; }
+  .doc-total b { background: #fe6c0c; color: #fff; padding: 12px 22px; font-size: 26px; white-space: nowrap; }
+  .doc-notes { margin-top: 26px; font-size: 14.5px; color: #1d2b44; white-space: pre-wrap; }
+  .doc-notes b { color: #123365; }
+  .doc-foot { margin-top: 26px; text-align: center; font-size: 13.5px; color: #4a5a76; }
+  .doc-foot .thanks { font-weight: 800; color: #123365; font-size: 15px; margin-bottom: 4px; }
 
   /* Ventanas emergentes */
   dialog {
@@ -272,6 +343,7 @@
       <nav class="tabs" role="tablist">
         <button role="tab" data-tab="calc" aria-selected="true">Calcular</button>
         <button role="tab" data-tab="clientes" aria-selected="false">Clientes</button>
+        <button role="tab" data-tab="cotiz" aria-selected="false">Cotizaciones</button>
         <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
         <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
@@ -315,12 +387,34 @@
       <div class="list" id="l-clientes"></div>
     </section>
 
+    <!-- Cotizaciones -->
+    <section id="t-cotiz" hidden>
+      <div class="section-head">
+        <h2>Cotizaciones</h2>
+        <div class="spacer"></div>
+        <button class="btn" id="b-empresa">Datos de mi empresa</button>
+        <button class="btn primary" id="b-new-cot">+ Nueva cotización</button>
+      </div>
+      <div class="card" id="doc-setup" hidden style="margin-bottom:14px">
+        <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
+        <p class="hint">Para guardar cotizaciones y facturas con el diseño de Surteme hay que preparar dos "cajones" nuevos. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
+        <textarea class="sql" id="doc-sql" readonly></textarea>
+        <div class="actions"><button class="btn primary" id="b-copy-docsql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
+      </div>
+      <div class="filters">
+        <input class="search" id="s-cot" type="search" placeholder="Buscar por cliente o número…">
+        <select id="s-cot-estado"><option value="">Todas</option><option value="pendiente">Pendientes</option><option value="aceptada">Aceptadas</option><option value="rechazada">Rechazadas</option></select>
+      </div>
+      <div class="list" id="l-cot"></div>
+    </section>
+
     <!-- Facturas -->
     <section id="t-facturas" hidden>
       <div class="section-head">
         <h2>Facturas</h2>
         <div class="spacer"></div>
-        <button class="btn primary" id="b-new-invoice">+ Nueva factura</button>
+        <button class="btn" id="b-new-invoice">Subir factura</button>
+        <button class="btn primary" id="b-crear-factura">+ Crear factura</button>
       </div>
       <div class="card" id="ab-setup" hidden style="margin-bottom:14px">
         <h3 style="font-size:1.1rem">Falta un paso para los abonos</h3>
@@ -464,6 +558,10 @@
 <dialog id="d-invoice">
   <div class="dlg-head"><h3 id="di-title">Factura</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
   <div class="dlg-body">
+    <div id="di-doclink" hidden style="margin:0 0 14px">
+      <div class="actions" style="margin:0"><button type="button" class="btn primary" id="di-viewdoc">Ver / compartir factura</button><button type="button" class="btn" id="di-editdoc">Editar productos y precios</button></div>
+      <p class="hint">Esta factura se hizo con el diseño de Surteme. Para cambiar productos o precios usa <b>Editar productos y precios</b>.</p>
+    </div>
     <form id="f-invoice">
       <div class="grid">
         <label class="field full"><span>Cliente *</span><select name="cliente_id" required></select></label>
@@ -612,6 +710,96 @@
   </div>
 </dialog>
 
+<!-- Ventana: crear / editar cotización o factura -->
+<dialog id="d-doc" class="wide">
+  <div class="dlg-head"><h3 id="dd-title">Cotización</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-doc">
+      <div class="grid">
+        <label class="field full"><span>Cliente *</span><select name="cliente_id" required></select></label>
+        <label class="field"><span id="dd-num-label">No. de cotización</span><input name="numero" required></label>
+        <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
+        <label class="field"><span>Condiciones de pago</span><input name="condiciones" list="dl-cond"></label>
+        <label class="field" id="dd-validez"><span>Validez de la oferta</span><input name="validez" placeholder="Ej. 15 días"></label>
+        <label class="field" id="dd-ncf" hidden><span>NCF (comprobante fiscal)</span><input name="ncf" placeholder="Opcional, ej. B0100000123"></label>
+      </div>
+
+      <h4 class="sub-title"><span>Productos</span></h4>
+      <div id="dd-items"></div>
+      <div class="actions" style="margin-top:10px">
+        <button type="button" class="btn" id="dd-pick">+ De mi lista de precios</button>
+        <button type="button" class="btn" id="dd-add">+ Escribir producto</button>
+      </div>
+      <p class="hint" style="margin-top:8px">Al elegir de tu lista, el precio de venta se calcula con un margen de
+        <input id="dd-margen" type="number" inputmode="decimal" step="any" min="0" max="95" style="width:70px;min-height:32px;padding:4px 8px;display:inline-block"> %. Tu costo nunca sale en el documento.</p>
+
+      <label class="check"><input type="checkbox" name="itbis"> Agregar ITBIS (18%)</label>
+      <div class="doc-sums" id="dd-sums"></div>
+      <label class="field" style="margin-top:14px"><span>Notas (salen en el documento)</span><textarea name="notas" placeholder="Ej. Precios sujetos a disponibilidad. Entrega gratis en Santiago."></textarea></label>
+      <div class="actions">
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary" id="dd-save">Guardar y ver</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+<datalist id="dl-cond"><option value="Contado"><option value="Crédito 15 días"><option value="Crédito 30 días"><option value="50% adelantado, 50% al entregar"></datalist>
+
+<!-- Ventana: elegir producto de la lista de precios -->
+<dialog id="d-pick">
+  <div class="dlg-head"><h3>Elegir producto</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <input class="search" id="pk-q" type="search" placeholder="Buscar producto…" style="margin-bottom:12px">
+    <div class="list" id="pk-list"></div>
+  </div>
+</dialog>
+
+<!-- Ventana: ver / compartir documento -->
+<dialog id="d-view" class="wide">
+  <div class="dlg-head"><h3 id="dv2-title">Documento</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <div class="actions" style="margin:0 0 14px">
+      <button class="btn wa" id="dv2-share">Compartir imagen (WhatsApp)</button>
+      <button class="btn" id="dv2-pdf">PDF</button>
+      <button class="btn" id="dv2-print">Imprimir</button>
+    </div>
+    <div class="doc-preview" id="dv2-prev"></div>
+    <div class="actions">
+      <button class="btn danger" id="dv2-delete">Borrar</button>
+      <button class="btn" id="dv2-estado" hidden></button>
+      <span class="push"></span>
+      <button class="btn" id="dv2-pagos" hidden>Ver pagos</button>
+      <button class="btn" id="dv2-edit">Editar</button>
+      <button class="btn primary" id="dv2-convert" hidden>Convertir en factura</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Ventana: datos de la empresa -->
+<dialog id="d-empresa">
+  <div class="dlg-head"><h3>Datos de mi empresa</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <p class="hint" style="margin:0 0 12px">Salen al pie de las cotizaciones y facturas. Deja vacío lo que no quieras mostrar.</p>
+    <form id="f-empresa">
+      <div class="grid">
+        <label class="field"><span>Teléfono / WhatsApp</span><input name="telefono" type="tel"></label>
+        <label class="field"><span>RNC</span><input name="rnc"></label>
+        <label class="field full"><span>Dirección</span><input name="direccion"></label>
+        <label class="field full"><span>Correo</span><input name="correo" type="email"></label>
+        <label class="field full"><span>Mensaje al pie</span><input name="gracias" placeholder="¡Gracias por preferirnos!"></label>
+        <label class="field"><span>Condiciones de pago (por defecto)</span><input name="condiciones" list="dl-cond" placeholder="Contado"></label>
+        <label class="field"><span>Validez de cotizaciones</span><input name="validez" placeholder="15 días"></label>
+        <label class="field full"><span>Notas fijas en cotizaciones</span><textarea name="notas_cot" placeholder="Ej. Precios sujetos a cambio sin previo aviso."></textarea></label>
+      </div>
+      <div class="actions"><span class="push"></span><button type="button" class="btn" data-close>Cancelar</button><button class="btn primary">Guardar</button></div>
+    </form>
+  </div>
+</dialog>
+
+<div id="doc-capture"></div>
+<div id="print-area"></div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script src="config.js"></script>
@@ -706,7 +894,7 @@
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
     $$('nav.tabs button').forEach(x => { x.setAttribute('aria-selected', x.dataset.tab === tab); if (x.dataset.tab === tab && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
-    ['calc', 'clientes', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    ['calc', 'clientes', 'cotiz', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -769,6 +957,7 @@
     renderClientes(); renderFacturas(); fillMonths();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
     loadSup(); loadGastos();
+    await loadDocs();
   }
   const clientName = id => (clientes.find(c => c.id === id) || {}).nombre || 'Sin cliente';
 
@@ -856,7 +1045,7 @@
 
   function invoiceRow(f, enCliente) {
     const s = saldo(f);
-    const sub = [fdate(f.fecha), !enCliente && f.numero && '#' + f.numero, f.archivo && '📎'].filter(Boolean).join(' · ');
+    const sub = [fdate(f.fecha), !enCliente && f.numero && '#' + f.numero, docDeFactura(f.id) && '📄', f.archivo && '📎'].filter(Boolean).join(' · ');
     return `<button class="row" data-inv="${f.id}"><div class="main">
       <div class="title">${esc(enCliente ? 'Factura' + (f.numero ? ' #' + f.numero : '') : clientName(f.cliente_id))}</div><div class="sub">${esc(sub)}</div></div>
       <div class="amount">${esc(fmt(Number(f.monto)))}<br><span class="badge ${s.estado}">${s.estado === 'abonada' ? 'Falta ' + esc(fmt(s.falta)) : ESTADO_TXT[s.estado]}</span></div></button>`;
@@ -910,6 +1099,7 @@
     if (f.archivo) $('#di-open').addEventListener('click', ev => { ev.preventDefault(); openFile(f.archivo); });
     profitLine();
     renderInvoicePagos();
+    $('#di-doclink').hidden = !(id && docDeFactura(id));
     $('#d-invoice').showModal();
   }
   ['monto', 'costo'].forEach(k => $('#f-invoice').elements[k].addEventListener('input', profitLine));
@@ -971,6 +1161,7 @@
     if (!confirm('¿Borrar esta factura y su archivo? No se puede deshacer.')) return;
     const files = [f.archivo, ...abonos.filter(a => a.factura_id === f.id).map(a => a.archivo)].filter(Boolean);
     if (files.length) await sb.storage.from(BUCKET).remove(files);
+    if (docDeFactura(f.id)) await sb.from('documentos').delete().eq('factura_id', f.id);
     const { error } = await sb.from('facturas').delete().eq('id', f.id);
     if (error) return toast(errText(error), true);
     $('#d-invoice').close(); toast('Factura borrada'); load();
@@ -1668,6 +1859,428 @@ grant select, insert, update, delete on gastos to authenticated;`;
     if (error) return toast(errText(error), true);
     $('#d-gasto').close(); toast('Gasto borrado'); loadGastos();
   });
+
+  // ---------- Cotizaciones y facturas con el diseño de Surteme ----------
+  const DOC_SQL = `create table if not exists documentos (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  tipo text not null default 'cotizacion',
+  numero text,
+  fecha date not null default current_date,
+  cliente_id uuid references clientes(id) on delete set null,
+  cliente_nombre text, cliente_rnc text,
+  condiciones text, validez text, ncf text,
+  items jsonb not null default '[]',
+  itbis boolean not null default false,
+  subtotal numeric not null default 0,
+  itbis_monto numeric not null default 0,
+  total numeric not null default 0,
+  costo numeric,
+  notas text,
+  estado text not null default 'pendiente',
+  factura_id uuid references facturas(id) on delete set null,
+  origen_id uuid references documentos(id) on delete set null
+);
+create table if not exists ajustes (
+  clave text primary key,
+  valor jsonb,
+  actualizado timestamptz not null default now()
+);
+alter table documentos enable row level security;
+alter table ajustes enable row level security;
+drop policy if exists "usuarios_documentos" on documentos;
+create policy "usuarios_documentos" on documentos for all to authenticated using (true) with check (true);
+drop policy if exists "usuarios_ajustes" on ajustes;
+create policy "usuarios_ajustes" on ajustes for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on documentos, ajustes to authenticated;`;
+  $('#doc-sql').value = DOC_SQL;
+  $('#b-copy-docsql').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(DOC_SQL); toast('Texto copiado'); }
+    catch (e) { $('#doc-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
+  });
+
+  let documentos = [], empresa = {}, docTablaFalta = false;
+  const TIPO = { cotizacion: 'Cotización', factura: 'Factura' };
+  const COT_ESTADO = { pendiente: 'Pendiente', aceptada: 'Aceptada', rechazada: 'Rechazada' };
+  const rd = n => 'RD$ ' + (Number(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fechaLarga = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const docDeFactura = id => documentos.find(d => d.factura_id === id);
+
+  async function loadDocs() {
+    const [d, a] = await Promise.all([
+      sb.from('documentos').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 9999),
+      sb.from('ajustes').select('*'),
+    ]);
+    docTablaFalta = missingTable(d.error) || missingTable(a.error);
+    $('#doc-setup').hidden = !docTablaFalta;
+    $('#b-new-cot').hidden = docTablaFalta;
+    $('#b-empresa').hidden = docTablaFalta;
+    if ((d.error || a.error) && !docTablaFalta) toast(errText(d.error || a.error), true);
+    documentos = d.error ? [] : d.data;
+    empresa = ((a.data || []).find(x => x.clave === 'empresa') || {}).valor || {};
+    renderCotizaciones(); renderFacturas();
+  }
+
+  // Lista de cotizaciones
+  ['#s-cot', '#s-cot-estado'].forEach(s => $(s).addEventListener('input', renderCotizaciones));
+  function renderCotizaciones() {
+    const q = norm($('#s-cot').value), est = $('#s-cot-estado').value;
+    const cots = documentos.filter(d => d.tipo === 'cotizacion');
+    const list = cots.filter(d => (!est || d.estado === est) && (!q || norm((d.cliente_nombre || '') + ' ' + (d.numero || '')).includes(q)));
+    const el = $('#l-cot');
+    if (docTablaFalta) { el.innerHTML = ''; return; }
+    if (!cots.length) { el.innerHTML = '<div class="empty">Aún no hay cotizaciones. Pulsa <b>+ Nueva cotización</b> para hacer la primera.</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty">Ninguna cotización coincide con la búsqueda.</div>'; return; }
+    el.innerHTML = list.map(d => {
+      const n = (d.items || []).length;
+      const badge = d.estado === 'aceptada' ? 'pagada' : d.estado === 'rechazada' ? 'rechazada' : 'pendiente';
+      return `<button class="row" data-doc="${d.id}"><div class="main"><div class="title">${esc(d.cliente_nombre || 'Sin cliente')}</div>
+        <div class="sub">${esc(['No. ' + (d.numero || '—'), fdate(d.fecha), n + (n === 1 ? ' producto' : ' productos')].join(' · '))}</div></div>
+        <div class="amount">${esc(fmt(Number(d.total)))}<br><span class="badge ${badge}">${COT_ESTADO[d.estado] || d.estado}</span></div></button>`;
+    }).join('');
+    $$('[data-doc]', el).forEach(r => r.addEventListener('click', () => openView(r.dataset.doc)));
+  }
+
+  // Número siguiente: 001-2026, 002-2026…
+  function nextNumero(tipo, fecha) {
+    const year = (fecha || today()).slice(0, 4);
+    const max = documentos.filter(d => d.tipo === tipo).reduce((m, d) => {
+      const x = /^(\d+)-(\d{4})$/.exec(d.numero || '');
+      return x && x[2] === year ? Math.max(m, +x[1]) : m;
+    }, 0);
+    return String(max + 1).padStart(3, '0') + '-' + year;
+  }
+
+  // ----- Editor -----
+  let edDoc = null, edItems = [];
+  try { $('#dd-margen').value = localStorage.getItem('surteme_margen') || '25'; } catch (e) { $('#dd-margen').value = '25'; }
+  $('#dd-margen').addEventListener('input', () => { try { localStorage.setItem('surteme_margen', $('#dd-margen').value); } catch (e) {} });
+
+  $('#b-new-cot').addEventListener('click', () => newDoc('cotizacion'));
+  $('#b-crear-factura').addEventListener('click', () => newDoc('factura'));
+  function newDoc(tipo, base) {
+    if (docTablaFalta) { openTab('cotiz'); toast('Primero termina el paso de Supabase que sale en Cotizaciones.', true); return; }
+    if (!clientes.length) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
+    const d = Object.assign({ tipo, fecha: today(), condiciones: empresa.condiciones || 'Contado', validez: empresa.validez || '15 días',
+      notas: tipo === 'cotizacion' ? (empresa.notas_cot || '') : '', items: [], itbis: false }, base || {});
+    d.tipo = tipo; d.id = null; d.numero = nextNumero(tipo, d.fecha);
+    openEditor(d);
+  }
+  function openEditor(d) {
+    edDoc = d;
+    edItems = JSON.parse(JSON.stringify(d.items || []));
+    if (!edItems.length) edItems.push(blankItem());
+    const f = $('#f-doc'); f.reset();
+    try { $('#dd-margen').value = localStorage.getItem('surteme_margen') || '25'; } catch (e) { $('#dd-margen').value = '25'; }
+    f.elements.cliente_id.innerHTML = '<option value="">— Elige un cliente —</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    f.elements.cliente_id.value = d.cliente_id || '';
+    ['numero', 'fecha', 'condiciones', 'validez', 'ncf', 'notas'].forEach(k => f.elements[k].value = d[k] || '');
+    f.elements.itbis.checked = !!d.itbis;
+    const cot = d.tipo === 'cotizacion';
+    $('#dd-title').textContent = (d.id ? 'Editar ' : 'Nueva ') + TIPO[d.tipo].toLowerCase();
+    $('#dd-num-label').textContent = cot ? 'No. de cotización' : 'No. de factura';
+    $('#dd-validez').hidden = !cot;
+    $('#dd-ncf').hidden = cot;
+    renderItems();
+    $('#d-doc').showModal();
+  }
+  const blankItem = () => ({ descripcion: '', detalle: '', cantidad: 1, unidad: '', precio: null, costo: null });
+  function renderItems() {
+    const el = $('#dd-items');
+    el.innerHTML = edItems.map((it, i) => `<div class="item-card" data-i="${i}">
+      <div class="item-head">Producto ${i + 1}<button type="button" class="x" data-del="${i}" aria-label="Quitar">×</button></div>
+      <div class="grid">
+        <label class="field full"><span>Producto *</span><input data-k="descripcion" value="${esc(it.descripcion)}" placeholder="Ej. Vaso de 12 onz"></label>
+        <label class="field full"><span>Detalle (opcional)</span><input data-k="detalle" value="${esc(it.detalle)}" placeholder="Ej. Transparente, ideal para bebidas."></label>
+        <label class="field"><span>Cantidad</span><input data-k="cantidad" type="number" inputmode="decimal" step="any" min="0" value="${esc(it.cantidad ?? '')}"></label>
+        <label class="field"><span>Presentación</span><input data-k="unidad" value="${esc(it.unidad)}" placeholder="Ej. caja 200/1"></label>
+        <label class="field"><span>Precio unitario (RD$)</span><input data-k="precio" type="number" inputmode="decimal" step="any" min="0" value="${esc(it.precio ?? '')}"></label>
+        <label class="field"><span>Tu costo (no se imprime)</span><input data-k="costo" type="number" inputmode="decimal" step="any" min="0" value="${esc(it.costo ?? '')}" placeholder="Opcional"></label>
+      </div>
+      <div class="item-foot"><span class="gan"></span><span>Total: <b class="tot"></b></span></div>
+    </div>`).join('') || '<div class="empty" style="padding:12px">Agrega al menos un producto.</div>';
+    $$('input[data-k]', el).forEach(inp => inp.addEventListener('input', () => {
+      const i = +inp.closest('[data-i]').dataset.i, k = inp.dataset.k;
+      edItems[i][k] = ['cantidad', 'precio', 'costo'].includes(k) ? (inp.value === '' ? null : num(inp.value)) : inp.value;
+      updateSums();
+    }));
+    $$('[data-del]', el).forEach(b => b.addEventListener('click', () => { edItems.splice(+b.dataset.del, 1); renderItems(); }));
+    updateSums();
+  }
+  function calcTotals(items, itbis) {
+    const subtotal = round2(items.reduce((s, it) => s + (Number(it.cantidad) || 0) * (Number(it.precio) || 0), 0));
+    const itbisMonto = itbis ? round2(subtotal * ITBIS) : 0;
+    const conCosto = items.filter(it => it.costo !== null && it.costo !== undefined && it.costo !== '' && Number.isFinite(Number(it.costo)));
+    const costo = conCosto.length === items.length && items.length ? round2(conCosto.reduce((s, it) => s + (Number(it.cantidad) || 0) * Number(it.costo), 0)) : null;
+    const ganancia = conCosto.reduce((s, it) => s + (Number(it.cantidad) || 0) * ((Number(it.precio) || 0) - Number(it.costo)), 0);
+    return { subtotal, itbisMonto, total: round2(subtotal + itbisMonto), costo, ganancia, hayCosto: conCosto.length > 0 };
+  }
+  function updateSums() {
+    $$('#dd-items [data-i]').forEach(card => {
+      const it = edItems[+card.dataset.i], t = (Number(it.cantidad) || 0) * (Number(it.precio) || 0);
+      $('.tot', card).textContent = fmt(t);
+      const c = Number(it.costo);
+      $('.gan', card).innerHTML = it.costo !== null && it.costo !== '' && Number.isFinite(c) && Number(it.precio) > 0
+        ? `Ganas <b style="color:${it.precio - c < 0 ? 'var(--bad)' : 'var(--ok)'}">${esc(fmt((Number(it.cantidad) || 0) * (it.precio - c)))}</b> (${esc(pct((it.precio - c) / it.precio * 100))})` : '';
+    });
+    const t = calcTotals(edItems, $('#f-doc').elements.itbis.checked);
+    $('#dd-sums').innerHTML = (t.itbisMonto ? `<div><span>Subtotal</span><b>${fmt(t.subtotal)}</b></div><div><span>ITBIS 18%</span><b>${fmt(t.itbisMonto)}</b></div>` : '') +
+      `<div class="t"><span>Total</span><span>${fmt(t.total)}</span></div>` +
+      (t.hayCosto ? `<div style="color:var(--muted)"><span>Tu ganancia estimada</span><b style="color:${t.ganancia < 0 ? 'var(--bad)' : 'var(--ok)'}">${fmt(t.ganancia)}</b></div>` : '');
+  }
+  $('#f-doc').elements.itbis.addEventListener('input', updateSums);
+  $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); renderItems(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
+
+  // Elegir de la lista de precios de los suplidores
+  $('#dd-pick').addEventListener('click', () => {
+    if (!productos.length) { toast('Aún no hay precios cargados en Suplidores. Puedes escribir el producto a mano.', true); return; }
+    $('#pk-q').value = ''; renderPick(); $('#d-pick').showModal();
+  });
+  $('#pk-q').addEventListener('input', renderPick);
+  function mejorOferta(p) {
+    const conUnidad = p.rows.filter(r => Number.isFinite(unitItbis(r))).sort((a, b) => unitItbis(a) - unitItbis(b));
+    return conUnidad[0] || p.rows.find(r => Number.isFinite(pkgItbis(r))) || p.rows[0];
+  }
+  function renderPick() {
+    const q = norm($('#pk-q').value);
+    const list = productos.filter(p => !q || norm(p.nombre + ' ' + p.categoria).includes(q)).slice(0, 60);
+    $('#pk-list').innerHTML = list.length ? list.map(p => {
+      const r = mejorOferta(p), pk = pkgItbis(r);
+      return `<button class="row" data-pk="${productos.indexOf(p)}"><div class="main"><div class="title">${esc(p.nombre)}</div>
+        <div class="sub">${esc([r.presentacion && 'Pres. ' + r.presentacion, provName(r.proveedor_id)].filter(Boolean).join(' · '))}</div></div>
+        <div class="amount">${Number.isFinite(pk) ? esc(fmt(pk)) : '—'}<br><span class="sub" style="font-weight:500">tu costo</span></div></button>`;
+    }).join('') : '<div class="empty">No se encontró ese producto.</div>';
+    $$('[data-pk]', $('#pk-list')).forEach(b => b.addEventListener('click', () => {
+      const p = productos[+b.dataset.pk], r = mejorOferta(p), costo = pkgItbis(r);
+      const m = Math.min(95, Math.max(0, num($('#dd-margen').value) || 0));
+      const precio = Number.isFinite(costo) ? Math.ceil(costo / (1 - m / 100)) : null;
+      const vacio = edItems.length === 1 && !edItems[0].descripcion && !edItems[0].precio;
+      const it = { descripcion: p.nombre, detalle: '', cantidad: 1, unidad: r.presentacion || '', precio, costo: Number.isFinite(costo) ? round2(costo) : null };
+      if (vacio) edItems[0] = it; else edItems.push(it);
+      $('#d-pick').close(); renderItems();
+      toast(`${p.nombre} agregado`);
+    }));
+  }
+
+  // Guardar
+  $('#f-doc').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, btn = $('#dd-save');
+    const items = edItems.filter(it => (it.descripcion || '').trim()).map(it => ({
+      descripcion: it.descripcion.trim(), detalle: (it.detalle || '').trim(), cantidad: Number(it.cantidad) || 0,
+      unidad: (it.unidad || '').trim(), precio: Number(it.precio) || 0, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
+    if (!items.length) return toast('Agrega al menos un producto con nombre.', true);
+    const c = clientes.find(x => x.id === f.elements.cliente_id.value);
+    const t = calcTotals(items, f.elements.itbis.checked);
+    const data = {
+      tipo: edDoc.tipo, numero: f.elements.numero.value.trim(), fecha: f.elements.fecha.value || today(),
+      cliente_id: c ? c.id : null, cliente_nombre: c ? c.nombre : null, cliente_rnc: c ? c.rnc : null,
+      condiciones: f.elements.condiciones.value.trim() || null,
+      validez: edDoc.tipo === 'cotizacion' ? f.elements.validez.value.trim() || null : null,
+      ncf: edDoc.tipo === 'factura' ? f.elements.ncf.value.trim() || null : null,
+      items, itbis: f.elements.itbis.checked, subtotal: t.subtotal, itbis_monto: t.itbisMonto, total: t.total, costo: t.costo,
+      notas: f.elements.notas.value.trim() || null,
+    };
+    if (!edDoc.id) { data.estado = edDoc.tipo === 'factura' ? 'emitida' : 'pendiente'; if (edDoc.origen_id) data.origen_id = edDoc.origen_id; }
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      // Una factura también se anota en "Facturas" para cobrarla, recibir abonos y verla en la ganancia
+      if (data.tipo === 'factura') {
+        const reg = { cliente_id: data.cliente_id, numero: data.ncf || data.numero, fecha: data.fecha, monto: data.total,
+          costo: data.costo === null ? null : round2(data.costo + data.itbis_monto) };
+        const existe = edDoc.factura_id && facturas.find(x => x.id === edDoc.factura_id);
+        const r = existe ? await sb.from('facturas').update(reg).eq('id', edDoc.factura_id).select().single()
+                         : await sb.from('facturas').insert(Object.assign({ estado: 'pendiente' }, reg)).select().single();
+        if (r.error) throw r.error;
+        data.factura_id = r.data.id;
+      }
+      const res = edDoc.id ? await sb.from('documentos').update(data).eq('id', edDoc.id).select().single()
+                           : await sb.from('documentos').insert(data).select().single();
+      if (res.error) throw res.error;
+      if (edDoc.origen_id) await sb.from('documentos').update({ estado: 'aceptada' }).eq('id', edDoc.origen_id);
+      $('#d-doc').close();
+      toast(TIPO[data.tipo] + ' guardada');
+      await load();
+      openView(res.data.id);
+    } catch (er) { toast(errText(er), true); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar y ver'; }
+  });
+
+  // ----- El documento con el diseño de Surteme -----
+  const CORNER = `<div class="corner tl"><svg viewBox="0 0 230 90" width="230" height="90" xmlns="http://www.w3.org/2000/svg"><polygon points="0,0 230,0 0,70" fill="#fe6c0c"/><polygon points="0,0 190,0 0,52" fill="#123365"/></svg></div>`;
+  const CORNER_BR = `<div class="corner br"><svg viewBox="0 0 230 90" width="230" height="90" xmlns="http://www.w3.org/2000/svg"><polygon points="230,90 0,90 230,20" fill="#fe6c0c"/><polygon points="230,90 40,90 230,38" fill="#123365"/></svg></div>`;
+  function docHTML(d) {
+    const cot = d.tipo === 'cotizacion';
+    const rows = [[cot ? 'No. de cotización' : 'No. de factura', d.numero], ['Fecha', fechaLarga(d.fecha)], ['Cliente', d.cliente_nombre || '—'],
+      ['RNC', d.cliente_rnc || '—']];
+    if (!cot && d.ncf) rows.push(['NCF', d.ncf]);
+    rows.push(['Condiciones de pago', d.condiciones || '—']);
+    if (cot) rows.push(['Validez de la oferta', d.validez || '—']);
+    const items = (d.items || []).map((it, i) => {
+      const cant = Number(it.cantidad) || 0, cantTxt = cant.toLocaleString('es-DO', { maximumFractionDigits: 2 });
+      const q = it.unidad ? (cant === 1 ? esc(it.unidad) : `${esc(cantTxt)}<br><span style="font-size:13.5px;color:#4a5a76">(${esc(it.unidad)})</span>`) : esc(cantTxt);
+      return `<tr><td class="n">${i + 1}</td><td class="d"><b>${esc(it.descripcion)}</b>${it.detalle ? `<span>${esc(it.detalle)}</span>` : ''}</td>
+        <td class="q">${q}</td><td class="p">${rd(it.precio)}</td><td class="t">${rd(cant * (Number(it.precio) || 0))}</td></tr>`;
+    }).join('');
+    const pie = [empresa.telefono && 'Tel. ' + empresa.telefono, empresa.rnc && 'RNC ' + empresa.rnc, empresa.direccion, empresa.correo].filter(Boolean);
+    return `<div class="doc">${CORNER}
+      <div class="doc-head">
+        <div class="doc-logo"><img src="logo.png" alt="Surteme" onerror="this.outerHTML='<div class=&quot;alt&quot;>SURTEME</div>'"></div>
+        <div class="doc-sep"></div>
+        <div class="doc-meta"><h1>${cot ? 'COTIZACIÓN' : 'FACTURA'}</h1><div class="doc-ul"></div>
+          <table>${rows.map(([l, v]) => `<tr><td class="l">${esc(l)}</td><td class="c">:</td><td>${esc(v)}</td></tr>`).join('')}</table></div>
+      </div>
+      <table class="doc-items"><thead><tr><th>Ítem</th><th>Descripción</th><th>Cantidad</th><th>Precio Unitario</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
+      <div class="doc-sum">
+        ${d.itbis ? `<div class="line"><span>Subtotal</span><b>${rd(d.subtotal)}</b></div><div class="line"><span>ITBIS (18%)</span><b>${rd(d.itbis_monto)}</b></div>` : ''}
+        <div class="doc-total"><span>TOTAL GENERAL</span><b>${rd(d.total)}</b></div>
+      </div>
+      ${d.notas ? `<div class="doc-notes"><b>Notas:</b> ${esc(d.notas)}</div>` : ''}
+      <div class="doc-foot">${empresa.gracias !== '' ? `<div class="thanks">${esc(empresa.gracias || '¡Gracias por preferirnos!')}</div>` : ''}${esc(pie.join('  ·  '))}</div>
+      ${CORNER_BR}
+    </div>`;
+  }
+
+  // ----- Ver / compartir -----
+  let viewDoc = null, shareFiles = null, sharePromise = null;
+  function openView(id) {
+    viewDoc = documentos.find(d => d.id === id); if (!viewDoc) return;
+    const d = viewDoc, cot = d.tipo === 'cotizacion';
+    $('#dv2-title').textContent = `${TIPO[d.tipo]} ${d.numero || ''} · ${d.cliente_nombre || ''}`;
+    $('#dv2-prev').innerHTML = docHTML(d);
+    $('#dv2-convert').hidden = !cot || d.estado === 'aceptada';
+    $('#dv2-estado').hidden = !cot;
+    $('#dv2-estado').textContent = d.estado === 'rechazada' ? 'Marcar pendiente' : 'Marcar rechazada';
+    $('#dv2-pagos').hidden = cot || !d.factura_id;
+    if (!$('#d-view').open) $('#d-view').showModal();
+    fitPreview();
+    shareFiles = null; sharePromise = prepareFiles(d).catch(() => null);
+  }
+  function fitPreview() {
+    const wrap = $('#dv2-prev'), doc = $('.doc', wrap); if (!doc) return;
+    const s = wrap.clientWidth / 816;
+    doc.style.transform = `scale(${s})`;
+    wrap.style.height = Math.ceil(doc.offsetHeight * s) + 'px';
+  }
+  window.addEventListener('resize', () => { if ($('#d-view').open) fitPreview(); });
+
+  const scripts = {};
+  function loadScript(src) {
+    return scripts[src] = scripts[src] || new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { delete scripts[src]; rej(new Error('No se pudo cargar. Revisa tu internet.')); };
+      document.head.appendChild(s);
+    });
+  }
+  const fileBase = d => `Surteme-${TIPO[d.tipo]}-${d.numero || ''}-${d.cliente_nombre || ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').replace(/-+/g, '-').replace(/-$/, '');
+  async function renderCanvas(d) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const box = $('#doc-capture'); box.innerHTML = docHTML(d);
+    const img = $('img', box);
+    if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; });
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const canvas = await window.html2canvas($('.doc', box), { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    box.innerHTML = '';
+    return canvas;
+  }
+  async function prepareFiles(d) {
+    const canvas = await renderCanvas(d);
+    const png = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const pdf = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+    const pw = 612, ph = 792, pagePx = Math.floor(canvas.width * ph / pw), fullH = canvas.height * pw / canvas.width;
+    if (fullH <= ph * 1.45) {
+      // Cabe en una sola hoja carta (se reduce un poco si hace falta)
+      const k = Math.min(1, ph / fullH);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pw - pw * k) / 2, 0, pw * k, fullH * k);
+    } else for (let y = 0, page = 0; y < canvas.height; y += pagePx, page++) {
+      const h = Math.min(pagePx, canvas.height - y);
+      const part = document.createElement('canvas'); part.width = canvas.width; part.height = h;
+      const ctx = part.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, h); ctx.drawImage(canvas, 0, -y);
+      if (page) pdf.addPage();
+      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, h * pw / canvas.width);
+    }
+    const name = fileBase(d);
+    shareFiles = { id: d.id, png: new File([png], name + '.png', { type: 'image/png' }), pdf: new File([pdf.output('blob')], name + '.pdf', { type: 'application/pdf' }) };
+    return shareFiles;
+  }
+  function download(file) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  async function shareOrDownload(kind, btn) {
+    const d = viewDoc; if (!d) return;
+    const label = btn.textContent;
+    let files = shareFiles && shareFiles.id === d.id ? shareFiles : null;
+    if (!files) {
+      btn.disabled = true; btn.textContent = 'Preparando…';
+      try { let r = sharePromise ? await sharePromise : null; if (!r || r.id !== d.id) r = await prepareFiles(d); files = r; }
+      catch (er) { toast(errText(er), true); return; }
+      finally { btn.disabled = false; btn.textContent = label; }
+    }
+    const file = files[kind];
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: file.name }); return; }
+      catch (er) {
+        if (er && er.name === 'AbortError') return;
+        if (er && er.name === 'NotAllowedError') { toast('Listo. Pulsa el botón otra vez para compartir.'); return; }
+      }
+    }
+    download(file);
+    toast('Archivo descargado: ' + file.name);
+  }
+  $('#dv2-share').addEventListener('click', e => shareOrDownload('png', e.currentTarget));
+  $('#dv2-pdf').addEventListener('click', e => shareOrDownload('pdf', e.currentTarget));
+  $('#dv2-print').addEventListener('click', () => {
+    if (!viewDoc) return;
+    $('#print-area').innerHTML = docHTML(viewDoc);
+    const img = $('#print-area img');
+    const go = () => { window.print(); };
+    if (img && !img.complete) img.onload = img.onerror = go; else go();
+  });
+  $('#dv2-edit').addEventListener('click', () => { const d = viewDoc; $('#d-view').close(); openEditor(d); });
+  $('#dv2-convert').addEventListener('click', () => {
+    const d = viewDoc; $('#d-view').close();
+    newDoc('factura', { cliente_id: d.cliente_id, condiciones: d.condiciones, items: d.items, itbis: d.itbis, notas: '', origen_id: d.id });
+  });
+  $('#dv2-estado').addEventListener('click', async () => {
+    const d = viewDoc, nuevo = d.estado === 'rechazada' ? 'pendiente' : 'rechazada';
+    const { error } = await sb.from('documentos').update({ estado: nuevo }).eq('id', d.id);
+    if (error) return toast(errText(error), true);
+    toast(nuevo === 'rechazada' ? 'Marcada como rechazada' : 'Marcada como pendiente');
+    await load(); openView(d.id);
+  });
+  $('#dv2-pagos').addEventListener('click', () => { const d = viewDoc; $('#d-view').close(); openTab('facturas'); openInvoice(d.factura_id); });
+  $('#dv2-delete').addEventListener('click', async () => {
+    const d = viewDoc; if (!d) return;
+    const f = d.factura_id && facturas.find(x => x.id === d.factura_id);
+    if (!confirm(f ? '¿Borrar esta factura? También se borra de la lista de Facturas, con sus abonos. No se puede deshacer.' : `¿Borrar esta ${TIPO[d.tipo].toLowerCase()}? No se puede deshacer.`)) return;
+    const r = await sb.from('documentos').delete().eq('id', d.id);
+    if (r.error) return toast(errText(r.error), true);
+    if (f) {
+      const files = [f.archivo, ...abonos.filter(a => a.factura_id === f.id).map(a => a.archivo)].filter(Boolean);
+      if (files.length) await sb.storage.from(BUCKET).remove(files);
+      await sb.from('facturas').delete().eq('id', f.id);
+    }
+    $('#d-view').close(); toast('Borrada'); load();
+  });
+
+  // ----- Datos de la empresa -----
+  $('#b-empresa').addEventListener('click', () => {
+    const f = $('#f-empresa'); f.reset();
+    ['telefono', 'rnc', 'direccion', 'correo', 'gracias', 'condiciones', 'validez', 'notas_cot'].forEach(k => f.elements[k].value = empresa[k] || '');
+    $('#d-empresa').showModal();
+  });
+  $('#f-empresa').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, valor = {};
+    ['telefono', 'rnc', 'direccion', 'correo', 'gracias', 'condiciones', 'validez', 'notas_cot'].forEach(k => valor[k] = f.elements[k].value.trim());
+    const { error } = await sb.from('ajustes').upsert({ clave: 'empresa', valor, actualizado: new Date().toISOString() });
+    if (error) return toast(errText(error), true);
+    empresa = valor; $('#d-empresa').close(); toast('Datos guardados');
+  });
+
+  $('#di-viewdoc').addEventListener('click', () => { const d = docDeFactura(openInvoiceId); if (d) { $('#d-invoice').close(); openView(d.id); } });
+  $('#di-editdoc').addEventListener('click', () => { const d = docDeFactura(openInvoiceId); if (d) { $('#d-invoice').close(); openEditor(d); } });
 
   // Cerrar ventanas
   $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));

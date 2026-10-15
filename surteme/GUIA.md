@@ -52,3 +52,11 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - Abre una factura → **+ Agregar abono**: cuánto pagó, fecha, cómo pagó y foto del comprobante. La factura queda **Pendiente**, **Abonada** (dice cuánto falta) o **Pagada** sola.
 - **Recordar pago por WhatsApp** (en el cliente o en la factura): abre WhatsApp con el mensaje listo, solo con lo que falta. Tú pulsas **Enviar**.
 - El cliente necesita tener su teléfono guardado.
+
+## Cotizaciones y facturas con el diseño de Surteme
+- La primera vez, en **Cotizaciones** te pedirá pegar un texto en **SQL Editor** (botón **Copiar texto**).
+- **Datos de mi empresa:** teléfono, RNC, dirección, etc. Salen al pie de cada documento.
+- **+ Nueva cotización:** eliges el cliente y agregas productos (de tu lista de precios o escritos a mano). El número (001-2026, 002-2026…) se pone solo.
+- **Compartir imagen (WhatsApp)**, **PDF** o **Imprimir**.
+- **Convertir en factura:** pasa la cotización a factura. La factura aparece también en **Facturas** para anotar abonos y cobrar por WhatsApp.
+- En **Facturas → + Crear factura** puedes hacer una factura directa sin cotización.
