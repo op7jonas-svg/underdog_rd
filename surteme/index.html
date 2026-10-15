@@ -810,6 +810,17 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const BUCKET = 'facturas';
 
+  // ---------- Actualización automática ----------
+  // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
+  const APP_VERSION = '2026-10-15b';
+  fetch('version.txt?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
+    v = v.trim();
+    if (v && v !== APP_VERSION && !sessionStorage.getItem('surteme_upd_' + v)) {
+      sessionStorage.setItem('surteme_upd_' + v, '1');
+      location.replace(location.pathname + '?v=' + encodeURIComponent(v));
+    }
+  }).catch(() => {});
+
   // ---------- Utilidades ----------
   const money = new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' });
   const fmt = n => money.format(Number.isFinite(n) ? n : 0);

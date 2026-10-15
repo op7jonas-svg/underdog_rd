@@ -60,3 +60,7 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - **Compartir imagen (WhatsApp)**, **PDF** o **Imprimir**.
 - **Convertir en factura:** pasa la cotización a factura. La factura aparece también en **Facturas** para anotar abonos y cobrar por WhatsApp.
 - En **Facturas → + Crear factura** puedes hacer una factura directa sin cotización.
+
+## Para Claude (al publicar cambios)
+- Cambiar `APP_VERSION` en `index.html` y el contenido de `version.txt` al mismo valor nuevo, para que los teléfonos se actualicen solos.
+- Publicar en `main` y también en `gh-pages` (el sitio se publica desde `gh-pages`).
