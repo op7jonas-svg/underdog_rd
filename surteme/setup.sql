@@ -138,3 +138,20 @@ create policy "usuarios_documentos" on documentos for all to authenticated using
 drop policy if exists "usuarios_ajustes" on ajustes;
 create policy "usuarios_ajustes" on ajustes for all to authenticated using (true) with check (true);
 grant select, insert, update, delete on documentos, ajustes to authenticated;
+
+-- ===== Ventas del día =====
+create table if not exists ventas (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  fecha date not null default current_date,
+  monto numeric not null default 0,
+  costo numeric,
+  descripcion text,
+  metodo text,
+  cliente_id uuid references clientes(id) on delete set null,
+  notas text
+);
+alter table ventas enable row level security;
+drop policy if exists "usuarios_ventas" on ventas;
+create policy "usuarios_ventas" on ventas for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on ventas to authenticated;

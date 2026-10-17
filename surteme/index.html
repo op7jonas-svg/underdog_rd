@@ -89,7 +89,7 @@
     flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted);
     padding: 9px 6px; border-radius: 10px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
-  @media (max-width: 600px) { nav.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; } nav.tabs button { font-size: .85rem; padding: 7px 4px; } }
+  @media (max-width: 600px) { nav.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; } nav.tabs button { font-size: .82rem; padding: 7px 2px; } }
   nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
 
   main { padding-top: 20px; padding-bottom: 60px; }
@@ -269,6 +269,13 @@
   .doc-foot { margin-top: 26px; text-align: center; font-size: 13.5px; color: #4a5a76; }
   .doc-foot .thanks { font-weight: 800; color: #123365; font-size: 15px; margin-bottom: 4px; }
 
+  /* Ventas del día */
+  .today-card { background: var(--accent-soft); border-color: transparent; margin-bottom: 14px; }
+  .today-card .k { font-weight: 700; color: var(--accent-text); font-size: .92rem; }
+  .today-total { font-size: 2.4rem; font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px; }
+  .today-split { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: .9rem; color: var(--muted); }
+  .today-split b { color: var(--text); }
+
   /* Ventanas emergentes */
   dialog {
     border: 0; padding: 0; border-radius: 18px; background: var(--surface); color: var(--text);
@@ -341,9 +348,10 @@
     </div>
     <div class="wrap">
       <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="ventas" aria-selected="false">Ventas</button>
         <button role="tab" data-tab="calc" aria-selected="true">Calcular</button>
         <button role="tab" data-tab="clientes" aria-selected="false">Clientes</button>
-        <button role="tab" data-tab="cotiz" aria-selected="false">Cotizaciones</button>
+        <button role="tab" data-tab="cotiz" aria-selected="false">Cotizar</button>
         <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
         <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
@@ -374,6 +382,48 @@
         <div class="results" id="c-results"></div>
         <p class="explain"><b>Margen</b>: de cada RD$100 que cobras, cuánto es ganancia.<br><b>Sobre el costo</b>: cuánto le subiste al costo (también se llama "markup").</p>
       </div>
+    </section>
+
+    <!-- Ventas del día -->
+    <section id="t-ventas" hidden>
+      <div class="card" id="v-setup" hidden style="margin-bottom:14px">
+        <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
+        <p class="hint">Para guardar las ventas de cada día hay que preparar un "cajón" nuevo. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
+        <textarea class="sql" id="v-sql" readonly></textarea>
+        <div class="actions"><button class="btn primary" id="b-copy-vsql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
+      </div>
+
+      <div class="card today-card">
+        <div class="k" id="vh-fecha">Ventas de hoy</div>
+        <div class="today-total" id="vh-total">RD$0.00</div>
+        <div class="hint" id="vh-detalle" style="margin:4px 0 0"></div>
+        <div class="today-split" id="vh-split"></div>
+      </div>
+
+      <form class="card" id="f-venta-rapida">
+        <h3 style="font-size:1.05rem;margin-bottom:10px">Registrar una venta</h3>
+        <div class="grid">
+          <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required placeholder="0.00"></label>
+          <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" placeholder="Ej. 2 cajas de bandejas"></label>
+          <div class="field full"><span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">¿Cómo pagó?</span>
+            <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none">
+              <button type="button" data-m="Efectivo" aria-pressed="true">Efectivo</button>
+              <button type="button" data-m="Transferencia" aria-pressed="false">Transferencia</button>
+              <button type="button" data-m="Tarjeta" aria-pressed="false">Tarjeta</button>
+            </div></div>
+          <label class="field"><span>Lo que te costó (opcional)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Para ver tu ganancia"></label>
+          <label class="field"><span>Cliente (opcional)</span><select name="cliente_id"></select></label>
+        </div>
+        <div class="actions"><button class="btn primary" id="vr-save" style="flex:1">Registrar venta</button></div>
+      </form>
+
+      <h3 class="sub-title" style="margin-top:22px"><span>Ventas de hoy</span></h3>
+      <div class="list" id="l-ventas-hoy"></div>
+
+      <h3 class="sub-title" style="margin-top:26px"><span>Historial por día</span></h3>
+      <div class="filters"><select id="vh-mes"></select></div>
+      <div class="totals" id="vh-mes-tot"></div>
+      <div class="list" id="l-dias"></div>
     </section>
 
     <!-- Clientes -->
@@ -615,6 +665,38 @@
   </div>
 </dialog>
 
+<!-- Ventana: un día de ventas -->
+<dialog id="d-dia">
+  <div class="dlg-head"><h3 id="ddia-title">Día</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <div class="totals" id="ddia-tot"></div>
+    <div class="list" id="ddia-list"></div>
+  </div>
+</dialog>
+
+<!-- Ventana: editar venta -->
+<dialog id="d-venta">
+  <div class="dlg-head"><h3>Editar venta</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-venta">
+      <div class="grid">
+        <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
+        <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
+        <label class="field full"><span>¿Qué vendiste?</span><input name="descripcion"></label>
+        <label class="field"><span>¿Cómo pagó?</span><select name="metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label class="field"><span>Lo que te costó</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+        <label class="field full"><span>Cliente</span><select name="cliente_id"></select></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="dvt-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
 <!-- Ventana: gasto -->
 <dialog id="d-gasto">
   <div class="dlg-head"><h3 id="dg-title">Gasto</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
@@ -812,7 +894,7 @@
 
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
-  const APP_VERSION = '2026-10-15b';
+  const APP_VERSION = '2026-10-17a';
   fetch('version.txt?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
     v = v.trim();
     if (v && v !== APP_VERSION && !sessionStorage.getItem('surteme_upd_' + v)) {
@@ -905,7 +987,7 @@
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
     $$('nav.tabs button').forEach(x => { x.setAttribute('aria-selected', x.dataset.tab === tab); if (x.dataset.tab === tab && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
-    ['calc', 'clientes', 'cotiz', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -942,8 +1024,8 @@
       show('v-app');
       if (!started) {
         started = true;
-        let tab = 'calc';
-        try { tab = localStorage.getItem('surteme_tab') || 'calc'; } catch (e) {}
+        let tab = 'ventas';
+        try { tab = localStorage.getItem('surteme_tab') || 'ventas'; } catch (e) {}
         openTab(tab);
         setTimeout(load, 0);
       }
@@ -967,7 +1049,7 @@
     if (a.error && !abTablaFalta) toast(errText(a.error), true);
     renderClientes(); renderFacturas(); fillMonths();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
-    loadSup(); loadGastos();
+    loadSup(); loadGastos(); loadVentas();
     await loadDocs();
   }
   const clientName = id => (clientes.find(c => c.id === id) || {}).nombre || 'Sin cliente';
@@ -1870,6 +1952,189 @@ grant select, insert, update, delete on gastos to authenticated;`;
     if (error) return toast(errText(error), true);
     $('#d-gasto').close(); toast('Gasto borrado'); loadGastos();
   });
+
+  // ---------- Ventas del día (el total vuelve a cero cada día y queda guardado por fecha) ----------
+  const V_SQL = `create table if not exists ventas (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  fecha date not null default current_date,
+  monto numeric not null default 0,
+  costo numeric,
+  descripcion text,
+  metodo text,
+  cliente_id uuid references clientes(id) on delete set null,
+  notas text
+);
+alter table ventas enable row level security;
+drop policy if exists "usuarios_ventas" on ventas;
+create policy "usuarios_ventas" on ventas for all to authenticated using (true) with check (true);
+grant select, insert, update, delete on ventas to authenticated;`;
+  $('#v-sql').value = V_SQL;
+  $('#b-copy-vsql').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(V_SQL); toast('Texto copiado'); }
+    catch (e) { $('#v-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
+  });
+
+  let ventas = [], vTablaFalta = false, vMetodo = 'Efectivo', vDia = today();
+  const sum = (arr, k) => arr.reduce((s, x) => s + Number(x[k] || 0), 0);
+  const hora = v => v.creado ? new Date(v.creado).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' }) : '';
+  const diaLargo = s => { const t = new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' }); return t.charAt(0).toUpperCase() + t.slice(1); };
+
+  async function loadVentas() {
+    const r = await sb.from('ventas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 19999);
+    vTablaFalta = missingTable(r.error);
+    $('#v-setup').hidden = !vTablaFalta;
+    $('#f-venta-rapida').hidden = vTablaFalta;
+    if (r.error && !vTablaFalta) toast(errText(r.error), true);
+    ventas = r.error ? [] : r.data;
+    renderVentas();
+  }
+
+  // Lo vendido en un día: ventas registradas + facturas con esa fecha
+  function delDia(dia) {
+    const vs = ventas.filter(v => v.fecha === dia), fs = facturas.filter(f => f.fecha === dia);
+    const conCostoV = vs.filter(v => v.costo !== null && v.costo !== undefined), conCostoF = fs.filter(f => f.costo !== null && f.costo !== undefined);
+    return { vs, fs, ventas: sum(vs, 'monto'), facturas: sum(fs, 'monto'), total: sum(vs, 'monto') + sum(fs, 'monto'),
+      ganancia: conCostoV.reduce((s, v) => s + Number(v.monto) - Number(v.costo), 0) + conCostoF.reduce((s, f) => s + Number(f.monto) - Number(f.costo), 0),
+      hayCosto: conCostoV.length + conCostoF.length > 0, n: vs.length + fs.length };
+  }
+  const ventaRow = v => {
+    const sub = [hora(v), v.metodo, v.cliente_id && clientName(v.cliente_id), v.costo !== null && v.costo !== undefined && 'ganancia ' + fmt(Number(v.monto) - Number(v.costo))].filter(Boolean).join(' · ');
+    return `<button class="row" data-venta="${v.id}"><div class="main"><div class="title">${esc(v.descripcion || 'Venta')}</div><div class="sub">${esc(sub)}</div></div>
+      <div class="amount">${esc(fmt(Number(v.monto)))}</div></button>`;
+  };
+  const facturaDiaRow = f => `<button class="row" data-fact="${f.id}"><div class="main"><div class="title">Factura${f.numero ? ' #' + esc(f.numero) : ''} · ${esc(clientName(f.cliente_id))}</div>
+      <div class="sub">${esc(ESTADO_TXT[saldo(f).estado])}</div></div><div class="amount">${esc(fmt(Number(f.monto)))}</div></button>`;
+  function bindDiaRows(el) {
+    $$('[data-venta]', el).forEach(b => b.addEventListener('click', () => openVenta(b.dataset.venta)));
+    $$('[data-fact]', el).forEach(b => b.addEventListener('click', () => { if ($('#d-dia').open) $('#d-dia').close(); openTab('facturas'); openInvoice(b.dataset.fact); }));
+  }
+
+  function renderVentas() {
+    vDia = today();
+    const d = delDia(vDia);
+    $('#vh-fecha').textContent = 'Ventas de hoy · ' + diaLargo(vDia);
+    $('#vh-total').textContent = fmt(d.total);
+    $('#vh-detalle').innerHTML = d.n
+      ? `${d.n} ${d.n === 1 ? 'venta' : 'ventas'}` + (d.hayCosto ? ` · ganancia <b style="color:var(--ok)">${esc(fmt(d.ganancia))}</b>` : '')
+      : 'Todavía no hay ventas hoy. Empieza en cero cada día.';
+    const porMetodo = {};
+    d.vs.forEach(v => porMetodo[v.metodo || 'Otro'] = (porMetodo[v.metodo || 'Otro'] || 0) + Number(v.monto || 0));
+    const partes = Object.entries(porMetodo).map(([m, x]) => `<span><b>${esc(fmt(x))}</b> ${esc(m.toLowerCase())}</span>`);
+    if (d.fs.length) partes.push(`<span><b>${esc(fmt(d.facturas))}</b> en facturas</span>`);
+    $('#vh-split').innerHTML = partes.join('');
+    // Lista de hoy
+    const el = $('#l-ventas-hoy');
+    el.innerHTML = d.n ? d.vs.map(ventaRow).join('') + d.fs.map(facturaDiaRow).join('') : '<div class="empty" style="padding:16px">Las ventas que registres hoy aparecen aquí.</div>';
+    bindDiaRows(el);
+    renderHistorial();
+    const sel = $('#f-venta-rapida').elements.cliente_id, cv = sel.value;
+    sel.innerHTML = '<option value="">— Sin cliente —</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    sel.value = clientes.some(c => c.id === cv) ? cv : '';
+  }
+
+  let vMes = today().slice(0, 7);
+  $('#vh-mes').addEventListener('input', () => { vMes = $('#vh-mes').value; renderHistorial(); });
+  function renderHistorial() {
+    const dias = [...new Set([...ventas.map(v => v.fecha), ...facturas.map(f => f.fecha)].filter(Boolean))].sort().reverse();
+    const meses = [...new Set([today().slice(0, 7), ...dias.map(x => x.slice(0, 7))])].sort().reverse();
+    $('#vh-mes').innerHTML = meses.map(m => {
+      const t = new Date(m + '-15T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+      return `<option value="${m}">${esc(t.charAt(0).toUpperCase() + t.slice(1))}</option>`;
+    }).join('');
+    if (!meses.includes(vMes)) vMes = meses[0];
+    $('#vh-mes').value = vMes;
+    const delMes = dias.filter(x => x.startsWith(vMes)).map(x => ({ dia: x, ...delDia(x) }));
+    const totalMes = delMes.reduce((s, x) => s + x.total, 0), ganMes = delMes.reduce((s, x) => s + x.ganancia, 0);
+    const conVentas = delMes.filter(x => x.total > 0);
+    $('#vh-mes-tot').innerHTML =
+      `<div class="stat"><div class="k">Vendido en el mes</div><div class="v">${fmt(totalMes)}</div></div>
+       <div class="stat"><div class="k">Promedio por día</div><div class="v">${fmt(conVentas.length ? totalMes / conVentas.length : 0)}</div></div>
+       <div class="stat"><div class="k">Ganancia</div><div class="v">${delMes.some(x => x.hayCosto) ? fmt(ganMes) : '—'}</div></div>`;
+    const max = Math.max(0, ...delMes.map(x => x.total));
+    $('#l-dias').innerHTML = delMes.length ? delMes.map(x => `<button class="row" data-dia="${x.dia}" style="display:block">
+        <div style="display:flex;gap:10px;align-items:baseline"><div class="main"><div class="title">${esc(diaLargo(x.dia))}${x.dia === today() ? ' (hoy)' : ''}</div>
+        <div class="sub">${x.n} ${x.n === 1 ? 'venta' : 'ventas'}${x.hayCosto ? ' · ganancia ' + esc(fmt(x.ganancia)) : ''}</div></div>
+        <div class="amount">${esc(fmt(x.total))}</div></div>
+        <div class="bar" style="margin-top:8px"><span style="width:${max > 0 ? Math.max(2, x.total / max * 100) : 0}%"></span></div></button>`).join('')
+      : '<div class="empty">No hay ventas en este mes.</div>';
+    $$('[data-dia]', $('#l-dias')).forEach(b => b.addEventListener('click', () => openDia(b.dataset.dia)));
+  }
+
+  let diaAbierto = null;
+  function openDia(dia) {
+    diaAbierto = dia;
+    const d = delDia(dia);
+    $('#ddia-title').textContent = diaLargo(dia);
+    $('#ddia-tot').innerHTML =
+      `<div class="stat"><div class="k">Total del día</div><div class="v">${fmt(d.total)}</div></div>
+       <div class="stat"><div class="k">Ventas</div><div class="v">${d.n}</div></div>
+       <div class="stat"><div class="k">Ganancia</div><div class="v">${d.hayCosto ? fmt(d.ganancia) : '—'}</div></div>`;
+    const el = $('#ddia-list');
+    el.innerHTML = d.n ? d.vs.map(ventaRow).join('') + d.fs.map(facturaDiaRow).join('') : '<div class="empty">No hay ventas este día.</div>';
+    bindDiaRows(el);
+    if (!$('#d-dia').open) $('#d-dia').showModal();
+  }
+
+  // Registrar rápido
+  $$('#vr-metodo button').forEach(b => b.addEventListener('click', () => {
+    vMetodo = b.dataset.m;
+    $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  }));
+  $('#f-venta-rapida').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, btn = $('#vr-save'), costo = num(f.elements.costo.value);
+    const data = { fecha: today(), monto: num(f.elements.monto.value) || 0, descripcion: f.elements.descripcion.value.trim() || null,
+      metodo: vMetodo, costo: Number.isFinite(costo) ? costo : null, cliente_id: f.elements.cliente_id.value || null };
+    if (!(data.monto > 0)) return toast('Escribe el monto de la venta.', true);
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const { error } = await sb.from('ventas').insert(data);
+    btn.disabled = false; btn.textContent = 'Registrar venta';
+    if (error) return toast(errText(error), true);
+    ['monto', 'descripcion', 'costo'].forEach(k => f.elements[k].value = '');
+    f.elements.cliente_id.value = '';
+    vMetodo = 'Efectivo';
+    $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === 'Efectivo'));
+    toast('Venta registrada: ' + fmt(data.monto));
+    await loadVentas();
+  });
+
+  // Editar / borrar una venta
+  let openVentaId = null;
+  function openVenta(id) {
+    const v = ventas.find(x => x.id === id); if (!v) return;
+    openVentaId = id;
+    const f = $('#f-venta'); f.reset();
+    f.elements.cliente_id.innerHTML = '<option value="">— Sin cliente —</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    ['monto', 'fecha', 'descripcion', 'costo', 'cliente_id'].forEach(k => f.elements[k].value = v[k] ?? '');
+    f.elements.metodo.value = v.metodo || 'Efectivo';
+    $('#d-venta').showModal();
+  }
+  async function despuesDeCambiarVenta() {
+    await loadVentas();
+    if ($('#d-dia').open && diaAbierto) openDia(diaAbierto);
+  }
+  $('#f-venta').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, costo = num(f.elements.costo.value);
+    const data = { monto: num(f.elements.monto.value) || 0, fecha: f.elements.fecha.value || today(), descripcion: f.elements.descripcion.value.trim() || null,
+      metodo: f.elements.metodo.value, costo: Number.isFinite(costo) ? costo : null, cliente_id: f.elements.cliente_id.value || null };
+    const { error } = await sb.from('ventas').update(data).eq('id', openVentaId);
+    if (error) return toast(errText(error), true);
+    $('#d-venta').close(); toast('Venta actualizada');
+    despuesDeCambiarVenta();
+  });
+  $('#dvt-delete').addEventListener('click', async () => {
+    if (!confirm('¿Borrar esta venta? No se puede deshacer.')) return;
+    const { error } = await sb.from('ventas').delete().eq('id', openVentaId);
+    if (error) return toast(errText(error), true);
+    $('#d-venta').close(); toast('Venta borrada');
+    despuesDeCambiarVenta();
+  });
+
+  // A la medianoche (o al volver a abrir la página otro día) el total de hoy vuelve a cero solo
+  setInterval(() => { if (started && vDia !== today()) renderVentas(); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && started && vDia !== today()) renderVentas(); });
 
   // ---------- Cotizaciones y facturas con el diseño de Surteme ----------
   const DOC_SQL = `create table if not exists documentos (
