@@ -155,3 +155,29 @@ alter table ventas enable row level security;
 drop policy if exists "usuarios_ventas" on ventas;
 create policy "usuarios_ventas" on ventas for all to authenticated using (true) with check (true);
 grant select, insert, update, delete on ventas to authenticated;
+
+-- ===== Arreglos (octubre 2026) =====
+-- Clientes archivados (en vez de borrarlos con todo su historial)
+alter table clientes add column if not exists archivado boolean not null default false;
+-- Que no se repita el número de una cotización o factura
+create unique index if not exists documentos_tipo_numero_uq on documentos (tipo, numero) where numero is not null;
+-- Índices para que siga rápida al crecer
+create index if not exists abonos_factura_id_idx on abonos (factura_id);
+create index if not exists facturas_cliente_id_idx on facturas (cliente_id);
+create index if not exists precios_proveedor_id_idx on precios (proveedor_id);
+create index if not exists documentos_cliente_id_idx on documentos (cliente_id);
+create index if not exists documentos_factura_id_idx on documentos (factura_id);
+create index if not exists documentos_origen_id_idx on documentos (origen_id);
+create index if not exists ventas_cliente_id_idx on ventas (cliente_id);
+create index if not exists ventas_fecha_idx on ventas (fecha);
+create index if not exists gastos_fecha_idx on gastos (fecha);
+-- Avisar al otro teléfono cuando algo cambia (tiempo real)
+do $$
+declare t text;
+begin
+  foreach t in array array['clientes','facturas','abonos','documentos','ventas','gastos','proveedores','precios','ajustes'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
