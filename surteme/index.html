@@ -31,9 +31,11 @@
     --bad: #c92a2a;
     --bad-soft: #fde4e4;
     --shadow: 0 1px 2px rgba(21,32,29,.05), 0 6px 20px rgba(21,32,29,.06);
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
+      color-scheme: dark;
       --bg: #111615;
       --surface: #19201e;
       --surface-2: #222b28;
@@ -55,6 +57,7 @@
     }
   }
   :root[data-theme="dark"] {
+    color-scheme: dark;
     --bg: #111615; --surface: #19201e; --surface-2: #222b28; --text: #ecf2f0; --muted: #a1afab;
     --line: #2f3a37; --accent: #2dd4bf; --accent-hover: #5eead4; --accent-soft: #123b36; --accent-text: #5eead4;
     --on-accent: #062a26; --ok: #69db7c; --ok-soft: #173321; --warn: #ffc65c; --warn-soft: #3a2d10;
@@ -89,7 +92,7 @@
     flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted);
     padding: 9px 6px; border-radius: 10px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
-  @media (max-width: 600px) { nav.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; } nav.tabs button { font-size: .82rem; padding: 7px 2px; } }
+  @media (max-width: 600px) { nav.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; } nav.tabs button { font-size: .82rem; padding: 7px 2px; min-height: 44px; } }
   nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
 
   main { padding-top: 20px; padding-bottom: 60px; }
@@ -109,6 +112,8 @@
   }
   textarea { min-height: 70px; resize: vertical; }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  /* Campos que no se pueden cambiar aquí (se ven grises) */
+  input:disabled, select:disabled { background: var(--surface-2); color: var(--muted); opacity: 1; }
   .grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid .full { grid-column: 1 / -1; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
@@ -123,7 +128,7 @@
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .btn.primary:hover { background: var(--accent-hover); }
   .btn.danger { color: var(--bad); }
-  .btn.small { min-height: 34px; padding: 5px 10px; font-size: .9rem; }
+  .btn.small { min-height: 40px; padding: 5px 12px; font-size: .9rem; }
   .btn:disabled { opacity: .55; cursor: default; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
   .actions .push { margin-left: auto; }
@@ -133,16 +138,19 @@
   .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .92rem; font-weight: 600; padding: 8px 8px; border-radius: 9px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .chips button { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: .9rem; cursor: pointer; }
+  .chips button { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 8px 14px; min-height: 40px; font: inherit; font-size: .9rem; cursor: pointer; }
   .chips button:hover { border-color: var(--accent); }
   .results { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
   @media (max-width: 560px) { .results { grid-template-columns: 1fr 1fr; } }
   .stat { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; min-width: 0; }
   .stat .k { font-size: .82rem; color: var(--muted); font-weight: 600; }
-  .stat .v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  @media (max-width: 560px) { .stat .v { font-size: 1.08rem; } .stat .k { font-size: .78rem; } }
+  /* Los montos no se parten en dos líneas: si no caben, la letra se achica (ver ajustarMontos) */
+  .stat .v { font-size: clamp(.95rem, 4.6vw, 1.35rem); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 560px) { .stat .k { font-size: .78rem; } }
   .stat.big { grid-column: 1 / -1; background: var(--accent-soft); }
-  .stat.big .v { font-size: 1.9rem; color: var(--accent-text); }
+  /* Un monto que no cabe ni con la letra más chica pasa a ocupar toda la fila (ver ajustarMontos) */
+  .stat.ancha { grid-column: 1 / -1; }
+  .stat.big .v { font-size: 1.9rem; color: var(--accent-text); white-space: normal; }
   .stat .v.neg { color: var(--bad); }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-weight: 500; }
   .check input { width: 20px; height: 20px; min-height: 0; }
@@ -158,8 +166,11 @@
   }
   .row:hover { border-color: var(--accent); }
   .row .main { flex: 1; min-width: 0; }
-  .row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row .sub { color: var(--muted); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .title { font-weight: 600; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  /* La línea de abajo (fecha, número, ganancia…) baja a otra línea si no cabe: nunca se corta con «…» */
+  .row .sub { color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
+  .row .completo { display: block; white-space: normal; overflow: visible; overflow-wrap: anywhere; -webkit-line-clamp: none; }
+  .row .main > .badge { margin-top: 4px; }
   .row .amount { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text);
     display: grid; place-items: center; font-weight: 700; flex: none; }
@@ -168,6 +179,7 @@
   .badge.pendiente { background: var(--warn-soft); color: var(--warn); }
   .badge.rechazada { background: var(--bad-soft); color: var(--bad); }
   .badge.abonada { background: var(--accent-soft); color: var(--accent-text); }
+  .badge.archivado { background: var(--surface-2); color: var(--muted); }
   .btn.wa { background: #25d366; border-color: #25d366; color: #073b1d; }
   .btn.wa:hover { background: #1fbe5b; }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
@@ -208,7 +220,7 @@
   .item-card .grid { gap: 8px; }
   .item-card input { min-height: 40px; padding: 8px 10px; background: var(--surface); }
   .item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; }
-  .item-head .x { width: 30px; height: 30px; font-size: 1rem; margin-left: auto; }
+  .item-head .x { width: 44px; height: 44px; font-size: 1.1rem; margin-left: auto; background: var(--surface); border: 1px solid var(--line); }
   .item-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: .9rem; color: var(--muted); }
   .item-foot b { color: var(--text); }
   .doc-sums { margin-top: 14px; display: grid; gap: 4px; font-size: .95rem; }
@@ -272,9 +284,26 @@
   /* Ventas del día */
   .today-card { background: var(--accent-soft); border-color: transparent; margin-bottom: 14px; }
   .today-card .k { font-weight: 700; color: var(--accent-text); font-size: .92rem; }
-  .today-total { font-size: 2.4rem; font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px; }
+  .today-total { font-size: clamp(1.6rem, 9vw, 2.4rem); white-space: nowrap; font-weight: 800; color: var(--accent-text); font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px; }
   .today-split { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: .9rem; color: var(--muted); }
   .today-split b { color: var(--text); }
+
+  /* Aviso fijo arriba cuando no se pudieron cargar los datos */
+  .carga-error { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 10px; padding: 8px 12px;
+    border-radius: 12px; background: var(--bad-soft); color: var(--bad); font-weight: 600; font-size: .9rem; }
+  .carga-error span { flex: 1; min-width: 0; }
+  /* Mientras una parte nunca ha cargado, sus totales salen con «—» (no un RD$0.00 que parece real)
+     y las listas dicen «Cargando…» o «No se pudo cargar» (no «Aún no hay…») */
+  section.sin-datos .totals .stat .v, section.sin-datos .today-total { color: transparent; position: relative; }
+  section.sin-datos .totals .stat .v::after, section.sin-datos .today-total::after { content: '—'; color: var(--muted); position: absolute; left: 0; top: 0; }
+  section.sin-datos #vh-split { display: none; }
+  section.sin-datos #vh-detalle { font-size: 0; }
+  section.sin-datos #vh-detalle::after { content: 'Cargando…'; font-size: .9rem; }
+  #v-app.con-fallo section.sin-datos #vh-detalle::after { content: 'No se pudieron cargar las ventas.'; }
+  section.sin-datos .list { opacity: .6; }
+  section.sin-datos .list > .empty { font-size: 0; }
+  section.sin-datos .list > .empty::after { content: 'Cargando…'; font-size: 1rem; }
+  #v-app.con-fallo section.sin-datos .list > .empty::after { content: 'No se pudo cargar. Revisa el internet y pulsa «Reintentar» arriba.'; }
 
   /* Ventanas emergentes */
   dialog {
@@ -285,7 +314,7 @@
   .dlg-head { display: flex; align-items: center; gap: 8px; padding: 16px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); z-index: 1; }
   .dlg-head h3 { font-size: 1.15rem; flex: 1; }
   .dlg-body { padding: 18px; }
-  .x { border: 0; background: var(--surface-2); color: var(--text); width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; }
+  .x { border: 0; background: var(--surface-2); color: var(--text); width: 44px; height: 44px; flex: none; border-radius: 50%; font-size: 1.3rem; cursor: pointer; }
   .file-now { font-size: .88rem; color: var(--muted); margin-top: 6px; }
   .profit-line { margin-top: 6px; font-size: .9rem; font-weight: 600; }
   .sub-title { font-size: 1rem; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
@@ -304,9 +333,13 @@
   .toast {
     position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 100;
     background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600;
-    max-width: calc(100vw - 32px); box-shadow: var(--shadow);
+    width: max-content; max-width: calc(100vw - 32px); box-shadow: var(--shadow);
+    pointer-events: none;  /* el aviso no tapa los toques: se puede pulsar el botón que quede debajo */
   }
-  .toast.error { background: var(--bad); color: #fff; }
+  /* Rojo oscuro también en modo oscuro: el rojo claro de ese modo con letra blanca casi no se lee */
+  .toast.error { background: #b42318; color: #fff; }
+  /* Con una ventana abierta, el aviso sale arriba: abajo están los botones (Guardar, Borrar…) y los taparía */
+  .toast.arriba { top: calc(12px + env(safe-area-inset-top, 0px)); bottom: auto; }
 </style>
 </head>
 <body>
@@ -356,6 +389,7 @@
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
         <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
       </nav>
+      <div class="carga-error" id="carga-error" role="alert" hidden><span id="carga-error-txt">No se pudieron cargar tus datos. Revisa el internet.</span><button class="btn small" id="b-reintentar" type="button">Reintentar</button></div>
     </div>
   </header>
 
@@ -434,6 +468,7 @@
         <button class="btn primary" id="b-new-client">+ Nuevo cliente</button>
       </div>
       <div class="filters"><input class="search" id="s-clientes" type="search" placeholder="Buscar por nombre, teléfono o RNC…"></div>
+      <label class="check" id="w-archivados" style="margin:0 0 12px" hidden><input type="checkbox" id="s-archivados"> <span id="t-archivados">Ver archivados</span></label>
       <div class="list" id="l-clientes"></div>
     </section>
 
@@ -461,7 +496,7 @@
     <!-- Facturas -->
     <section id="t-facturas" hidden>
       <div class="section-head">
-        <h2>Facturas</h2>
+        <div><h2>Facturas</h2><p class="hint"><b>+ Crear factura</b>: la haces aquí con el diseño de Surteme. <b>Subir factura</b>: guardas la foto o el PDF de una que ya tienes.</p></div>
         <div class="spacer"></div>
         <button class="btn" id="b-new-invoice">Subir factura</button>
         <button class="btn primary" id="b-crear-factura">+ Crear factura</button>
@@ -580,6 +615,7 @@
 <dialog id="d-client">
   <div class="dlg-head"><h3 id="dc-title">Cliente</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
   <div class="dlg-body">
+    <p class="hint" id="dc-archivado" hidden style="margin:0 0 12px"><b>Cliente archivado.</b> No sale en la lista de clientes ni al elegir cliente, pero sus facturas, pagos y ventas siguen guardados. Para volver a usarlo, pulsa <b>Activar</b>.</p>
     <form id="f-client">
       <div class="grid">
         <label class="field full"><span>Nombre o empresa *</span><input name="nombre" required></label>
@@ -610,8 +646,9 @@
   <div class="dlg-body">
     <div id="di-doclink" hidden style="margin:0 0 14px">
       <div class="actions" style="margin:0"><button type="button" class="btn primary" id="di-viewdoc">Ver / compartir factura</button><button type="button" class="btn" id="di-editdoc">Editar productos y precios</button></div>
-      <p class="hint">Esta factura se hizo con el diseño de Surteme. Para cambiar productos o precios usa <b>Editar productos y precios</b>.</p>
+      <p class="hint">Esta factura se hizo con el diseño de Surteme. El cliente, el número, la fecha y los montos se cambian en <b>Editar productos y precios</b>, para que la factura que tiene el cliente y la de cobro digan lo mismo. Aquí solo cambias el estado, el archivo y las notas.</p>
     </div>
+    <p class="hint" id="di-espera" hidden style="margin:0 0 14px">Todavía no han cargado tus facturas hechas con el diseño de Surteme. Hasta que carguen, aquí solo puedes cambiar el estado, el archivo y las notas (así la factura que tiene el cliente y la de cobro siguen diciendo lo mismo).</p>
     <form id="f-invoice">
       <div class="grid">
         <label class="field full"><span>Cliente *</span><select name="cliente_id" required></select></label>
@@ -813,7 +850,7 @@
         <button type="button" class="btn" id="dd-add">+ Escribir producto</button>
       </div>
       <p class="hint" style="margin-top:8px">Al elegir de tu lista, el precio de venta se calcula con un margen de
-        <input id="dd-margen" type="number" inputmode="decimal" step="any" min="0" max="95" style="width:70px;min-height:32px;padding:4px 8px;display:inline-block"> %. Tu costo nunca sale en el documento.</p>
+        <input id="dd-margen" type="number" inputmode="decimal" step="any" min="0" max="95" style="width:74px;min-height:40px;padding:6px 8px;display:inline-block"> %. Tu costo nunca sale en el documento.</p>
 
       <label class="check"><input type="checkbox" name="itbis"> Agregar ITBIS (18%)</label>
       <div class="doc-sums" id="dd-sums"></div>
@@ -862,14 +899,15 @@
 <dialog id="d-empresa">
   <div class="dlg-head"><h3>Datos de mi empresa</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
   <div class="dlg-body">
-    <p class="hint" style="margin:0 0 12px">Salen al pie de las cotizaciones y facturas. Deja vacío lo que no quieras mostrar.</p>
+    <p class="hint" style="margin:0 0 12px">Salen al pie de las cotizaciones y facturas. Deja vacío lo que no quieras mostrar. El mensaje al pie sale siempre, salvo que marques <b>No mostrar mensaje al pie</b>.</p>
     <form id="f-empresa">
       <div class="grid">
         <label class="field"><span>Teléfono / WhatsApp</span><input name="telefono" type="tel"></label>
         <label class="field"><span>RNC</span><input name="rnc"></label>
         <label class="field full"><span>Dirección</span><input name="direccion"></label>
         <label class="field full"><span>Correo</span><input name="correo" type="email"></label>
-        <label class="field full"><span>Mensaje al pie</span><input name="gracias" placeholder="¡Gracias por preferirnos!"></label>
+        <div class="full"><label class="field"><span>Mensaje al pie</span><input name="gracias" placeholder="¡Gracias por preferirnos!"></label>
+          <label class="check" style="margin-top:8px"><input type="checkbox" name="sin_gracias"> No mostrar mensaje al pie</label></div>
         <label class="field"><span>Condiciones de pago (por defecto)</span><input name="condiciones" list="dl-cond" placeholder="Contado"></label>
         <label class="field"><span>Validez de cotizaciones</span><input name="validez" placeholder="15 días"></label>
         <label class="field full"><span>Notas fijas en cotizaciones</span><textarea name="notas_cot" placeholder="Ej. Precios sujetos a cambio sin previo aviso."></textarea></label>
@@ -894,14 +932,28 @@
 
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
+  // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
   const APP_VERSION = '2026-10-17b';
-  fetch('version.txt?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
-    v = v.trim();
-    if (v && v !== APP_VERSION && !sessionStorage.getItem('surteme_upd_' + v)) {
-      sessionStorage.setItem('surteme_upd_' + v, '1');
-      location.replace(location.pathname + '?v=' + encodeURIComponent(v));
-    }
-  }).catch(() => {});
+  let ultimaRevision = 0;
+  function revisarVersion() {
+    if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
+    ultimaRevision = Date.now();
+    fetch('version.txt?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(v => {
+      v = v.trim();
+      // Nunca recarga con algo a medio escribir: lo intenta otra vez la próxima vez que vuelvas a la app
+      if (v && v !== APP_VERSION && !sessionStorage.getItem('surteme_upd_' + v) && !ocupado()) {
+        sessionStorage.setItem('surteme_upd_' + v, '1');
+        location.replace(location.pathname + '?v=' + encodeURIComponent(v));
+      }
+    }).catch(() => {});
+  }
+  // ¿Hay algo abierto o a medio escribir? (una ventana, «Registrar una venta», las calculadoras, o un campo con el cursor)
+  function ocupado() {
+    const a = document.activeElement;
+    return [...document.querySelectorAll('dialog')].some(d => d.open) || !!(a && a.matches && a.matches('input, textarea, select')) ||
+      [...document.querySelectorAll('#f-venta-rapida input, #c-costo, #c-precio, #c-margen, #fu-km')].some(i => i.value);
+  }
+  revisarVersion();
 
   // ---------- Utilidades ----------
   const money = new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' });
@@ -913,20 +965,109 @@
   const fdate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const initials = s => String(s || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
   const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // Buscar por palabras: «funda 51» encuentra «Funda plástica #51 blanca» (cada palabra puede estar en cualquier parte)
+  const palabras = q => norm(q).split(/\s+/).filter(Boolean);
+  const tieneTodas = (ws, texto) => { const t = norm(texto); return ws.every(w => t.includes(w)); };
   const show = (id) => { ['v-setup', 'v-login', 'v-app'].forEach(v => $('#' + v).hidden = v !== id); };
 
+  // Los avisos van dentro de la ventana abierta de más arriba: si quedan en la página, la ventana los tapa
   let toastTimer;
-  function toast(text, isError) {
+  const abiertas = [];
+  function ventanaArriba() {
+    $$('dialog').forEach(d => { const i = abiertas.indexOf(d); if (!d.open && i >= 0) abiertas.splice(i, 1); else if (d.open && i < 0) abiertas.push(d); });
+    return abiertas[abiertas.length - 1];
+  }
+  function ponerAviso() {
+    const t = $('#toast'), host = ventanaArriba() || document.body;
+    if (t.parentNode !== host) host.appendChild(t);
+    t.classList.toggle('arriba', host !== document.body);
+  }
+  function toast(text, isError, ms) {
     const t = $('#toast');
     t.textContent = text; t.className = 'toast' + (isError ? ' error' : ''); t.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, isError ? 6000 : 2500);
+    ponerAviso();
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, ms || (isError ? 6000 : 2500));
   }
+  // Si se abre o se cierra una ventana mientras se ve el aviso, se mueve para que siga a la vista
+  new MutationObserver(() => { ventanaArriba(); if (!$('#toast').hidden) ponerAviso(); })
+    .observe(document.body, { attributes: true, attributeFilter: ['open'], subtree: true });
+
+  // Ventanas con algo escrito que todavía no se ha guardado (ver «Cerrar ventanas» al final)
+  const sucias = new WeakSet();
+  // Pone las opciones de una lista desplegable solo si cambiaron: al recargar no se cierra la lista que tengas abierta
+  const opcionesPuestas = new WeakMap();
+  const ponerOpciones = (el, html) => { if (opcionesPuestas.get(el) !== html) { el.innerHTML = html; opcionesPuestas.set(el, html); } };
+
+  // Montos grandes: si no caben en su cuadro, la letra se achica (en vez de partir el número o salirse de la pantalla)
+  // Solo se deshace lo que puso esta función: los textos con su propia letra (la ayuda de Calcular, el aviso
+  // «Estás vendiendo por debajo del costo»…) se quedan como están.
+  let montosPend = false;
+  const achicados = new Set();
+  function ajustarMontos() {
+    montosPend = false;
+    achicados.forEach(v => { v.style.fontSize = ''; const st = v.closest('.stat'); if (st) st.classList.remove('ancha'); });
+    achicados.clear();
+    const noCaben = vs => vs.map(v => [v, v.clientWidth, v.scrollWidth, parseFloat(getComputedStyle(v).fontSize)]).filter(([, w, s]) => w && s > w + 1);
+    const malos = noCaben($$('.stat .v, .today-total'));
+    // Si ni con la letra más chica (11px) cabe, el cuadro pasa a ocupar toda la fila; después se achica lo que haga falta
+    malos.forEach(([v, w, s, f]) => { const st = v.closest('.stat'); if (st && f * w / s < 11) { st.classList.add('ancha'); achicados.add(v); } });
+    noCaben(malos.map(m => m[0])).forEach(([v, w, s, f]) => { v.style.fontSize = Math.max(11, Math.floor(f * w / s * 10) / 10) + 'px'; achicados.add(v); });
+  }
+  const pedirAjuste = () => { if (!montosPend) { montosPend = true; requestAnimationFrame(ajustarMontos); } };
+  new MutationObserver(pedirAjuste).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'open'] });
+  window.addEventListener('resize', pedirAjuste);
   function errText(e) {
     const m = (e && (e.message || e.error_description)) || String(e);
     if (/invalid login/i.test(m)) return 'Correo o contraseña incorrectos.';
-    if (/failed to fetch|network/i.test(m)) return 'Sin conexión a internet. Intenta de nuevo.';
+    if (sinRed(m)) return 'Sin conexión a internet. Intenta de nuevo.';
     if (/email not confirmed/i.test(m)) return 'Ese correo aún no está confirmado en Supabase.';
+    if (/jwt/i.test(m)) return 'Tu sesión venció. Pulsa «Salir» y vuelve a entrar.';
+    if (e && e.code === 'PGRST116') return 'Ese registro ya no existe: quizás lo borraron en el otro teléfono. Cierra la ventana.';
     return 'Hubo un problema: ' + m;
+  }
+  // Error de internet. El iPhone (Safari) dice «Load failed»; Chrome, «Failed to fetch»
+  const sinRed = m => /failed to fetch|network|load failed/i.test(m);
+  // Id hecho en el teléfono para cada registro nuevo: si se pierde la respuesta o algo falla a mitad
+  // y se pulsa Guardar otra vez, se completa el mismo registro en vez de crear otro igual
+  const nuevoId = () => crypto.randomUUID ? crypto.randomUUID()
+    : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+  // Al guardar un registro que ya existía se mandan solo los campos que cambiaste desde que abriste la ventana: si el otro
+  // teléfono cambió otra cosa del mismo registro mientras tanto, no se deshace. «antes» = lo que mostraba el formulario al abrir.
+  const leerCampos = (form, campos) => Object.fromEntries(campos.map(k => { const el = form.elements[k]; return [k, el.type === 'checkbox' ? el.checked : el.value]; }));
+  const soloCambios = (data, ahora, antes) => Object.fromEntries(Object.entries(data).filter(([k]) => !(k in antes) || ahora[k] !== antes[k]));
+  // Mientras se guarda, el botón queda desactivado: un segundo toque no crea otro registro igual
+  async function conBoton(btn, texto, fn) {
+    if (btn.disabled) return;
+    const antes = btn.textContent;
+    btn.disabled = true; btn.textContent = texto;
+    try { return await fn(); } finally { btn.disabled = false; btn.textContent = antes; }
+  }
+  // Borra archivos guardados. Se llama después de borrar el registro; si falla, solo queda anotado en la consola
+  async function borrarArchivos(files) {
+    files = files.filter(Boolean); if (!files.length) return;
+    try { const { error } = await sb.storage.from(BUCKET).remove(files); if (error) console.warn('No se pudieron borrar archivos', files, error); }
+    catch (e) { console.warn('No se pudieron borrar archivos', files, e); }
+  }
+  // Sube el archivo de un registro ya guardado y lo anota. Si no se puede anotar, se borra lo subido (no quedan archivos sueltos)
+  async function subirArchivo(tabla, carpeta, id, file, anterior) {
+    const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+    const path = `${carpeta}${id}/${Date.now()}-${safe}`;
+    const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
+    if (up.error) throw up.error;
+    const u2 = await sb.from(tabla).update({ archivo: path }).eq('id', id);
+    if (u2.error) { borrarArchivos([path]); throw u2.error; }
+    if (anterior && anterior !== path) borrarArchivos([anterior]);
+  }
+  // Motivo corto de un error, para ponerlo entre paréntesis dentro de un aviso
+  const motivo = er => {
+    const m = (er && (er.message || er.error_description)) || String(er);
+    return sinRed(m) ? 'sin conexión a internet' : errText(er).replace(/^Hubo un problema: /, '').replace(/\.$/, '');
+  };
+  // Aviso cuando el registro sí se guardó pero el archivo no subió: sale en rojo y también queda escrito junto al archivo
+  function sinArchivo(que, er, donde) {
+    const t = `${que}, pero el archivo no subió (${motivo(er)}). Pulsa Guardar otra vez para subirlo. Si cierras la ventana, puedes adjuntarlo después.`;
+    toast(t, true, 9000);
+    $(donde).innerHTML = `<b style="color:var(--bad)">${esc(t)}</b>`;
   }
 
   // ---------- Calculadora (funciona sin conexión) ----------
@@ -1018,8 +1159,12 @@
     const { error } = await sb.auth.signInWithPassword({ email: f.get('email').trim(), password: f.get('password') });
     btn.disabled = false; btn.textContent = 'Entrar';
     if (error) { msg.textContent = errText(error); msg.hidden = false; }
+    else $('#f-login').elements.password.value = '';  // ya entró: la contraseña no se queda escrita en la página
   });
-  $('#b-logout').addEventListener('click', () => sb.auth.signOut());
+  // Salir cierra la sesión solo en este teléfono (los demás equipos siguen dentro), y pregunta antes
+  $('#b-logout').addEventListener('click', () => {
+    if (confirm('¿Salir de Surteme en este teléfono? Tendrás que poner tu correo y contraseña otra vez.')) sb.auth.signOut({ scope: 'local' });
+  });
 
   sb.auth.onAuthStateChange((_ev, session) => {
     if (session) {
@@ -1029,65 +1174,214 @@
         let tab = 'ventas';
         try { tab = localStorage.getItem('surteme_tab') || 'ventas'; } catch (e) {}
         openTab(tab);
+        mostrarCarga();
+        escucharCambios(session);
         setTimeout(load, 0);
       }
     } else {
+      const salio = started || _ev === 'SIGNED_OUT';
       started = false; clientes = []; facturas = [];
+      dejarDeEscuchar();
+      Object.keys(listo).forEach(k => listo[k] = false); fallo = {}; mostrarCarga();
+      // Al salir se borra la contraseña escrita: para volver a entrar hay que ponerla otra vez (el correo se queda).
+      // (Solo al salir: al abrir la página no se toca, por si el teléfono ya la llenó solo.)
+      if (salio) $('#f-login').elements.password.value = '';
       show('v-login');
     }
   });
 
-  async function load() {
+  // ---------- Cargar los datos ----------
+  // Supabase entrega como mucho 1,000 filas por pedido: se piden de 1,000 en 1,000 hasta tenerlas todas.
+  // «pedir» arma la consulta con un orden fijo que termina en id (así ninguna fila se repite ni se salta entre un pedido y otro).
+  async function todas(pedir) {
+    const out = [];
+    for (let i = 0; ; i += 1000) {
+      const r = await pedir().range(i, i + 999);
+      if (r.error) return { data: null, error: r.error };
+      out.push(...(r.data || []));
+      if (!r.data || r.data.length < 1000) return { data: out, error: null };
+    }
+  }
+  // Partes que ya cargaron bien al menos una vez. Mientras una no ha cargado, sus totales salen con «—» (no un RD$0.00 falso)
+  // y no se crean clientes, facturas ni cotizaciones (saldrían repetidos o con un número ya usado).
+  const listo = { base: false, sup: false, gastos: false, ventas: false, docs: false };
+  const SECCIONES = { base: ['clientes', 'facturas', 'ventas', 'gastos'], ventas: ['ventas', 'gastos'], gastos: ['gastos'], sup: ['suplidores'], docs: ['cotiz'] };
+  let ultimaCarga = 0, cargando = null, otraVez = false, fallo = {};
+  // Lo que no se pudo cargar la última vez, por partes (base, sup, gastos, ventas, docs)
+  const fallos = () => Object.values(fallo).filter(Boolean);
+  // Cada parte anota aquí si cargó bien o no, y el aviso de arriba se pone al día. Así, si después de guardar una venta
+  // (o un gasto, o un precio) su parte carga bien, el aviso rojo y los «—» se quitan ya, sin esperar al reintento de 30 s.
+  function marcar(parte, err) { fallo[parte] = err || null; mostrarCarga(); return err || null; }
+  // Si se pide cargar mientras ya se está cargando, se vuelve a cargar al terminar (así siempre se ve lo último).
+  // Al cargar solo se dibujan otra vez las listas y los totales: lo que se esté escribiendo en una ventana no se toca.
+  function load() {
+    if (cargando) { otraVez = true; return cargando; }
+    return cargando = (async () => {
+      try { do { otraVez = false; await cargarTodo(); } while (otraVez); }
+      finally { cargando = null; }
+    })();
+  }
+  async function cargarTodo() {
+    const inicio = Date.now();
+    await cargarBase();
+    // Si una parte falla, las demás se cargan igual
+    await Promise.all([loadSup(true), loadGastos(true), loadVentas(true), loadDocs(true)]);
+    if (!fallos().length) ultimaCarga = inicio;
+    mostrarCarga();
+    refrescarVentanas();
+  }
+  async function cargarBase() {
     const [c, f, a] = await Promise.all([
-      sb.from('clientes').select('*').order('nombre'),
-      sb.from('facturas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 9999),
-      sb.from('abonos').select('*').range(0, 9999),
+      todas(() => sb.from('clientes').select('*').order('nombre').order('id')),
+      todas(() => sb.from('facturas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).order('id')),
+      todas(() => sb.from('abonos').select('*').order('id')),
     ]);
-    if (c.error || f.error) { toast(errText(c.error || f.error), true); return; }
-    clientes = c.data; facturas = f.data;
-    abTablaFalta = missingTable(a.error);
-    abonos = a.error ? [] : a.data;
+    // Lo que no se pudo leer se queda como estaba (mejor datos de hace un rato que una lista vacía)
+    if (!c.error) clientes = c.data;
+    if (!f.error) facturas = f.data;
+    const abFalta = missingTable(a.error);
+    if (!a.error || abFalta) { abTablaFalta = abFalta; abonos = a.error ? [] : a.data; }
     $('#ab-setup').hidden = !abTablaFalta;
-    if (a.error && !abTablaFalta) toast(errText(a.error), true);
+    const err = c.error || f.error || (abFalta ? null : a.error);
+    if (!err) listo.base = true;
     renderClientes(); renderFacturas(); fillMonths();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
-    loadSup(); loadGastos(); loadVentas();
-    await loadDocs();
+    return marcar('base', err);
   }
+  // Aviso fijo arriba si algo no cargó, y «—» en los totales de lo que nunca ha cargado
+  function mostrarCarga() {
+    const nunca = Object.keys(listo).filter(k => !listo[k]), secs = new Set(nunca.flatMap(k => SECCIONES[k]));
+    ['ventas', 'clientes', 'cotiz', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).classList.toggle('sin-datos', secs.has(t)));
+    const fs = fallos(), hay = fs.length > 0, red = fs.some(e => sinRed((e && e.message) || String(e)));
+    $('#v-app').classList.toggle('con-fallo', hay);
+    $('#carga-error').hidden = !hay;
+    if (hay) $('#carga-error-txt').textContent = (nunca.length ? 'No se pudieron cargar tus datos' : 'No se pudieron actualizar tus datos: lo que ves puede no estar al día') +
+      (red ? '. Revisa el internet.' : ` (${motivo(fs[0])}).`);
+  }
+  $('#b-reintentar').addEventListener('click', () => conBoton($('#b-reintentar'), 'Cargando…', load));
+  // Mientras los datos no han cargado no se crea nada que pueda salir repetido. Devuelve true (y avisa) si falta cargar.
+  function faltaCargar(...partes) {
+    if (partes.every(p => listo[p])) return false;
+    toast(fallos().length ? 'Tus datos no se han podido cargar. Revisa el internet y pulsa «Reintentar» arriba.' : 'Tus datos se están cargando. Espera un momento.', true);
+    return true;
+  }
+  // Después de cargar, lo que se ve en las ventanas abiertas se pone al día (listas, pagos, totales), nunca lo que se está escribiendo
+  function refrescarVentanas() {
+    if ($('#d-invoice').open) { renderInvoicePagos(); bloqueoFactura(); }
+    if ($('#d-dia').open && diaAbierto) openDia(diaAbierto);
+    if ($('#d-view').open && viewDoc) {
+      const d = documentos.find(x => x.id === viewDoc.id);
+      if (d && JSON.stringify(d) !== JSON.stringify(viewDoc)) openView(d.id);
+    }
+  }
+
+  // ---------- Tiempo real: lo que anota el otro teléfono aparece solo ----------
+  // Cada cambio en la base avisa aquí. Se espera 1.5 s (por si llegan varios juntos) y se vuelve a cargar.
+  let canal = null, tCambio = null;
+  function pedirCarga() {
+    clearTimeout(tCambio);
+    tCambio = setTimeout(() => {
+      if (!started) return;
+      if (document.hidden) { ultimaCarga = 0; return; }  // con la app escondida no se carga: se carga al volver
+      load();
+    }, 1500);
+  }
+  function escucharCambios(session) {
+    if (canal || typeof sb.channel !== 'function') return;
+    try { if (sb.realtime && session && session.access_token) sb.realtime.setAuth(session.access_token); } catch (e) {}
+    let yaEstuvo = false;
+    canal = sb.channel('surteme-cambios')
+      .on('postgres_changes', { event: '*', schema: 'public' }, pedirCarga)
+      .subscribe(estado => {
+        // Si la conexión se cortó y volvió, pudo perderse algún aviso: se carga todo otra vez
+        if (estado === 'SUBSCRIBED') { if (yaEstuvo) pedirCarga(); yaEstuvo = true; }
+      });
+  }
+  function dejarDeEscuchar() {
+    clearTimeout(tCambio);
+    if (!canal) return;
+    const c = canal; canal = null;
+    try { Promise.resolve(sb.removeChannel(c)).catch(() => {}); } catch (e) {}
+  }
+
+  // ---------- Al volver a la app ----------
+  // Al volver a la app (o cuando vuelve el internet) se revisa si hay versión nueva y, si pasaron más de 30 s
+  // desde la última carga buena (o la última falló), se vuelven a pedir los datos.
+  function alVolver(e) {
+    if (document.hidden) return;
+    revisarVersion();
+    if (!started) return;
+    if (vDia !== today()) renderVentas();
+    if (e && e.type === 'online') load();
+    else if (!cargando && (fallos().length || Date.now() - ultimaCarga > 30000)) load();
+  }
+  document.addEventListener('visibilitychange', alVolver);
+  window.addEventListener('focus', alVolver);
+  window.addEventListener('online', alVolver);
+  window.addEventListener('pageshow', e => { if (e.persisted) alVolver(e); });
+  // Cada 30 s: a la medianoche el total de hoy vuelve a cero solo (y al cambiar de mes, el historial y Gastos pasan
+  // al mes nuevo). Si la última carga falló, se vuelve a intentar.
+  setInterval(() => {
+    if (!started) return;
+    if (vDia !== today()) renderVentas();
+    if (fallos().length && !cargando && !document.hidden) load();
+  }, 30000);
   const clientName = id => (clientes.find(c => c.id === id) || {}).nombre || 'Sin cliente';
 
   // ---------- Clientes ----------
-  $('#s-clientes').addEventListener('input', renderClientes);
+  // Un cliente con facturas, cotizaciones o ventas no se borra: se archiva. Deja de salir en la lista y al elegir
+  // cliente, pero todo su historial se queda (si no, se borrarían sus facturas y pagos, y bajarían las ventas pasadas).
+  const archivado = c => c.archivado === true;
+  const activos = () => clientes.filter(c => !archivado(c));
+  // Opciones para elegir cliente: los activos, más el que ya tiene el registro aunque esté archivado (para no perderlo al guardar)
+  const opcionesCliente = (vacio, actual) => `<option value="">${vacio}</option>` +
+    clientes.filter(c => !archivado(c) || c.id === actual).map(c => `<option value="${c.id}">${esc(c.nombre)}${archivado(c) ? ' (archivado)' : ''}</option>`).join('');
+  ['#s-clientes', '#s-archivados'].forEach(s => $(s).addEventListener('input', renderClientes));
   function renderClientes() {
+    const nArch = clientes.length - activos().length, chk = $('#s-archivados');
+    if (!nArch) chk.checked = false;
+    $('#w-archivados').hidden = !nArch;
+    $('#t-archivados').textContent = `Ver archivados (${nArch})`;
     const q = norm($('#s-clientes').value);
-    const list = clientes.filter(c => !q || norm([c.nombre, c.telefono, c.rnc, c.correo].join(' ')).includes(q));
+    const base = clientes.filter(c => archivado(c) === chk.checked);
+    const list = base.filter(c => !q || norm([c.nombre, c.telefono, c.rnc, c.correo].join(' ')).includes(q));
     const el = $('#l-clientes');
     if (!clientes.length) { el.innerHTML = '<div class="empty">Aún no hay clientes. Pulsa <b>+ Nuevo cliente</b> para agregar el primero.</div>'; return; }
+    if (!base.length) { el.innerHTML = '<div class="empty">Todos tus clientes están archivados. Marca <b>Ver archivados</b> para verlos, o pulsa <b>+ Nuevo cliente</b>.</div>'; return; }
     if (!list.length) { el.innerHTML = '<div class="empty">No se encontró ningún cliente con esa búsqueda.</div>'; return; }
     el.innerHTML = list.map(c => {
       const fs = facturas.filter(f => f.cliente_id === c.id);
       const pend = deudaCliente(c.id);
       const sub = [c.telefono, c.rnc && 'RNC ' + c.rnc, fs.length + (fs.length === 1 ? ' factura' : ' facturas')].filter(Boolean).join(' · ');
       return `<button class="row" data-id="${c.id}"><div class="avatar">${esc(initials(c.nombre))}</div>
-        <div class="main"><div class="title">${esc(c.nombre)}</div><div class="sub">${esc(sub)}</div></div>
-        ${pend > 0 ? `<div class="amount"><span class="badge pendiente">Debe ${esc(fmt(pend))}</span></div>` : ''}</button>`;
+        <div class="main"><div class="title">${esc(c.nombre)}</div><div class="sub">${esc(sub)}</div>
+        ${archivado(c) ? '<span class="badge archivado">Archivado</span> ' : ''}${pend > 0 ? `<span class="badge pendiente">Debe ${esc(fmt(pend))}</span>` : ''}</div></button>`;
     }).join('');
     $$('.row', el).forEach(r => r.addEventListener('click', () => openClient(r.dataset.id)));
   }
 
-  let openClientId = null;
-  $('#b-new-client').addEventListener('click', () => openClient(null));
+  let openClientId = null, clienteNuevo = null, cliAntes = {};
+  const CAMPOS_CLI = ['nombre', 'rnc', 'telefono', 'correo', 'direccion', 'notas'];
+  $('#b-new-client').addEventListener('click', () => { if (!faltaCargar('base')) openClient(null); });
   function openClient(id) {
     openClientId = id;
+    clienteNuevo = id ? null : nuevoId();
     const c = clientes.find(x => x.id === id) || {};
     const form = $('#f-client'); form.reset();
-    ['nombre', 'rnc', 'telefono', 'correo', 'direccion', 'notas'].forEach(k => form.elements[k].value = c[k] || '');
+    CAMPOS_CLI.forEach(k => form.elements[k].value = c[k] || '');
+    cliAntes = leerCampos(form, CAMPOS_CLI);
     $('#dc-title').textContent = id ? c.nombre : 'Nuevo cliente';
-    $('#dc-delete').hidden = !id;
+    $('#dc-archivado').hidden = !archivado(c);
+    // El botón dice «Borrar» (cliente sin historial), «Archivar» (con historial) o «Activar» (si está archivado)
+    const b = $('#dc-delete');
+    b.hidden = !id;
+    b.textContent = archivado(c) ? 'Activar' : tieneHistorial(id) ? 'Archivar' : 'Borrar';
+    b.classList.toggle('danger', b.textContent === 'Borrar');
     $('#dc-invoices').hidden = !id;
     if (id) renderClientInvoices(id);
-    $('#d-client').showModal();
+    if (!$('#d-client').open) $('#d-client').showModal();
   }
+  const tieneHistorial = id => !!id && (facturas.some(f => f.cliente_id === id) || documentos.some(d => d.cliente_id === id) || ventas.some(v => v.cliente_id === id));
   function renderClientInvoices(id) {
     const fs = facturas.filter(f => f.cliente_id === id);
     const debe = deudaCliente(id);
@@ -1099,30 +1393,63 @@
   }
   $('#dc-add-invoice').addEventListener('click', () => openInvoice(null, openClientId));
 
-  $('#f-client').addEventListener('submit', async e => {
+  $('#f-client').addEventListener('submit', e => {
     e.preventDefault();
-    const f = e.target, data = {};
-    ['nombre', 'rnc', 'telefono', 'correo', 'direccion', 'notas'].forEach(k => data[k] = f.elements[k].value.trim() || null);
-    const q = openClientId ? sb.from('clientes').update(data).eq('id', openClientId).select().single()
-                           : sb.from('clientes').insert(data).select().single();
-    const { data: saved, error } = await q;
-    if (error) return toast(errText(error), true);
-    toast(openClientId ? 'Cliente actualizado' : 'Cliente guardado');
-    const wasNew = !openClientId;
-    await load();
-    if (wasNew) openClient(saved.id); else { $('#dc-title').textContent = saved.nombre; }
+    const f = e.target, data = {}, ahora = leerCampos(f, CAMPOS_CLI);
+    CAMPOS_CLI.forEach(k => data[k] = f.elements[k].value.trim() || null);
+    conBoton($('#f-client button.primary'), 'Guardando…', async () => {
+      const wasNew = !openClientId, cambios = wasNew ? data : soloCambios(data, ahora, cliAntes);
+      const q = wasNew ? sb.from('clientes').upsert({ id: clienteNuevo, ...data }).select().single()
+              : Object.keys(cambios).length ? sb.from('clientes').update(cambios).eq('id', openClientId).select().single()
+              : sb.from('clientes').select('*').eq('id', openClientId).single();  // no cambiaste nada: solo se revisa que siga ahí
+      const { data: saved, error } = await q;
+      if (error) return toast(errText(error), true);
+      cliAntes = ahora;  // lo que se acaba de guardar es ahora «lo de antes» para el próximo Guardar
+      if (wasNew) { openClientId = saved.id; clienteNuevo = null; }  // desde ya, Guardar otra vez actualiza este cliente
+      sucias.delete($('#d-client'));  // ya se guardó: la ventana sigue abierta, pero ya no hay nada que perder
+      toast(wasNew ? 'Cliente guardado' : 'Cliente actualizado');
+      await load();
+      if (wasNew) openClient(saved.id); else { $('#dc-title').textContent = saved.nombre; }
+    });
   });
 
+  // Lo que tiene guardado un cliente. Se pregunta a la base (no solo a este teléfono): el otro pudo anotarle algo hace poco.
+  // Devuelve un texto como «2 facturas y 1 venta», '' si no tiene nada, o null si no se pudo revisar.
+  async function historialCliente(id) {
+    const rs = await Promise.all([['facturas', 'id'], ['documentos', 'id, tipo'], ['ventas', 'id']].map(([t, cols]) => todas(() => sb.from(t).select(cols).eq('cliente_id', id).order('id'))));
+    const err = rs.map(r => r.error).find(e => e && !missingTable(e));
+    if (err) { toast(errText(err), true); return null; }
+    const [f, d, v] = rs.map(r => r.error ? [] : r.data || []), cot = d.filter(x => x.tipo === 'cotizacion').length;
+    const partes = [f.length && f.length + (f.length === 1 ? ' factura' : ' facturas'), cot && cot + (cot === 1 ? ' cotización' : ' cotizaciones'),
+      v.length && v.length + (v.length === 1 ? ' venta' : ' ventas')].filter(Boolean);
+    if (!partes.length && d.length) partes.push('documentos guardados');
+    return partes.length > 1 ? partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1] : partes[0] || '';
+  }
+  async function cambiarArchivado(c, valor) {
+    const { error } = await sb.from('clientes').update({ archivado: valor }).eq('id', c.id);
+    if (error) return toast(/archivado/.test(error.message || '') ? 'Falta un paso en Supabase. En SQL Editor pega esto y pulsa Run: alter table clientes add column if not exists archivado boolean not null default false;' : errText(error), true, 15000);
+    $('#d-client').close();
+    toast(valor ? `${c.nombre} quedó archivado. Lo ves en Clientes → Ver archivados.` : `${c.nombre} está activo otra vez.`, false, 4000);
+    await load();
+  }
   $('#dc-delete').addEventListener('click', async () => {
-    const c = clientes.find(x => x.id === openClientId); if (!c) return;
-    const fs = facturas.filter(f => f.cliente_id === c.id);
-    if (!confirm(`¿Borrar a "${c.nombre}"${fs.length ? ` y sus ${fs.length} factura(s)` : ''}? No se puede deshacer.`)) return;
-    const ids = fs.map(f => f.id);
-    const files = [...fs.map(f => f.archivo), ...abonos.filter(a => ids.includes(a.factura_id)).map(a => a.archivo)].filter(Boolean);
-    if (files.length) await sb.storage.from(BUCKET).remove(files);
-    const { error } = await sb.from('clientes').delete().eq('id', c.id);
-    if (error) return toast(errText(error), true);
-    $('#d-client').close(); toast('Cliente borrado'); load();
+    const b = $('#dc-delete'), c = clientes.find(x => x.id === openClientId); if (!c || b.disabled) return;
+    if (archivado(c)) return conBoton(b, 'Guardando…', () => cambiarArchivado(c, false));
+    const hist = await conBoton(b, 'Revisando…', () => historialCliente(c.id));
+    if (hist === null || hist === undefined) return;
+    if (!hist) {
+      if (!confirm(`¿Borrar a "${c.nombre}"? No tiene facturas, cotizaciones ni ventas. No se puede deshacer.`)) return;
+      return conBoton(b, 'Borrando…', async () => {
+        const { error } = await sb.from('clientes').delete().eq('id', c.id);
+        if (error) return toast(errText(error), true);
+        $('#d-client').close(); toast('Cliente borrado'); load();
+      });
+    }
+    // Con historial no se borra: se archiva
+    const debe = deudaCliente(c.id);
+    if (!confirm(`¿Archivar a "${c.nombre}"?\n\nTiene ${hist}. Para no perder ese historial no se borra: deja de salir en la lista de clientes y al elegir cliente, pero sus facturas, pagos y ventas siguen guardados.` +
+      (debe > 0 ? `\n\nOjo: todavía te debe ${fmt(debe)}.` : '') + '\n\nPuedes volver a activarlo cuando quieras (Clientes → Ver archivados).')) return;
+    await conBoton(b, 'Guardando…', () => cambiarArchivado(c, true));
   });
 
   // ---------- Facturas ----------
@@ -1131,10 +1458,10 @@
   function fillMonths() {
     const sel = $('#s-mes'), cur = sel.value;
     const months = [...new Set(facturas.map(f => (f.fecha || '').slice(0, 7)).filter(Boolean))].sort().reverse();
-    sel.innerHTML = '<option value="">Todo el tiempo</option>' + months.map(m => {
+    ponerOpciones(sel, '<option value="">Todo el tiempo</option>' + months.map(m => {
       const label = new Date(m + '-15T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
       return `<option value="${m}">${esc(label.charAt(0).toUpperCase() + label.slice(1))}</option>`;
-    }).join('');
+    }).join(''));
     if (months.includes(cur)) sel.value = cur;
   }
 
@@ -1162,23 +1489,25 @@
        <div class="stat"><div class="k">Ganancia${ventaConCosto ? ' (' + pct(gan / ventaConCosto * 100) + ')' : ''}</div><div class="v${gan < 0 ? ' neg' : ''}">${conCosto.length ? fmt(gan) : '—'}</div></div>
        <div class="stat"><div class="k">Por cobrar</div><div class="v">${fmt(pend)}</div></div>`;
     const el = $('#l-facturas');
-    if (!facturas.length) el.innerHTML = '<div class="empty">Aún no hay facturas. Pulsa <b>+ Nueva factura</b> para subir la primera.</div>';
+    if (!facturas.length) el.innerHTML = '<div class="empty">Aún no hay facturas. Pulsa <b>+ Crear factura</b> para hacer una con el diseño de Surteme, o <b>Subir factura</b> si ya la tienes en papel o PDF.</div>';
     else if (!list.length) el.innerHTML = '<div class="empty">Ninguna factura coincide con el filtro.</div>';
-    else { el.innerHTML = list.map(invoiceRow).join(''); bindInvoiceRows(el); }
+    else { el.innerHTML = list.map(f => invoiceRow(f)).join(''); bindInvoiceRows(el); }
   }
 
-  let openInvoiceId = null;
+  let openInvoiceId = null, facturaNueva = null, invAntes = {};
+  const CAMPOS_FACT = ['cliente_id', 'numero', 'fecha', 'monto', 'costo', 'estado', 'notas'];
   $('#b-new-invoice').addEventListener('click', () => {
-    if (!clientes.length) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
+    if (faltaCargar('base', 'docs')) return;
+    if (!activos().length) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
     openInvoice(null);
   });
 
   function openInvoice(id, clienteId) {
     openInvoiceId = id;
+    facturaNueva = id ? null : nuevoId();
     const f = facturas.find(x => x.id === id) || { fecha: today(), estado: 'pendiente', cliente_id: clienteId || '' };
     const form = $('#f-invoice'); form.reset();
-    form.elements.cliente_id.innerHTML = '<option value="">— Elige un cliente —</option>' +
-      clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    form.elements.cliente_id.innerHTML = opcionesCliente('— Elige un cliente —', f.cliente_id);
     form.elements.cliente_id.value = f.cliente_id || '';
     form.elements.numero.value = f.numero || '';
     form.elements.fecha.value = f.fecha || today();
@@ -1186,6 +1515,8 @@
     form.elements.costo.value = f.costo ?? '';
     form.elements.estado.value = f.estado || 'pendiente';
     form.elements.notas.value = f.notas || '';
+    invAntes = Object.fromEntries(CAMPOS_FACT.map(k => [k, form.elements[k].value]));  // lo que mostraba al abrir (ver Guardar)
+    bloqueoFactura();
     $('#di-title').textContent = id ? 'Factura' + (f.numero ? ' #' + f.numero : '') : 'Nueva factura';
     $('#di-delete').hidden = !id;
     $('#di-file').innerHTML = f.archivo
@@ -1194,8 +1525,18 @@
     if (f.archivo) $('#di-open').addEventListener('click', ev => { ev.preventDefault(); openFile(f.archivo); });
     profitLine();
     renderInvoicePagos();
-    $('#di-doclink').hidden = !(id && docDeFactura(id));
     $('#d-invoice').showModal();
+  }
+  // Factura hecha con el diseño de Surteme: el documento manda (así la que tiene el cliente y la de cobro dicen lo mismo).
+  // Aquí solo se cambian el estado, el archivo y las notas; lo demás, en «Editar productos y precios».
+  // Mientras esos documentos no han cargado no se sabe si la factura tiene uno: por si acaso, también se bloquea.
+  const CAMPOS_DOC = ['cliente_id', 'numero', 'fecha', 'monto', 'costo'];
+  const facturaBloqueada = id => !!id && (!!docDeFactura(id) || !listo.docs);
+  function bloqueoFactura() {
+    const id = openInvoiceId, form = $('#f-invoice'), conDoc = !!(id && docDeFactura(id));
+    CAMPOS_DOC.forEach(k => form.elements[k].disabled = facturaBloqueada(id));
+    $('#di-doclink').hidden = !conDoc;
+    $('#di-espera').hidden = !id || conDoc || listo.docs;
   }
   ['monto', 'costo'].forEach(k => $('#f-invoice').elements[k].addEventListener('input', profitLine));
   function profitLine() {
@@ -1218,7 +1559,11 @@
     e.preventDefault();
     const form = e.target, btn = $('#di-save');
     const costo = num(form.elements.costo.value);
-    const data = {
+    const prev = facturas.find(x => x.id === openInvoiceId), conDoc = !!prev && facturaBloqueada(prev.id);
+    // Si se escribió algo en un campo que quedó bloqueado (porque se supo después que la factura tiene diseño), se avisa: eso no se guarda
+    const ignorados = conDoc && CAMPOS_DOC.some(k => form.elements[k].value !== invAntes[k]);
+    // Con diseño de Surteme solo se guardan estado y notas (lo demás viene del documento)
+    const data = conDoc ? { estado: form.elements.estado.value, notas: form.elements.notas.value.trim() || null } : {
       cliente_id: form.elements.cliente_id.value || null,
       numero: form.elements.numero.value.trim() || null,
       fecha: form.elements.fecha.value || today(),
@@ -1227,38 +1572,63 @@
       estado: form.elements.estado.value,
       notas: form.elements.notas.value.trim() || null,
     };
+    // Solo se mandan los campos que cambiaste: si el otro teléfono cambió otra cosa mientras tenías la ventana abierta
+    // (por ejemplo, la marcó «Pagada»), no se deshace. El estado que no tocaste se toma de lo último cargado.
+    if (prev) Object.keys(data).forEach(k => { if (form.elements[k].value === invAntes[k]) delete data[k]; });
+    const tocoEstado = 'estado' in data;
+    if (prev && !tocoEstado) data.estado = prev.estado;
+    // Si estaba pagada con sus abonos y ahora el total es mayor, vuelve a pendiente
+    const monto = prev && !('monto' in data) ? Number(prev.monto || 0) : data.monto;
+    let vuelve = false;
+    if (prev) {
+      const est = estadoPorAbonos(prev, monto, data.estado, pagadoDe(prev.id)); vuelve = data.estado === 'pagada' && est === 'pendiente'; data.estado = est;
+      if (!tocoEstado && est === prev.estado) delete data.estado;
+    }
     const file = form.elements.archivo.files[0];
+    if (btn.disabled) return;
     btn.disabled = true; btn.textContent = file ? 'Subiendo…' : 'Guardando…';
+    // Una factura nueva se guarda con su id ya hecho: si el archivo no sube y se pulsa Guardar otra vez, se completa la misma
+    const nueva = !openInvoiceId, id = openInvoiceId || facturaNueva;
+    let guardada = false;
     try {
-      const prev = facturas.find(x => x.id === openInvoiceId);
-      const res = openInvoiceId ? await sb.from('facturas').update(data).eq('id', openInvoiceId).select().single()
-                                : await sb.from('facturas').insert(data).select().single();
+      const res = nueva ? await sb.from('facturas').upsert({ id, ...data }).select().single()
+                        : Object.keys(data).length ? await sb.from('facturas').update(data).eq('id', id).select().single()
+                        : await sb.from('facturas').select('*').eq('id', id).single();  // no cambiaste nada: solo se revisa que siga ahí
       if (res.error) throw res.error;
-      const saved = res.data;
-      if (file) {
-        const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
-        const path = `${saved.id}/${Date.now()}-${safe}`;
-        const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
-        if (up.error) throw up.error;
-        const u2 = await sb.from('facturas').update({ archivo: path }).eq('id', saved.id);
-        if (u2.error) throw u2.error;
-        if (prev && prev.archivo) await sb.storage.from(BUCKET).remove([prev.archivo]);
-      }
+      guardada = true;
+      if (file) await subirArchivo('facturas', '', res.data.id, file, prev && prev.archivo);
       $('#d-invoice').close();
-      toast(openInvoiceId ? 'Factura actualizada' : 'Factura guardada');
+      if (ignorados) toast('Se guardaron el estado y las notas. El cliente, el número, la fecha y los montos de esta factura no se cambiaron: se cambian en «Editar productos y precios», para que la factura del cliente diga lo mismo.', true, 10000);
+      else toast(nueva ? 'Factura guardada' : vuelve ? `Factura actualizada. Vuelve a «Pendiente»: faltan ${fmt(round2(monto - pagadoDe(prev.id)))}` : 'Factura actualizada', vuelve);
       await load();
-    } catch (er) { toast(errText(er), true); }
+    } catch (er) {
+      if (guardada) { sinArchivo(nueva ? 'La factura se guardó' : 'Los cambios se guardaron', er, '#di-file'); load(); }
+      else toast(errText(er), true);
+    }
     finally { btn.disabled = false; btn.textContent = 'Guardar'; }
   });
 
-  $('#di-delete').addEventListener('click', async () => {
-    const f = facturas.find(x => x.id === openInvoiceId); if (!f) return;
-    if (!confirm('¿Borrar esta factura y su archivo? No se puede deshacer.')) return;
-    const files = [f.archivo, ...abonos.filter(a => a.factura_id === f.id).map(a => a.archivo)].filter(Boolean);
-    if (files.length) await sb.storage.from(BUCKET).remove(files);
-    if (docDeFactura(f.id)) await sb.from('documentos').delete().eq('factura_id', f.id);
+  // Archivos de una factura y de sus abonos. Se piden a la base: el otro teléfono pudo cambiar o agregar comprobantes
+  async function archivosDeFactura(id) {
+    const [f, a] = await Promise.all([sb.from('facturas').select('archivo').eq('id', id), sb.from('abonos').select('archivo').eq('factura_id', id)]);
+    const fs = f.error ? facturas.filter(x => x.id === id) : f.data || [], as = a.error ? abonos.filter(x => x.factura_id === id) : a.data || [];
+    return [...new Set([...fs, ...as].map(x => x.archivo).filter(Boolean))];
+  }
+  // Borra una factura: primero su documento (si se hizo con el diseño de Surteme), después la factura (la base borra sus abonos)
+  // y al final los archivos. Si algo falla se avisa y no se borran los archivos, así nada queda apuntando a un archivo borrado.
+  async function borrarFactura(f) {
+    const files = await archivosDeFactura(f.id);
+    const r = await sb.from('documentos').delete().eq('factura_id', f.id);
+    if (r.error && !missingTable(r.error)) return r.error;
     const { error } = await sb.from('facturas').delete().eq('id', f.id);
-    if (error) return toast(errText(error), true);
+    if (error) return error;
+    borrarArchivos(files);
+  }
+  $('#di-delete').addEventListener('click', async () => {
+    const f = facturas.find(x => x.id === openInvoiceId); if (!f || $('#di-delete').disabled) return;
+    if (!confirm('¿Borrar esta factura y su archivo? No se puede deshacer.')) return;
+    const error = await conBoton($('#di-delete'), 'Borrando…', () => borrarFactura(f));
+    if (error) { toast(errText(error), true); load(); return; }
     $('#d-invoice').close(); toast('Factura borrada'); load();
   });
 
@@ -1284,9 +1654,10 @@ grant select, insert, update, delete on abonos to authenticated;`;
   });
 
   // Cuánto se ha pagado y cuánto falta de una factura
+  const pagadoDe = id => abonos.filter(a => a.factura_id === id).reduce((s, a) => s + Number(a.monto || 0), 0);
   function saldo(f) {
     const total = Number(f.monto || 0);
-    const pagado = abonos.filter(a => a.factura_id === f.id).reduce((s, a) => s + Number(a.monto || 0), 0);
+    const pagado = pagadoDe(f.id);
     if (f.estado === 'pagada') return { total, pagado, falta: 0, estado: 'pagada' };
     const falta = Math.max(0, round2(total - pagado));
     return { total, pagado, falta, estado: falta <= 0 ? 'pagada' : pagado > 0 ? 'abonada' : 'pendiente' };
@@ -1300,16 +1671,18 @@ grant select, insert, update, delete on abonos to authenticated;`;
     const f = facturas.find(x => x.id === openInvoiceId);
     box.hidden = !f || abTablaFalta;
     if (!f || abTablaFalta) return;
-    const s = saldo(f);
+    const s = saldo(f), aMano = s.estado === 'pagada' && s.pagado < s.total - 0.005;
+    // «Pagado» es solo lo que se ha anotado en abonos (no se inventa un pago si se marcó pagada a mano)
     $('#di-saldo').innerHTML =
       `<div class="stat"><div class="k">Total</div><div class="v">${fmt(s.total)}</div></div>
-       <div class="stat"><div class="k">Pagado</div><div class="v" style="color:var(--ok)">${fmt(Math.min(s.pagado, s.total) || (s.estado === 'pagada' ? s.total : 0))}</div></div>
+       <div class="stat"><div class="k">Pagado</div><div class="v" style="color:var(--ok)">${fmt(Math.min(s.pagado, s.total))}</div></div>
        <div class="stat"><div class="k">Falta</div><div class="v${s.falta > 0 ? ' neg' : ''}">${fmt(s.falta)}</div></div>`;
-    const lista = abonos.filter(a => a.factura_id === f.id).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-    $('#di-abonos').innerHTML = lista.length ? lista.map(a => `<button class="row" data-abono="${a.id}"><div class="main">
+    const lista = abonos.filter(a => a.factura_id === f.id).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.creado || '').localeCompare(a.creado || ''));
+    const nota = aMano ? `<p class="hint" style="margin:0 0 10px"><b>Marcada como pagada.</b> ${s.pagado > 0 ? `Los abonos anotados suman ${esc(fmt(s.pagado))} de ${esc(fmt(s.total))}.` : 'No tiene abonos anotados.'} Si todavía te deben, cambia arriba el <b>Estado</b> a «Pendiente de cobro» y pulsa <b>Guardar</b>.</p>` : '';
+    $('#di-abonos').innerHTML = nota + (lista.length ? lista.map(a => `<button class="row" data-abono="${a.id}"><div class="main">
         <div class="title">${esc(fmt(Number(a.monto)))}</div><div class="sub">${esc([fdate(a.fecha), a.metodo, a.archivo && '📎', a.notas].filter(Boolean).join(' · '))}</div></div>
         <div class="amount sub" style="font-weight:500">Editar</div></button>`).join('')
-      : `<div class="empty" style="padding:10px">${s.estado === 'pagada' ? 'Marcada como pagada.' : 'Todavía no hay abonos.'}</div>`;
+      : aMano ? '' : `<div class="empty" style="padding:10px">Todavía no hay abonos.</div>`);
     $$('[data-abono]', $('#di-abonos')).forEach(b => b.addEventListener('click', () => openAbono(b.dataset.abono)));
     $('#di-add-abono').hidden = s.falta <= 0;
     $('#di-wa').hidden = s.falta <= 0;
@@ -1317,9 +1690,9 @@ grant select, insert, update, delete on abonos to authenticated;`;
   $('#di-add-abono').addEventListener('click', () => openAbono(null));
   $('#di-wa').addEventListener('click', () => {
     const f = facturas.find(x => x.id === openInvoiceId);
-    if (f) recordarPago(f.cliente_id, [f]);
+    if (f) conBoton($('#di-wa'), 'Revisando…', () => recordarPago(f.cliente_id, [f]));
   });
-  $('#dc-wa').addEventListener('click', () => recordarPago(openClientId));
+  $('#dc-wa').addEventListener('click', () => conBoton($('#dc-wa'), 'Revisando…', () => recordarPago(openClientId)));
 
   // WhatsApp: abre el chat con el mensaje ya escrito (tú solo pulsas Enviar)
   function waNumero(tel) {
@@ -1328,26 +1701,44 @@ grant select, insert, update, delete on abonos to authenticated;`;
     if (d.length === 10 && /^(809|829|849)/.test(d)) d = '1' + d;
     return d.length >= 11 ? d : '';
   }
-  function recordarPago(clienteId, soloEstas) {
+  async function recordarPago(clienteId, soloEstas) {
     const c = clientes.find(x => x.id === clienteId);
     if (!c) return toast('Esta factura no tiene cliente.', true);
     const tel = waNumero(c.telefono);
     if (!tel) return toast(c.telefono ? `El teléfono de ${c.nombre} no parece válido. Revísalo en Clientes.` : `${c.nombre} no tiene teléfono guardado. Agrégalo en Clientes.`, true);
-    const pend = (soloEstas || facturas.filter(f => f.cliente_id === c.id))
+    // La ventana se abre ya, al tocar el botón (si se abre después de esperar al internet, el teléfono la bloquea).
+    // Luego se le pone el chat, o se cierra si al final no hay nada que cobrar.
+    const w = window.open('', '_blank');
+    // Antes de cobrar se piden a la base las facturas y los pagos de este cliente: el otro teléfono pudo anotar un pago hace poco
+    const fr = await todas(() => sb.from('facturas').select('*').eq('cliente_id', c.id).order('id'));
+    const ids = fr.error ? [] : fr.data.map(f => f.id);
+    const ar = fr.error || !ids.length || abTablaFalta ? { data: [], error: null } : await todas(() => sb.from('abonos').select('*').in('factura_id', ids).order('id'));
+    const err = fr.error || (missingTable(ar.error) ? null : ar.error);
+    if (err) { if (w) w.close(); return toast(`No se pudo revisar lo que debe ${c.nombre} (${motivo(err)}). No se mandó el cobro: intenta otra vez.`, true); }
+    // Lo nuevo se pone también en la pantalla, para que diga lo mismo que el mensaje
+    facturas = facturas.filter(f => f.cliente_id !== c.id && !ids.includes(f.id)).concat(fr.data)
+      .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.creado || '').localeCompare(a.creado || ''));
+    abonos = abonos.filter(a => !ids.includes(a.factura_id)).concat(ar.data || []);
+    renderClientes(); renderFacturas(); renderVentas();
+    if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
+    if ($('#d-invoice').open) renderInvoicePagos();
+    const pend = (soloEstas ? facturas.filter(f => soloEstas.some(s => s.id === f.id)) : facturas.filter(f => f.cliente_id === c.id))
       .map(f => ({ f, s: saldo(f) })).filter(x => x.s.falta > 0)
       .sort((a, b) => (a.f.fecha || '').localeCompare(b.f.fecha || ''));
-    if (!pend.length) return toast(`${c.nombre} no tiene nada pendiente.`);
+    if (!pend.length) { if (w) w.close(); return toast(`${c.nombre} no tiene nada pendiente.`); }
     const total = pend.reduce((s, x) => s + x.s.falta, 0);
     const lineas = pend.map(({ f, s }) => `• Factura${f.numero ? ' #' + f.numero : ''} del ${fdate(f.fecha)} — ${fmt(s.falta)}` +
       (s.pagado > 0 ? ` (abonó ${fmt(s.pagado)} de ${fmt(s.total)})` : ''));
     const msg = `Hola ${c.nombre} 👋, le saluda Surteme. Le recordamos que tiene pendiente:\n${lineas.join('\n')}\n*Total pendiente: ${fmt(total)}*\n¡Gracias por preferirnos!`;
-    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+    if (w) w.location = url; else window.open(url, '_blank');
   }
 
   // Agregar / editar un abono
-  let openAbonoId = null;
+  let openAbonoId = null, abonoNuevo = null;
   function openAbono(id) {
     openAbonoId = id;
+    abonoNuevo = id ? null : nuevoId();
     const f = facturas.find(x => x.id === openInvoiceId); if (!f) return;
     const a = abonos.find(x => x.id === id) || {};
     const form = $('#f-abono'); form.reset();
@@ -1362,23 +1753,54 @@ grant select, insert, update, delete on abonos to authenticated;`;
     if (a.archivo) $('#da-open').addEventListener('click', ev => { ev.preventDefault(); openFile(a.archivo); });
     $('#d-abono').showModal();
   }
-  // Si con los abonos ya se pagó todo, marcar la factura como pagada (y al revés si se borra un abono)
-  async function syncEstado(facturaId) {
-    const f = facturas.find(x => x.id === facturaId); if (!f) return;
-    const pagado = abonos.filter(a => a.factura_id === f.id).reduce((s, a) => s + Number(a.monto || 0), 0);
-    const nuevo = pagado >= Number(f.monto || 0) - 0.005 && pagado > 0 ? 'pagada' : (f.estado === 'pagada' && pagado < Number(f.monto || 0) && abonos.some(a => a.factura_id === f.id) ? 'pendiente' : f.estado);
-    if (nuevo !== f.estado) {
-      await sb.from('facturas').update({ estado: nuevo }).eq('id', f.id);
-      f.estado = nuevo;
-      if ($('#d-invoice').open && openInvoiceId === f.id) $('#f-invoice').elements.estado.value = nuevo;
-    }
+  // Estado que le toca a una factura según sus abonos. «antes» es lo que estaba pagado antes del cambio y «pagado»
+  // lo pagado ahora. Si los abonos cubren el total: pagada. Si estaba pagada porque los abonos cubrían el total, y ya no
+  // lo cubren (se borró o se bajó un abono, o subió el total), vuelve a pendiente. Una factura marcada pagada a mano se respeta.
+  function estadoPorAbonos(f, monto, estado, antes, pagado = pagadoDe(f.id)) {
+    const cubria = antes > 0 && antes >= Number(f.monto || 0) - 0.005;
+    if (pagado > 0 && pagado >= monto - 0.005) return 'pagada';
+    return estado === 'pagada' && f.estado === 'pagada' && cubria ? 'pendiente' : estado;
   }
-  async function reloadAbonos(facturaId) {
-    const r = await sb.from('abonos').select('*').range(0, 9999);
+  const ponerEstado = (f, nuevo) => {
+    f.estado = nuevo;
+    if ($('#d-invoice').open && openInvoiceId === f.id) $('#f-invoice').elements.estado.value = invAntes.estado = nuevo;
+  };
+  // Antes de borrar un abono o de bajarle el monto: si con ese cambio la factura deja de estar pagada, se pone «Pendiente»
+  // PRIMERO. Si eso no se puede guardar, el abono no se toca (así la factura nunca queda «Pagada» mientras te deben).
+  // Si después falla el cambio del abono no pasa nada: con sus abonos completos se sigue viendo pagada en todas partes.
+  // «despues» es lo pagado si el cambio sale bien. Devuelve el error, o null (todo bien, o no hacía falta).
+  async function antesDeBajar(f, despues) {
+    if (f.estado !== 'pagada' || estadoPorAbonos(f, Number(f.monto || 0), 'pagada', pagadoDe(f.id), despues) !== 'pendiente') return null;
+    const { error } = await sb.from('facturas').update({ estado: 'pendiente' }).eq('id', f.id);
+    if (error) return error;
+    ponerEstado(f, 'pendiente');
+    return null;
+  }
+  // Si con los abonos ya se pagó todo, marcar la factura como pagada (y al revés, por si el otro teléfono cambió algo).
+  // Devuelve un texto si no se pudo guardar el estado nuevo ('' si todo bien).
+  async function syncEstado(facturaId, antes) {
+    const f = facturas.find(x => x.id === facturaId); if (!f) return '';
+    const nuevo = estadoPorAbonos(f, Number(f.monto || 0), f.estado, antes);
+    if (nuevo === f.estado) return '';
+    const { error } = await sb.from('facturas').update({ estado: nuevo }).eq('id', f.id);
+    // Si no se pudo marcar «Pagada» no pasa nada: con abonos que cubren el total ya se ve pagada en todas partes
+    if (error) return nuevo === 'pendiente' ? `no se pudo poner la factura otra vez en «Pendiente» (${motivo(error)}). Abre la factura, cambia el Estado a «Pendiente de cobro» y pulsa Guardar.` : '';
+    ponerEstado(f, nuevo);
+    return '';
+  }
+  // Vuelve a pedir los abonos y pone la factura al día. «antes»: lo pagado antes del cambio, tomado antes de guardar
+  // (mientras se sube una foto, el tiempo real puede poner los abonos al día). Devuelve un texto si algo no se pudo hacer.
+  async function reloadAbonos(facturaId, antes) {
+    const r = await todas(() => sb.from('abonos').select('*').order('id'));
+    // Si no se pudo leer, no se toca el estado (se calcularía con los abonos viejos)
+    const problema = r.error ? `no se pudo actualizar la lista de pagos (${motivo(r.error)}). Recarga la página.` : '';
     if (!r.error) abonos = r.data;
-    await syncEstado(facturaId);
+    const p2 = problema || await syncEstado(facturaId, antes);
     renderClientes(); renderFacturas(); renderInvoicePagos();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
+    // Ventas muestra el estado de las facturas del día (Pendiente / Abonada / Pagada)
+    renderVentas(); if ($('#d-dia').open && diaAbierto) openDia(diaAbierto);
+    return p2;
   }
   $('#f-abono').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1392,36 +1814,52 @@ grant select, insert, update, delete on abonos to authenticated;`;
     };
     if (!(data.monto > 0)) return toast('Escribe cuánto te pagaron.', true);
     const file = form.elements.archivo.files[0];
+    if (btn.disabled) return;
     btn.disabled = true; btn.textContent = file ? 'Subiendo…' : 'Guardando…';
+    // Un abono nuevo se guarda con su id ya hecho: si el archivo no sube y se pulsa Guardar otra vez, no se anota dos veces
+    const nuevo = !openAbonoId, id = openAbonoId || abonoNuevo, facturaId = openInvoiceId;
+    // Lo de antes del cambio se toma ya, antes de esperar al internet
+    const f = facturas.find(x => x.id === facturaId), prev = abonos.find(x => x.id === id), antes = pagadoDe(facturaId);
+    let guardado = false;
     try {
-      const prev = abonos.find(x => x.id === openAbonoId);
-      const res = openAbonoId ? await sb.from('abonos').update(data).eq('id', openAbonoId).select().single()
-                              : await sb.from('abonos').insert(data).select().single();
+      // Si al bajar el monto la factura deja de estar pagada, primero vuelve a «Pendiente» (si eso falla, no se cambia nada)
+      const er = f && await antesDeBajar(f, round2(antes - (prev ? Number(prev.monto || 0) : 0) + data.monto));
+      if (er) throw er;
+      const res = nuevo ? await sb.from('abonos').upsert({ id, ...data }).select().single()
+                        : await sb.from('abonos').update(data).eq('id', id).select().single();
       if (res.error) throw res.error;
-      if (file) {
-        const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
-        const path = `abonos/${res.data.id}/${Date.now()}-${safe}`;
-        const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
-        if (up.error) throw up.error;
-        const u2 = await sb.from('abonos').update({ archivo: path }).eq('id', res.data.id);
-        if (u2.error) throw u2.error;
-        if (prev && prev.archivo) await sb.storage.from(BUCKET).remove([prev.archivo]);
-      }
+      guardado = true;
+      abonos = abonos.filter(x => x.id !== res.data.id).concat(res.data);  // ya se guardó: se pone aquí aunque después no se pueda releer
+      if (file) await subirArchivo('abonos', 'abonos/', res.data.id, file, prev && prev.archivo);
       $('#d-abono').close();
-      await reloadAbonos(openInvoiceId);
-      const f = facturas.find(x => x.id === openInvoiceId);
-      toast(f && saldo(f).falta <= 0 ? '¡Factura pagada completa!' : 'Abono guardado');
-    } catch (er) { toast(errText(er), true); }
+      const problema = await reloadAbonos(facturaId, antes);
+      const f2 = facturas.find(x => x.id === facturaId);
+      if (problema) toast('Abono guardado, pero ' + problema, true);
+      else toast(f2 && saldo(f2).falta <= 0 ? '¡Factura pagada completa!' : 'Abono guardado');
+    } catch (er) {
+      if (guardado) { sinArchivo(nuevo ? 'El abono se guardó' : 'Los cambios se guardaron', er, '#da-file'); reloadAbonos(facturaId, antes); }
+      else toast(errText(er), true);
+    }
     finally { btn.disabled = false; btn.textContent = 'Guardar'; }
   });
   $('#da-delete').addEventListener('click', async () => {
-    const a = abonos.find(x => x.id === openAbonoId); if (!a) return;
+    const a = abonos.find(x => x.id === openAbonoId); if (!a || $('#da-delete').disabled) return;
     if (!confirm('¿Borrar este abono? No se puede deshacer.')) return;
-    if (a.archivo) await sb.storage.from(BUCKET).remove([a.archivo]);
-    const { error } = await sb.from('abonos').delete().eq('id', a.id);
-    if (error) return toast(errText(error), true);
+    const facturaId = a.factura_id, f = facturas.find(x => x.id === facturaId), antes = pagadoDe(facturaId);
+    // Si sin este abono la factura deja de estar pagada, primero vuelve a «Pendiente»; si eso falla, el abono no se borra.
+    // Después se borra el registro y al final la foto: si el borrado falla, el abono no se queda sin su comprobante.
+    const malo = await conBoton($('#da-delete'), 'Borrando…', async () => {
+      const er = f && await antesDeBajar(f, round2(antes - Number(a.monto || 0)));
+      if (er) return { er, estado: true };
+      const r = await sb.from('abonos').delete().eq('id', a.id);
+      return r.error ? { er: r.error } : null;
+    });
+    if (malo) return toast(malo.estado ? `No se borró el abono: no se pudo poner la factura otra vez en «Pendiente» (${motivo(malo.er)}). Intenta otra vez.` : errText(malo.er), true);
+    borrarArchivos([a.archivo]);
+    abonos = abonos.filter(x => x.id !== a.id);  // ya se borró: se quita aquí aunque después no se pueda releer la lista
     $('#d-abono').close(); toast('Abono borrado');
-    await reloadAbonos(openInvoiceId);
+    const problema = await reloadAbonos(facturaId, antes);
+    if (problema) toast('Abono borrado, pero ' + problema, true);
   });
 
   // ---------- Suplidores y precios ----------
@@ -1458,21 +1896,25 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
   let proveedores = [], precios = [], productos = [], provById = {};
   const missingTable = e => e && (/PGRST205|42P01/.test(e.code || '') || /could not find the table|does not exist/i.test(e.message || ''));
 
-  async function loadSup() {
+  // Los cargadores devuelven el error si no se pudo leer (null si todo bien). «callado»: el aviso lo da el que llama (load)
+  async function loadSup(callado) {
     const [v, p] = await Promise.all([
-      sb.from('proveedores').select('*').order('nombre'),
-      sb.from('precios').select('*').order('producto').range(0, 9999),
+      todas(() => sb.from('proveedores').select('*').order('nombre').order('id')),
+      todas(() => sb.from('precios').select('*').order('producto').order('id')),
     ]);
-    const err = v.error || p.error;
-    $('#sp-setup').hidden = !missingTable(err);
+    const err = v.error || p.error, falta = missingTable(err);
+    if (err && !falta) { if (!callado) toast(errText(err), true); if (listo.sup) return marcar('sup', err); }  // se quedan los datos que había
+    $('#sp-setup').hidden = !falta;
     $('#b-new-price').hidden = !!err;
-    if (err) { $('#sp-main').hidden = true; $('#sp-import').hidden = true; if (!missingTable(err)) toast(errText(err), true); return; }
+    if (err) { $('#sp-main').hidden = true; $('#sp-import').hidden = true; if (falta) listo.sup = true; return marcar('sup', falta ? null : err); }
+    listo.sup = true;
     proveedores = v.data; precios = p.data;
     provById = Object.fromEntries(proveedores.map(x => [x.id, x]));
     $('#sp-import').hidden = precios.length > 0;
     $('#sp-main').hidden = precios.length === 0 && proveedores.length === 0;
     buildProductos(); fillSupFilters(); renderProductos(); renderProveedores();
     if (openProd && $('#d-prod').open) renderProdDetail();
+    return marcar('sup', null);
   }
 
   // Precio del paquete con ITBIS y precio por unidad (igual que en la plantilla de Excel)
@@ -1513,12 +1955,12 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
   function fillSupFilters() {
     const cat = $('#s-cat'), prov = $('#s-prov'), cv = cat.value, pv = prov.value;
     const cats = [...new Set(productos.map(p => p.categoria))];
-    cat.innerHTML = '<option value="">Todas las categorías</option>' + cats.map(c => `<option>${esc(c)}</option>`).join('');
-    prov.innerHTML = '<option value="">Todos los suplidores</option>' + proveedores.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+    ponerOpciones(cat, '<option value="">Todas las categorías</option>' + cats.map(c => `<option>${esc(c)}</option>`).join(''));
+    ponerOpciones(prov, '<option value="">Todos los suplidores</option>' + proveedores.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join(''));
     if (cats.includes(cv)) cat.value = cv;
     if (provById[pv]) prov.value = pv;
-    $('#dl-cat').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
-    $('#dl-prod').innerHTML = productos.map(p => `<option value="${esc(p.nombre)}">`).join('');
+    ponerOpciones($('#dl-cat'), cats.map(c => `<option value="${esc(c)}">`).join(''));
+    ponerOpciones($('#dl-prod'), productos.map(p => `<option value="${esc(p.nombre)}">`).join(''));
   }
 
   $$('#sp-seg button').forEach(b => b.addEventListener('click', () => {
@@ -1535,10 +1977,10 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
       `<div class="stat"><div class="k">Productos</div><div class="v">${productos.length}</div></div>
        <div class="stat"><div class="k">Con 2+ suplidores</div><div class="v">${multi.length}</div></div>
        <div class="stat"><div class="k">Ahorro promedio</div><div class="v">${ah.length ? pct(ah.reduce((a, b) => a + b, 0) / ah.length * 100) : '—'}</div></div>`;
-    const q = norm($('#s-prod').value), cat = $('#s-cat').value, prov = $('#s-prov').value, only = $('#s-multi').checked;
+    const ws = palabras($('#s-prod').value), cat = $('#s-cat').value, prov = $('#s-prov').value, only = $('#s-multi').checked;
     const list = productos.filter(p => (!cat || p.categoria === cat) && (!only || p.nSup >= 2) &&
       (!prov || p.rows.some(r => r.proveedor_id === prov)) &&
-      (!q || norm(p.nombre + ' ' + p.rows.map(r => (r.descripcion || '') + ' ' + (r.referencia || '')).join(' ')).includes(q)));
+      tieneTodas(ws, p.nombre + ' ' + p.rows.map(r => (r.descripcion || '') + ' ' + (r.referencia || '')).join(' ')));
     const el = $('#l-prod');
     if (!list.length) { el.innerHTML = `<div class="empty">${productos.length ? 'Ningún producto coincide con la búsqueda.' : 'Aún no hay precios.'}</div>`; return; }
     let html = '', lastCat = null;
@@ -1566,11 +2008,10 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
       const n = new Set(precios.filter(r => r.proveedor_id === v.id).map(r => r.producto)).size;
       const comp = multi.filter(p => v.id in p.bySup).length;
       const gana = multi.filter(p => p.ganadores.includes(v.id)).length;
-      const sub = [n + (n === 1 ? ' producto' : ' productos'), comp ? `más barato en ${gana} de ${comp} comparados` : null,
-        v.incluye_itbis === false ? 'cotiza sin ITBIS' : 'cotiza con ITBIS'].filter(Boolean).join(' · ');
+      const sub = [n + (n === 1 ? ' producto' : ' productos'), v.incluye_itbis === false ? 'cotiza sin ITBIS' : 'cotiza con ITBIS'].join(' · ');
       return `<button class="row" data-prov="${v.id}"><div class="avatar">${esc(initials(v.nombre))}</div>
-        <div class="main"><div class="title">${esc(v.nombre)}</div><div class="sub">${esc(sub)}</div></div>
-        ${comp ? `<div class="amount"><span class="badge ${gana / comp >= .5 ? 'pagada' : 'pendiente'}">${esc(pct(gana / comp * 100))}</span></div>` : ''}</button>`;
+        <div class="main"><div class="title">${esc(v.nombre)}</div><div class="sub completo">${esc(sub)}</div>
+        ${comp ? `<span class="badge ${gana / comp >= .5 ? 'pagada' : 'pendiente'}">Más barato en ${gana} de ${comp} comparados</span>` : ''}</div></button>`;
     }).join('');
     $$('[data-prov]', el).forEach(r => r.addEventListener('click', () => openProv(r.dataset.prov)));
   }
@@ -1608,18 +2049,21 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
   });
 
   // Agregar / editar un precio
-  let openPriceId = null;
+  let openPriceId = null, precioNuevo = null, precioAntes = {};
+  const CAMPOS_PRECIO = ['proveedor_id', 'producto', 'categoria', 'referencia', 'descripcion', 'presentacion', 'unidades', 'precio', 'asumida', 'notas'];
   $('#b-new-price').addEventListener('click', () => {
     if (!proveedores.length) { toast('Primero agrega un suplidor en "Mis suplidores".', true); return; }
     openPrice(null);
   });
   function openPrice(id, preset) {
     openPriceId = id;
+    precioNuevo = id ? null : nuevoId();
     const r = precios.find(x => x.id === id) || preset || {};
     const f = $('#f-price'); f.reset();
     f.elements.proveedor_id.innerHTML = '<option value="">— Elige un suplidor —</option>' + proveedores.map(v => `<option value="${v.id}">${esc(v.nombre)}</option>`).join('');
     ['proveedor_id', 'producto', 'categoria', 'referencia', 'descripcion', 'presentacion', 'unidades', 'precio', 'notas'].forEach(k => f.elements[k].value = r[k] ?? '');
     f.elements.asumida.checked = !!r.asumida;
+    precioAntes = leerCampos(f, CAMPOS_PRECIO);
     $('#dpr-title').textContent = id ? 'Editar precio' : 'Nuevo precio';
     $('#dpr-delete').hidden = !id;
     priceCalc();
@@ -1634,7 +2078,7 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
     if (Number.isFinite(pk)) t += `Con ITBIS: <b>${esc(fmt(pk))}</b> el paquete` + (Number.isFinite(u) ? ` · <b>${esc(unitFmt(u))}</b>` : '');
     $('#dpr-calc').innerHTML = t;
   }
-  $('#f-price').addEventListener('submit', async e => {
+  $('#f-price').addEventListener('submit', e => {
     e.preventDefault();
     const f = e.target, u = num(f.elements.unidades.value), pr = num(f.elements.precio.value);
     const data = {
@@ -1648,14 +2092,20 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
       precio: Number.isFinite(pr) ? pr : null,
       asumida: f.elements.asumida.checked,
       notas: f.elements.notas.value.trim() || null,
-      actualizado: new Date().toISOString(),
     };
-    const res = openPriceId ? await sb.from('precios').update(data).eq('id', openPriceId) : await sb.from('precios').insert(data);
-    if (res.error) return toast(errText(res.error), true);
-    $('#d-price').close();
-    toast(openPriceId ? 'Precio actualizado' : 'Precio guardado');
-    if ($('#d-prod').open && openProd !== data.producto) openProd = data.producto;
-    loadSup();
+    const envio = openPriceId ? soloCambios(data, leerCampos(f, CAMPOS_PRECIO), precioAntes) : data;
+    if (Object.keys(envio).length) envio.actualizado = new Date().toISOString();
+    // Mientras guarda, el botón queda desactivado; y un precio nuevo lleva su id ya hecho (otro toque no crea uno repetido)
+    conBoton($('#f-price button.primary'), 'Guardando…', async () => {
+      const res = !openPriceId ? await sb.from('precios').upsert({ id: precioNuevo, ...envio })
+        : Object.keys(envio).length ? await sb.from('precios').update(envio).eq('id', openPriceId).select('id').single()
+        : await sb.from('precios').select('id').eq('id', openPriceId).single();  // no cambiaste nada: solo se revisa que siga ahí
+      if (res.error) return toast(errText(res.error), true);
+      $('#d-price').close();
+      toast(openPriceId ? 'Precio actualizado' : 'Precio guardado');
+      if ($('#d-prod').open && openProd !== data.producto) openProd = data.producto;
+      loadSup();
+    });
   });
   $('#dpr-delete').addEventListener('click', async () => {
     if (!confirm('¿Borrar este precio? No se puede deshacer.')) return;
@@ -1665,25 +2115,33 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
   });
 
   // Agregar / editar un suplidor
-  let openProvId = null;
+  let openProvId = null, provNuevo = null, provAntes = {};
+  const CAMPOS_PROV = ['nombre', 'incluye_itbis', 'contacto', 'telefono', 'notas'];
   $('#b-new-prov').addEventListener('click', () => openProv(null));
   function openProv(id) {
     openProvId = id;
+    provNuevo = id ? null : nuevoId();
     const v = provById[id] || {};
     const f = $('#f-prov'); f.reset();
     ['nombre', 'contacto', 'telefono', 'notas'].forEach(k => f.elements[k].value = v[k] || '');
     f.elements.incluye_itbis.value = v.incluye_itbis === false ? 'no' : 'si';
+    provAntes = leerCampos(f, CAMPOS_PROV);
     $('#dv-title').textContent = id ? v.nombre : 'Nuevo suplidor';
     $('#dv-delete').hidden = !id;
     $('#d-prov').showModal();
   }
-  $('#f-prov').addEventListener('submit', async e => {
+  $('#f-prov').addEventListener('submit', e => {
     e.preventDefault();
     const f = e.target, data = { incluye_itbis: f.elements.incluye_itbis.value === 'si' };
     ['nombre', 'contacto', 'telefono', 'notas'].forEach(k => data[k] = f.elements[k].value.trim() || null);
-    const res = openProvId ? await sb.from('proveedores').update(data).eq('id', openProvId) : await sb.from('proveedores').insert(data);
-    if (res.error) return toast(errText(res.error), true);
-    $('#d-prov').close(); toast(openProvId ? 'Suplidor actualizado' : 'Suplidor guardado'); loadSup();
+    const envio = openProvId ? soloCambios(data, leerCampos(f, CAMPOS_PROV), provAntes) : data;
+    conBoton($('#f-prov button.primary'), 'Guardando…', async () => {
+      const res = !openProvId ? await sb.from('proveedores').upsert({ id: provNuevo, ...envio })
+        : Object.keys(envio).length ? await sb.from('proveedores').update(envio).eq('id', openProvId).select('id').single()
+        : await sb.from('proveedores').select('id').eq('id', openProvId).single();  // no cambiaste nada: solo se revisa que siga ahí
+      if (res.error) return toast(errText(res.error), true);
+      $('#d-prov').close(); toast(openProvId ? 'Suplidor actualizado' : 'Suplidor guardado'); loadSup();
+    });
   });
   $('#dv-delete').addEventListener('click', async () => {
     const v = provById[openProvId]; if (!v) return;
@@ -1742,7 +2200,8 @@ grant select, insert, update, delete on gastos to authenticated;`;
   const FUEL = 'Combustible';
   const G_CATS = [FUEL, 'Mantenimiento del vehículo', 'Peajes y parqueo', 'Sueldos y ayudantes', 'Alquiler del local',
     'Luz, agua e internet', 'Teléfono', 'Bolsas y empaques', 'Impuestos y bancos', 'Otros'];
-  const round2 = n => Math.round(n * 100) / 100;
+  // Redondeo a centavos. El toPrecision quita el error de la coma flotante (728.75 × 0.18 = 131.17499… debe dar 131.18)
+  const round2 = n => Math.round(Number((n * 100).toPrecision(12))) / 100;
   $('#g-sql').value = G_SQL;
   $('#b-copy-gsql').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(G_SQL); toast('Texto copiado'); }
@@ -1762,27 +2221,30 @@ grant select, insert, update, delete on gastos to authenticated;`;
     $('#b-new-gasto').hidden = gTablaFalta;
   }
 
-  async function loadGastos() {
-    const r = await sb.from('gastos').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 9999);
-    gTablaFalta = missingTable(r.error);
+  async function loadGastos(callado) {
+    const r = await todas(() => sb.from('gastos').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).order('id'));
+    const falta = missingTable(r.error);
+    if (r.error && !falta) { if (!callado) toast(errText(r.error), true); if (listo.gastos) return marcar('gastos', r.error); }  // se quedan los que había
+    gTablaFalta = falta;
     $('#g-setup').hidden = !gTablaFalta;
-    if (r.error) { gastos = []; if (!gTablaFalta) toast(errText(r.error), true); }
-    else gastos = r.data;
+    gastos = r.error ? [] : r.data;
+    if (!r.error || falta) listo.gastos = true;
     showGastoViews(); fillGastoFilters(); renderGastos(); fuelChips();
+    return marcar('gastos', r.error && !falta ? r.error : null);
   }
 
   const catsEnUso = () => [...new Set([...G_CATS, ...gastos.map(g => g.categoria).filter(Boolean)])];
   function fillGastoFilters() {
     const mes = $('#g-mes'), cat = $('#g-cat'), cv = cat.value;
-    const months = [...new Set([today().slice(0, 7), ...gastos.map(g => (g.fecha || '').slice(0, 7)), ...facturas.map(f => (f.fecha || '').slice(0, 7))].filter(Boolean))].sort().reverse();
-    mes.innerHTML = months.map(m => {
+    const months = [...new Set([today().slice(0, 7), ...[...gastos, ...facturas, ...ventas].map(x => (x.fecha || '').slice(0, 7))].filter(Boolean))].sort().reverse();
+    ponerOpciones(mes, months.map(m => {
       const label = new Date(m + '-15T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
       return `<option value="${m}">${esc(label.charAt(0).toUpperCase() + label.slice(1))}</option>`;
-    }).join('') + '<option value="">Todo el tiempo</option>';
+    }).join('') + '<option value="">Todo el tiempo</option>');
     mes.value = months.includes(gMes) || gMes === '' ? gMes : months[0];
-    cat.innerHTML = '<option value="">Todas las categorías</option>' + catsEnUso().map(c => `<option>${esc(c)}</option>`).join('');
+    ponerOpciones(cat, '<option value="">Todas las categorías</option>' + catsEnUso().map(c => `<option>${esc(c)}</option>`).join(''));
     if (catsEnUso().includes(cv)) cat.value = cv;
-    $('#dl-veh').innerHTML = [...new Set(gastos.map(g => g.vehiculo).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
+    ponerOpciones($('#dl-veh'), [...new Set(gastos.map(g => g.vehiculo).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join(''));
   }
   $('#g-mes').addEventListener('input', () => { gMes = $('#g-mes').value; renderGastos(); });
   $('#g-cat').addEventListener('input', renderGastos);
@@ -1793,18 +2255,22 @@ grant select, insert, update, delete on gastos to authenticated;`;
     const gm = gastos.filter(inMes);
     const total = gm.reduce((s, g) => s + Number(g.monto || 0), 0);
     const fuel = gm.filter(g => g.categoria === FUEL).reduce((s, g) => s + Number(g.monto || 0), 0);
-    const fm = facturas.filter(inMes), conCosto = fm.filter(f => f.costo !== null && f.costo !== undefined);
-    const ganFact = conCosto.reduce((s, f) => s + Number(f.monto || 0) - Number(f.costo || 0), 0);
-    const neta = ganFact - total;
+    // Lo vendido en el periodo: facturas + ventas registradas en «Ventas». Solo las que tienen «lo que te costó» dan ganancia.
+    const tieneCosto = x => x.costo !== null && x.costo !== undefined;
+    const vendidos = [...facturas.filter(inMes), ...ventas.filter(inMes)], conCosto = vendidos.filter(tieneCosto);
+    const ganVendido = conCosto.reduce((s, x) => s + Number(x.monto || 0) - Number(x.costo || 0), 0);
+    const neta = ganVendido - total, sinCosto = vendidos.length - conCosto.length;
     $('#g-totals').innerHTML =
       `<div class="stat"><div class="k">Gastos</div><div class="v">${fmt(total)}</div></div>
        <div class="stat"><div class="k">Combustible</div><div class="v">${fmt(fuel)}</div></div>
        ${conCosto.length
         ? `<div class="stat"><div class="k">Ganancia real</div><div class="v${neta < 0 ? ' neg' : ''}">${fmt(neta)}</div></div>`
-        : `<div class="stat"><div class="k">Facturado</div><div class="v">${fmt(fm.reduce((s, f) => s + Number(f.monto || 0), 0))}</div></div>`}`;
+        : `<div class="stat"><div class="k">Vendido</div><div class="v">${fmt(sum(vendidos, 'monto'))}</div></div>`}`;
     $('#g-neta-hint').innerHTML = conCosto.length
-      ? `<b>Ganancia real</b> = lo que ganaste en tus facturas (${esc(fmt(ganFact))}) menos los gastos.`
-      : 'Para ver tu <b>ganancia real</b>, pon "lo que te costó" en cada factura.';
+      ? `<b>Ganancia real</b> = lo que ganaste en tus ventas y facturas (${esc(fmt(ganVendido))}) menos los gastos.` +
+        (sinCosto === 1 ? ' Hay 1 venta o factura sin «lo que te costó»: no entra en esta cuenta.'
+          : sinCosto ? ` Hay ${sinCosto} ventas o facturas sin «lo que te costó»: no entran en esta cuenta.` : '')
+      : 'Para ver tu <b>ganancia real</b>, pon "lo que te costó" en cada venta o factura.';
     const porCat = {};
     gm.forEach(g => porCat[g.categoria] = (porCat[g.categoria] || 0) + Number(g.monto || 0));
     const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
@@ -1839,7 +2305,7 @@ grant select, insert, update, delete on gastos to authenticated;`;
     const el = $('#fu-rend-chips');
     el.innerHTML = rendimientos().map(r => `<button type="button" data-r="${r.rend.toFixed(1)}">${esc(r.veh)}: ${r.rend.toLocaleString('es-DO', { maximumFractionDigits: 1 })} km/gal</button>`).join('');
     $$('button', el).forEach(b => b.addEventListener('click', () => { $('#fu-rend').value = b.dataset.r; fuelCalc(); }));
-    if (!$('#fu-precio').value) {
+    if (!$('#fu-precio').value && document.activeElement !== $('#fu-precio')) {  // no se toca si lo estás escribiendo
       const ult = gastos.find(g => g.categoria === FUEL && Number(g.precio_galon) > 0);
       if (ult) $('#fu-precio').value = Number(ult.precio_galon);
     }
@@ -1880,10 +2346,11 @@ grant select, insert, update, delete on gastos to authenticated;`;
   });
 
   // Agregar / editar un gasto
-  let openGastoId = null;
+  let openGastoId = null, gastoNuevo = null;
   $('#b-new-gasto').addEventListener('click', () => openGasto(null));
   function openGasto(id, preset) {
     openGastoId = id;
+    gastoNuevo = id ? null : nuevoId();
     const g = gastos.find(x => x.id === id) || preset || {};
     const f = $('#f-gasto'); f.reset();
     f.elements.categoria.innerHTML = catsEnUso().map(c => `<option>${esc(c)}</option>`).join('');
@@ -1924,34 +2391,35 @@ grant select, insert, update, delete on gastos to authenticated;`;
       notas: f.elements.notas.value.trim() || null,
     };
     const file = f.elements.archivo.files[0];
+    if (btn.disabled) return;
     btn.disabled = true; btn.textContent = file ? 'Subiendo…' : 'Guardando…';
+    // Un gasto nuevo se guarda con su id ya hecho: si el recibo no sube y se pulsa Guardar otra vez, no se anota dos veces
+    const nuevo = !openGastoId, id = openGastoId || gastoNuevo;
+    let guardado = false;
     try {
       const prev = gastos.find(x => x.id === openGastoId);
-      const res = openGastoId ? await sb.from('gastos').update(data).eq('id', openGastoId).select().single()
-                              : await sb.from('gastos').insert(data).select().single();
+      const res = nuevo ? await sb.from('gastos').upsert({ id, ...data }).select().single()
+                        : await sb.from('gastos').update(data).eq('id', id).select().single();
       if (res.error) throw res.error;
-      if (file) {
-        const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
-        const path = `gastos/${res.data.id}/${Date.now()}-${safe}`;
-        const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
-        if (up.error) throw up.error;
-        const u2 = await sb.from('gastos').update({ archivo: path }).eq('id', res.data.id);
-        if (u2.error) throw u2.error;
-        if (prev && prev.archivo) await sb.storage.from(BUCKET).remove([prev.archivo]);
-      }
-      $('#d-gasto').close();
-      toast(openGastoId ? 'Gasto actualizado' : 'Gasto guardado');
+      guardado = true;
       gMes = data.fecha.slice(0, 7);
+      if (file) await subirArchivo('gastos', 'gastos/', res.data.id, file, prev && prev.archivo);
+      $('#d-gasto').close();
+      toast(nuevo ? 'Gasto guardado' : 'Gasto actualizado');
       await loadGastos();
-    } catch (er) { toast(errText(er), true); }
+    } catch (er) {
+      if (guardado) { sinArchivo(nuevo ? 'El gasto se guardó' : 'Los cambios se guardaron', er, '#dg-file'); loadGastos(); }
+      else toast(errText(er), true);
+    }
     finally { btn.disabled = false; btn.textContent = 'Guardar'; }
   });
   $('#dg-delete').addEventListener('click', async () => {
-    const g = gastos.find(x => x.id === openGastoId); if (!g) return;
+    const g = gastos.find(x => x.id === openGastoId); if (!g || $('#dg-delete').disabled) return;
     if (!confirm('¿Borrar este gasto? No se puede deshacer.')) return;
-    if (g.archivo) await sb.storage.from(BUCKET).remove([g.archivo]);
-    const { error } = await sb.from('gastos').delete().eq('id', g.id);
+    // Primero el registro y después el recibo: si el borrado falla, el gasto no se queda sin su recibo
+    const error = await conBoton($('#dg-delete'), 'Borrando…', async () => (await sb.from('gastos').delete().eq('id', g.id)).error);
     if (error) return toast(errText(error), true);
+    borrarArchivos([g.archivo]);
     $('#d-gasto').close(); toast('Gasto borrado'); loadGastos();
   });
 
@@ -1977,19 +2445,23 @@ grant select, insert, update, delete on ventas to authenticated;`;
     catch (e) { $('#v-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
   });
 
-  let ventas = [], vTablaFalta = false, vMetodo = 'Efectivo', vDia = today();
+  let ventas = [], vTablaFalta = false, vMetodo = 'Efectivo', vDia = today(), ventaNueva = null, ventaFirma = null;
   const sum = (arr, k) => arr.reduce((s, x) => s + Number(x[k] || 0), 0);
   const hora = v => v.creado ? new Date(v.creado).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' }) : '';
   const diaLargo = s => { const t = new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' }); return t.charAt(0).toUpperCase() + t.slice(1); };
 
-  async function loadVentas() {
-    const r = await sb.from('ventas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 19999);
-    vTablaFalta = missingTable(r.error);
+  async function loadVentas(callado) {
+    const r = await todas(() => sb.from('ventas').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).order('id'));
+    const falta = missingTable(r.error);
+    if (r.error && !falta) { if (!callado) toast(errText(r.error), true); if (listo.ventas) return marcar('ventas', r.error); }  // se quedan las que había
+    vTablaFalta = falta;
     $('#v-setup').hidden = !vTablaFalta;
     $('#f-venta-rapida').hidden = vTablaFalta;
-    if (r.error && !vTablaFalta) toast(errText(r.error), true);
     ventas = r.error ? [] : r.data;
+    if (!r.error || falta) listo.ventas = true;
     renderVentas();
+    fillGastoFilters(); renderGastos();  // la «Ganancia real» de Gastos también cuenta estas ventas
+    return marcar('ventas', r.error && !falta ? r.error : null);
   }
 
   // Lo vendido en un día: ventas registradas + facturas con esa fecha
@@ -2005,15 +2477,20 @@ grant select, insert, update, delete on ventas to authenticated;`;
     return `<button class="row" data-venta="${v.id}"><div class="main"><div class="title">${esc(v.descripcion || 'Venta')}</div><div class="sub">${esc(sub)}</div></div>
       <div class="amount">${esc(fmt(Number(v.monto)))}</div></button>`;
   };
-  const facturaDiaRow = f => `<button class="row" data-fact="${f.id}"><div class="main"><div class="title">Factura${f.numero ? ' #' + esc(f.numero) : ''} · ${esc(clientName(f.cliente_id))}</div>
-      <div class="sub">${esc(ESTADO_TXT[saldo(f).estado])}</div></div><div class="amount">${esc(fmt(Number(f.monto)))}</div></button>`;
+  const facturaDiaRow = f => { const s = saldo(f); return `<button class="row" data-fact="${f.id}"><div class="main"><div class="title">${esc(clientName(f.cliente_id))}</div>
+      <div class="sub completo">${esc('Factura' + (f.numero ? ' #' + f.numero : '') + ' · ' + (s.estado === 'abonada' ? 'Abonada, falta ' + fmt(s.falta) : ESTADO_TXT[s.estado]))}</div></div><div class="amount">${esc(fmt(Number(f.monto)))}</div></button>`; };
   function bindDiaRows(el) {
     $$('[data-venta]', el).forEach(b => b.addEventListener('click', () => openVenta(b.dataset.venta)));
     $$('[data-fact]', el).forEach(b => b.addEventListener('click', () => { if ($('#d-dia').open) $('#d-dia').close(); openTab('facturas'); openInvoice(b.dataset.fact); }));
   }
 
   function renderVentas() {
-    vDia = today();
+    const antes = vDia; vDia = today();
+    // Cambió el mes con la app abierta: el historial y Gastos pasan al mes nuevo (si estaban en el mes que terminó)
+    if (antes.slice(0, 7) !== vDia.slice(0, 7)) {
+      if (vMes === antes.slice(0, 7)) vMes = vDia.slice(0, 7);
+      if (gMes === antes.slice(0, 7)) { gMes = vDia.slice(0, 7); fillGastoFilters(); renderGastos(); }
+    }
     const d = delDia(vDia);
     $('#vh-fecha').textContent = 'Ventas de hoy · ' + diaLargo(vDia);
     $('#vh-total').textContent = fmt(d.total);
@@ -2031,8 +2508,8 @@ grant select, insert, update, delete on ventas to authenticated;`;
     bindDiaRows(el);
     renderHistorial();
     const sel = $('#f-venta-rapida').elements.cliente_id, cv = sel.value;
-    sel.innerHTML = '<option value="">— Sin cliente —</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
-    sel.value = clientes.some(c => c.id === cv) ? cv : '';
+    ponerOpciones(sel, opcionesCliente('— Sin cliente —'));
+    sel.value = activos().some(c => c.id === cv) ? cv : '';
   }
 
   let vMes = today().slice(0, 7);
@@ -2040,10 +2517,10 @@ grant select, insert, update, delete on ventas to authenticated;`;
   function renderHistorial() {
     const dias = [...new Set([...ventas.map(v => v.fecha), ...facturas.map(f => f.fecha)].filter(Boolean))].sort().reverse();
     const meses = [...new Set([today().slice(0, 7), ...dias.map(x => x.slice(0, 7))])].sort().reverse();
-    $('#vh-mes').innerHTML = meses.map(m => {
+    ponerOpciones($('#vh-mes'), meses.map(m => {
       const t = new Date(m + '-15T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
       return `<option value="${m}">${esc(t.charAt(0).toUpperCase() + t.slice(1))}</option>`;
-    }).join('');
+    }).join(''));
     if (!meses.includes(vMes)) vMes = meses[0];
     $('#vh-mes').value = vMes;
     const delMes = dias.filter(x => x.startsWith(vMes)).map(x => ({ dia: x, ...delDia(x) }));
@@ -2089,10 +2566,16 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const data = { fecha: today(), monto: num(f.elements.monto.value) || 0, descripcion: f.elements.descripcion.value.trim() || null,
       metodo: vMetodo, costo: Number.isFinite(costo) ? costo : null, cliente_id: f.elements.cliente_id.value || null };
     if (!(data.monto > 0)) return toast('Escribe el monto de la venta.', true);
+    if (btn.disabled) return;
     btn.disabled = true; btn.textContent = 'Guardando…';
-    const { error } = await sb.from('ventas').insert(data);
+    // Con su id ya hecho: si se pierde la respuesta y se pulsa otra vez con lo mismo, no queda la venta repetida.
+    // Si se cambió algo, es otra venta y lleva otro id.
+    const firma = JSON.stringify(data);
+    if (firma !== ventaFirma) { ventaNueva = nuevoId(); ventaFirma = firma; }
+    const { error } = await sb.from('ventas').upsert({ id: ventaNueva, ...data });
     btn.disabled = false; btn.textContent = 'Registrar venta';
     if (error) return toast(errText(error), true);
+    ventaFirma = null;
     ['monto', 'descripcion', 'costo'].forEach(k => f.elements[k].value = '');
     f.elements.cliente_id.value = '';
     vMetodo = 'Efectivo';
@@ -2107,7 +2590,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const v = ventas.find(x => x.id === id); if (!v) return;
     openVentaId = id;
     const f = $('#f-venta'); f.reset();
-    f.elements.cliente_id.innerHTML = '<option value="">— Sin cliente —</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    f.elements.cliente_id.innerHTML = opcionesCliente('— Sin cliente —', v.cliente_id);
     ['monto', 'fecha', 'descripcion', 'costo', 'cliente_id'].forEach(k => f.elements[k].value = v[k] ?? '');
     f.elements.metodo.value = v.metodo || 'Efectivo';
     $('#d-venta').showModal();
@@ -2134,9 +2617,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     despuesDeCambiarVenta();
   });
 
-  // A la medianoche (o al volver a abrir la página otro día) el total de hoy vuelve a cero solo
-  setInterval(() => { if (started && vDia !== today()) renderVentas(); }, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && started && vDia !== today()) renderVentas(); });
+  // A la medianoche (o al volver a abrir la página otro día) el total de hoy vuelve a cero solo: ver «Al volver a la app»
 
   // ---------- Cotizaciones y facturas con el diseño de Surteme ----------
   const DOC_SQL = `create table if not exists documentos (
@@ -2159,6 +2640,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
   factura_id uuid references facturas(id) on delete set null,
   origen_id uuid references documentos(id) on delete set null
 );
+create unique index if not exists documentos_tipo_numero_uq on documentos (tipo, numero) where numero is not null;
 create table if not exists ajustes (
   clave text primary key,
   valor jsonb,
@@ -2184,19 +2666,22 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   const fechaLarga = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const docDeFactura = id => documentos.find(d => d.factura_id === id);
 
-  async function loadDocs() {
+  async function loadDocs(callado) {
     const [d, a] = await Promise.all([
-      sb.from('documentos').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).range(0, 9999),
-      sb.from('ajustes').select('*'),
+      todas(() => sb.from('documentos').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).order('id')),
+      todas(() => sb.from('ajustes').select('*').order('clave')),
     ]);
-    docTablaFalta = missingTable(d.error) || missingTable(a.error);
+    const err = d.error || a.error, falta = missingTable(d.error) || missingTable(a.error);
+    if (err && !falta) { if (!callado) toast(errText(err), true); if (listo.docs) return marcar('docs', err); }  // se quedan los que había
+    docTablaFalta = falta;
     $('#doc-setup').hidden = !docTablaFalta;
     $('#b-new-cot').hidden = docTablaFalta;
     $('#b-empresa').hidden = docTablaFalta;
-    if ((d.error || a.error) && !docTablaFalta) toast(errText(d.error || a.error), true);
     documentos = d.error ? [] : d.data;
     empresa = ((a.data || []).find(x => x.clave === 'empresa') || {}).valor || {};
+    if (!err || falta) listo.docs = true;
     renderCotizaciones(); renderFacturas();
+    return marcar('docs', err && !falta ? err : null);
   }
 
   // Lista de cotizaciones
@@ -2220,37 +2705,50 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   }
 
   // Número siguiente: 001-2026, 002-2026…
-  function nextNumero(tipo, fecha) {
+  function nextNumero(tipo, fecha, lista = documentos) {
     const year = (fecha || today()).slice(0, 4);
-    const max = documentos.filter(d => d.tipo === tipo).reduce((m, d) => {
+    const max = lista.filter(d => d.tipo === tipo).reduce((m, d) => {
       const x = /^(\d+)-(\d{4})$/.exec(d.numero || '');
       return x && x[2] === year ? Math.max(m, +x[1]) : m;
     }, 0);
     return String(max + 1).padStart(3, '0') + '-' + year;
   }
+  // Igual, pero mirando también la base: el otro teléfono pudo hacer documentos que aquí todavía no se ven. null si no se pudo revisar.
+  async function numeroLibre(tipo, fecha) {
+    const r = await todas(() => sb.from('documentos').select('id, numero').eq('tipo', tipo).like('numero', '%-' + (fecha || today()).slice(0, 4)).order('id'));
+    if (r.error) return null;
+    return nextNumero(tipo, fecha, [...documentos, ...(r.data || []).map(x => ({ tipo, numero: x.numero }))]);
+  }
 
   // ----- Editor -----
-  let edDoc = null, edItems = [];
+  let edDoc = null, edAntes = {}, edItems = [];
   try { $('#dd-margen').value = localStorage.getItem('surteme_margen') || '25'; } catch (e) { $('#dd-margen').value = '25'; }
   $('#dd-margen').addEventListener('input', () => { try { localStorage.setItem('surteme_margen', $('#dd-margen').value); } catch (e) {} });
 
   $('#b-new-cot').addEventListener('click', () => newDoc('cotizacion'));
   $('#b-crear-factura').addEventListener('click', () => newDoc('factura'));
   function newDoc(tipo, base) {
+    if (faltaCargar('base', 'docs')) return;
     if (docTablaFalta) { openTab('cotiz'); toast('Primero termina el paso de Supabase que sale en Cotizaciones.', true); return; }
-    if (!clientes.length) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
+    if (!activos().length && !(base && base.cliente_id)) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
     const d = Object.assign({ tipo, fecha: today(), condiciones: empresa.condiciones || 'Contado', validez: empresa.validez || '15 días',
       notas: tipo === 'cotizacion' ? (empresa.notas_cot || '') : '', items: [], itbis: false }, base || {});
     d.tipo = tipo; d.id = null; d.numero = nextNumero(tipo, d.fecha);
     openEditor(d);
+    // Se revisa la base por si el otro teléfono ya usó ese número; si es así (y no lo has cambiado), se propone el siguiente
+    numeroLibre(tipo, d.fecha).then(n => {
+      const inp = $('#f-doc').elements.numero;
+      if (n && n !== d.numero && edDoc === d && $('#d-doc').open && inp.value === d.numero) inp.value = d.numero = n;
+    }).catch(() => {});
   }
   function openEditor(d) {
     edDoc = d;
+    edAntes = JSON.parse(JSON.stringify(d));  // cómo estaba al abrir (al guardar se manda solo lo que cambió)
     edItems = JSON.parse(JSON.stringify(d.items || []));
     if (!edItems.length) edItems.push(blankItem());
     const f = $('#f-doc'); f.reset();
     try { $('#dd-margen').value = localStorage.getItem('surteme_margen') || '25'; } catch (e) { $('#dd-margen').value = '25'; }
-    f.elements.cliente_id.innerHTML = '<option value="">— Elige un cliente —</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    f.elements.cliente_id.innerHTML = opcionesCliente('— Elige un cliente —', d.cliente_id);
     f.elements.cliente_id.value = d.cliente_id || '';
     ['numero', 'fecha', 'condiciones', 'validez', 'ncf', 'notas'].forEach(k => f.elements[k].value = d[k] || '');
     f.elements.itbis.checked = !!d.itbis;
@@ -2282,11 +2780,18 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       edItems[i][k] = ['cantidad', 'precio', 'costo'].includes(k) ? (inp.value === '' ? null : num(inp.value)) : inp.value;
       updateSums();
     }));
-    $$('[data-del]', el).forEach(b => b.addEventListener('click', () => { edItems.splice(+b.dataset.del, 1); renderItems(); }));
+    $$('[data-del]', el).forEach(b => b.addEventListener('click', () => {
+      const it = edItems[+b.dataset.del], nombre = (it.descripcion || '').trim();
+      // Si el producto ya tiene algo escrito, pregunta antes de quitarlo
+      if ((nombre || (it.precio !== null && it.precio !== '' && it.precio !== undefined)) && !confirm(`¿Quitar ${nombre ? '«' + nombre + '»' : 'el producto ' + (+b.dataset.del + 1)} de la lista?`)) return;
+      edItems.splice(+b.dataset.del, 1); sucias.add($('#d-doc')); renderItems();
+    }));
     updateSums();
   }
+  // Total de una línea, ya redondeado a centavos: así las líneas impresas suman exacto el total
+  const lineaTotal = it => round2((Number(it.cantidad) || 0) * (Number(it.precio) || 0));
   function calcTotals(items, itbis) {
-    const subtotal = round2(items.reduce((s, it) => s + (Number(it.cantidad) || 0) * (Number(it.precio) || 0), 0));
+    const subtotal = round2(items.reduce((s, it) => s + lineaTotal(it), 0));
     const itbisMonto = itbis ? round2(subtotal * ITBIS) : 0;
     const conCosto = items.filter(it => it.costo !== null && it.costo !== undefined && it.costo !== '' && Number.isFinite(Number(it.costo)));
     const costo = conCosto.length === items.length && items.length ? round2(conCosto.reduce((s, it) => s + (Number(it.cantidad) || 0) * Number(it.costo), 0)) : null;
@@ -2295,7 +2800,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   }
   function updateSums() {
     $$('#dd-items [data-i]').forEach(card => {
-      const it = edItems[+card.dataset.i], t = (Number(it.cantidad) || 0) * (Number(it.precio) || 0);
+      const it = edItems[+card.dataset.i], t = lineaTotal(it);
       $('.tot', card).textContent = fmt(t);
       const c = Number(it.costo);
       $('.gan', card).innerHTML = it.costo !== null && it.costo !== '' && Number.isFinite(c) && Number(it.precio) > 0
@@ -2307,7 +2812,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       (t.hayCosto ? `<div style="color:var(--muted)"><span>Tu ganancia estimada</span><b style="color:${t.ganancia < 0 ? 'var(--bad)' : 'var(--ok)'}">${fmt(t.ganancia)}</b></div>` : '');
   }
   $('#f-doc').elements.itbis.addEventListener('input', updateSums);
-  $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); renderItems(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
+  $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); sucias.add($('#d-doc')); renderItems(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
 
   // Elegir de la lista de precios de los suplidores
   $('#dd-pick').addEventListener('click', () => {
@@ -2320,12 +2825,14 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     return conUnidad[0] || p.rows.find(r => Number.isFinite(pkgItbis(r))) || p.rows[0];
   }
   function renderPick() {
-    const q = norm($('#pk-q').value);
-    const list = productos.filter(p => !q || norm(p.nombre + ' ' + p.categoria).includes(q)).slice(0, 60);
+    // Primero los productos que lo dicen en su nombre; después los que solo coinciden por la categoría
+    // (así «vaso» muestra primero los vasos, y no las cajas de la categoría «porta-vasos»)
+    const ws = palabras($('#pk-q').value), enNombre = productos.filter(p => tieneTodas(ws, p.nombre));
+    const list = enNombre.concat(productos.filter(p => !enNombre.includes(p) && tieneTodas(ws, p.nombre + ' ' + p.categoria))).slice(0, 60);
     $('#pk-list').innerHTML = list.length ? list.map(p => {
       const r = mejorOferta(p), pk = pkgItbis(r);
-      return `<button class="row" data-pk="${productos.indexOf(p)}"><div class="main"><div class="title">${esc(p.nombre)}</div>
-        <div class="sub">${esc([r.presentacion && 'Pres. ' + r.presentacion, provName(r.proveedor_id)].filter(Boolean).join(' · '))}</div></div>
+      return `<button class="row" data-pk="${productos.indexOf(p)}"><div class="main"><div class="title completo">${esc(p.nombre)}</div>
+        <div class="sub completo">${esc([r.presentacion && 'Pres. ' + r.presentacion, provName(r.proveedor_id)].filter(Boolean).join(' · '))}</div></div>
         <div class="amount">${Number.isFinite(pk) ? esc(fmt(pk)) : '—'}<br><span class="sub" style="font-weight:500">tu costo</span></div></button>`;
     }).join('') : '<div class="empty">No se encontró ese producto.</div>';
     $$('[data-pk]', $('#pk-list')).forEach(b => b.addEventListener('click', () => {
@@ -2335,18 +2842,22 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       const vacio = edItems.length === 1 && !edItems[0].descripcion && !edItems[0].precio;
       const it = { descripcion: p.nombre, detalle: '', cantidad: 1, unidad: r.presentacion || '', precio, costo: Number.isFinite(costo) ? round2(costo) : null };
       if (vacio) edItems[0] = it; else edItems.push(it);
+      sucias.add($('#d-doc'));
       $('#d-pick').close(); renderItems();
       toast(`${p.nombre} agregado`);
     }));
   }
 
   // Guardar
+  // Productos tal como se guardan (sin los que no tienen nombre, con números). También sirve para saber si cambiaste alguno.
+  const limpiarItems = arr => (arr || []).filter(it => String(it.descripcion || '').trim()).map(it => ({
+    descripcion: String(it.descripcion).trim(), detalle: String(it.detalle || '').trim(), cantidad: Number(it.cantidad) || 0,
+    unidad: String(it.unidad || '').trim(), precio: Number(it.precio) || 0, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
+  const vacio = v => v === '' || v === undefined ? null : v;
   $('#f-doc').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, btn = $('#dd-save');
-    const items = edItems.filter(it => (it.descripcion || '').trim()).map(it => ({
-      descripcion: it.descripcion.trim(), detalle: (it.detalle || '').trim(), cantidad: Number(it.cantidad) || 0,
-      unidad: (it.unidad || '').trim(), precio: Number(it.precio) || 0, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
+    const items = limpiarItems(edItems);
     if (!items.length) return toast('Agrega al menos un producto con nombre.', true);
     const c = clientes.find(x => x.id === f.elements.cliente_id.value);
     const t = calcTotals(items, f.elements.itbis.checked);
@@ -2360,27 +2871,98 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       notas: f.elements.notas.value.trim() || null,
     };
     if (!edDoc.id) { data.estado = edDoc.tipo === 'factura' ? 'emitida' : 'pendiente'; if (edDoc.origen_id) data.origen_id = edDoc.origen_id; }
+    // ¿Cambió este dato desde que se abrió el editor? Un documento que ya existía guarda solo lo que cambió: si mientras tanto
+    // el otro teléfono le puso una nota (o cambió otra cosa), no se deshace.
+    const cambio = k => JSON.stringify(k === 'items' ? limpiarItems(edAntes.items) : k === 'itbis' ? !!edAntes.itbis : vacio(edAntes[k])) !== JSON.stringify(vacio(data[k]));
+    let vuelve = 0;  // lo que falta, si una factura pagada vuelve a pendiente por subir el total
+    if (btn.disabled) return;
     btn.disabled = true; btn.textContent = 'Guardando…';
-    try {
+    // Ids hechos aquí: si algo falla a mitad y se pulsa Guardar otra vez, se completa lo mismo (no se crea otra factura)
+    if (!edDoc.id && !edDoc.idNuevo) edDoc.idNuevo = nuevoId();
+    // Si la factura es nueva y el documento no se pudo guardar, se quita de «Facturas» (para que no quede una factura suelta)
+    const creaFactura = data.tipo === 'factura' && !(edDoc.factura_id && facturas.some(x => x.id === edDoc.factura_id));
+    const deshacer = async () => {
+      if (!creaFactura || !edDoc.factura_id) return;
+      const r = await sb.from('facturas').delete().eq('id', edDoc.factura_id);
+      if (!r.error) edDoc.factura_id = null;
+    };
+    async function guardarDoc() {
+      if (!edDoc.id) return await sb.from('documentos').upsert({ id: edDoc.idNuevo, ...data }).select().single();
+      const envio = Object.fromEntries(Object.keys(data).filter(cambio).map(k => [k, data[k]]));
+      return Object.keys(envio).length ? await sb.from('documentos').update(envio).eq('id', edDoc.id).select().single()
+        : await sb.from('documentos').select('*').eq('id', edDoc.id).single();  // no cambiaste nada: solo se revisa que siga ahí
+    }
+    async function guardar() {
+      if (data.tipo !== 'factura') return guardarDoc();
       // Una factura también se anota en "Facturas" para cobrarla, recibir abonos y verla en la ganancia
-      if (data.tipo === 'factura') {
-        const reg = { cliente_id: data.cliente_id, numero: data.ncf || data.numero, fecha: data.fecha, monto: data.total,
-          costo: data.costo === null ? null : round2(data.costo + data.itbis_monto) };
-        const existe = edDoc.factura_id && facturas.find(x => x.id === edDoc.factura_id);
-        const r = existe ? await sb.from('facturas').update(reg).eq('id', edDoc.factura_id).select().single()
-                         : await sb.from('facturas').insert(Object.assign({ estado: 'pendiente' }, reg)).select().single();
-        if (r.error) throw r.error;
-        data.factura_id = r.data.id;
+      const reg = { cliente_id: data.cliente_id, numero: data.ncf || data.numero, fecha: data.fecha, monto: data.total,
+        costo: data.costo === null ? null : round2(data.costo + data.itbis_monto) };
+      const existe = edDoc.factura_id && facturas.find(x => x.id === edDoc.factura_id);
+      if (existe && edDoc.id) {
+        // Factura ya hecha: en «Facturas» se cambia solo lo que cambió en el documento (lo demás lo pudo cambiar el otro teléfono)
+        const desde = { cliente_id: ['cliente_id'], numero: ['numero', 'ncf'], fecha: ['fecha'], monto: ['total'], costo: ['costo', 'itbis_monto'] };
+        Object.keys(desde).forEach(k => { if (!desde[k].some(cambio)) delete reg[k]; });
+        // Si cambió el total: si estaba pagada con sus abonos y ahora es mayor, vuelve a pendiente (y al revés).
+        // El estado solo se manda si cambia: así no se deshace un «Pagada» que puso el otro teléfono.
+        if ('monto' in reg) {
+          const est = estadoPorAbonos(existe, reg.monto, existe.estado, pagadoDe(existe.id));
+          if (est !== existe.estado) reg.estado = est;
+          if (existe.estado === 'pagada' && est === 'pendiente') vuelve = round2(reg.monto - pagadoDe(existe.id));
+        }
+        // Primero el documento y después la fila de «Facturas»: si el número ya lo tiene otro documento, no se cambia nada
+        data.factura_id = existe.id;
+        const res = await guardarDoc();
+        if (res.error) return res;
+        if (Object.keys(reg).length) { const r = await sb.from('facturas').update(reg).eq('id', existe.id).select().single(); if (r.error) throw r.error; }
+        return res;
       }
-      const res = edDoc.id ? await sb.from('documentos').update(data).eq('id', edDoc.id).select().single()
-                           : await sb.from('documentos').insert(data).select().single();
+      // Factura nueva: primero la fila de «Facturas» (el documento apunta a ella) y después el documento.
+      // (Si el documento ya existía, no se manda el estado: la base pone «pendiente» si la fila es nueva, y si no, no se toca.)
+      if (!edDoc.factura_id) edDoc.factura_id = nuevoId();
+      const r = await sb.from('facturas').upsert(Object.assign({ id: edDoc.factura_id }, edDoc.id ? {} : { estado: 'pendiente' }, reg)).select().single();
+      if (r.error) throw r.error;
+      data.factura_id = r.data.id;
+      return guardarDoc();
+    }
+    let docGuardado = false, dudoso = false;
+    try {
+      // Convertir una cotización: justo antes de guardar se revisa otra vez que nadie la haya convertido mientras tanto
+      if (!edDoc.id && edDoc.origen_id) {
+        const hecha = await yaConvertida(edDoc.origen_id, edDoc.idNuevo);
+        if (hecha === null) return;
+        if (hecha) { toast(hecha + ' Cierra esta ventana.', true, 9000); load(); return; }
+      }
+      const avisos = [];
+      let res = await guardar(), malo = !!vuelve;
+      // Ese número ya lo tiene otro documento (por ejemplo, uno hecho en el otro teléfono): se busca el siguiente libre y se guarda con ese
+      if (res.error && res.error.code === '23505' && !edDoc.id) {
+        const antes = data.numero, n = await numeroLibre(data.tipo, data.fecha);
+        if (n && n !== antes) {
+          data.numero = n; f.elements.numero.value = n;
+          res = await guardar();
+          if (!res.error) avisos.push(`Se guardó con el número ${n}, porque el ${antes} ya lo tenía otro documento.`);
+        }
+      }
+      if (res.error && res.error.code === '23505') { await deshacer(); return toast(`Ya hay otra ${TIPO[data.tipo].toLowerCase()} con el número ${data.numero}. Cambia el número y pulsa Guardar otra vez.`, true); }
+      // Documento nuevo sin respuesta (internet): pudo guardarse igual. Se pregunta a la base antes de deshacer nada.
+      // Si está, se sigue como si todo hubiera salido bien; si no se puede saber, no se borra nada (Guardar otra vez completa lo mismo).
+      if (res.error && !edDoc.id && sinRed(res.error.message || '')) {
+        const r = await sb.from('documentos').select('*').eq('id', edDoc.idNuevo);
+        if (r.error) dudoso = true;
+        else if ((r.data || []).length) res = { data: r.data[0], error: null };
+      }
       if (res.error) throw res.error;
-      if (edDoc.origen_id) await sb.from('documentos').update({ estado: 'aceptada' }).eq('id', edDoc.origen_id);
+      docGuardado = true;
+      if (edDoc.origen_id) {
+        const o = await sb.from('documentos').update({ estado: 'aceptada' }).eq('id', edDoc.origen_id);
+        if (o.error) { malo = true; avisos.push('No se pudo marcar la cotización como «Aceptada» (revisa tu internet), pero ya no se puede volver a convertir.'); }
+      }
       $('#d-doc').close();
-      toast(TIPO[data.tipo] + ' guardada');
+      const msg = TIPO[data.tipo] + ' guardada' + (vuelve ? `. Vuelve a «Pendiente»: faltan ${fmt(vuelve)}` : '');
+      toast(avisos.length ? msg + '. ' + avisos.join(' ') : msg, malo, avisos.length ? 8000 : 0);
       await load();
       openView(res.data.id);
-    } catch (er) { toast(errText(er), true); }
+    } catch (er) { if (!docGuardado && !dudoso) await deshacer().catch(() => {}); toast(errText(er), true); }
     finally { btn.disabled = false; btn.textContent = 'Guardar y ver'; }
   });
 
@@ -2398,7 +2980,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       const cant = Number(it.cantidad) || 0, cantTxt = cant.toLocaleString('es-DO', { maximumFractionDigits: 2 });
       const q = it.unidad ? (cant === 1 ? esc(it.unidad) : `${esc(cantTxt)}<br><span style="font-size:13.5px;color:#4a5a76">(${esc(it.unidad)})</span>`) : esc(cantTxt);
       return `<tr><td class="n">${i + 1}</td><td class="d"><b>${esc(it.descripcion)}</b>${it.detalle ? `<span>${esc(it.detalle)}</span>` : ''}</td>
-        <td class="q">${q}</td><td class="p">${rd(it.precio)}</td><td class="t">${rd(cant * (Number(it.precio) || 0))}</td></tr>`;
+        <td class="q">${q}</td><td class="p">${rd(it.precio)}</td><td class="t">${rd(lineaTotal(it))}</td></tr>`;
     }).join('');
     const pie = [empresa.telefono && 'Tel. ' + empresa.telefono, empresa.rnc && 'RNC ' + empresa.rnc, empresa.direccion, empresa.correo].filter(Boolean);
     return `<div class="doc">${CORNER}
@@ -2414,7 +2996,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
         <div class="doc-total"><span>TOTAL GENERAL</span><b>${rd(d.total)}</b></div>
       </div>
       ${d.notas ? `<div class="doc-notes"><b>Notas:</b> ${esc(d.notas)}</div>` : ''}
-      <div class="doc-foot">${empresa.gracias !== '' ? `<div class="thanks">${esc(empresa.gracias || '¡Gracias por preferirnos!')}</div>` : ''}${esc(pie.join('  ·  '))}</div>
+      <div class="doc-foot">${empresa.sin_gracias !== true ? `<div class="thanks">${esc(empresa.gracias || GRACIAS)}</div>` : ''}${esc(pie.join('  ·  '))}</div>
       ${CORNER_BR}
     </div>`;
   }
@@ -2426,7 +3008,8 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     const d = viewDoc, cot = d.tipo === 'cotizacion';
     $('#dv2-title').textContent = `${TIPO[d.tipo]} ${d.numero || ''} · ${d.cliente_nombre || ''}`;
     $('#dv2-prev').innerHTML = docHTML(d);
-    $('#dv2-convert').hidden = !cot || d.estado === 'aceptada';
+    // Si ya hay una factura hecha con esta cotización, no se ofrece convertirla otra vez (aunque no se haya podido marcar «Aceptada»)
+    $('#dv2-convert').hidden = !cot || d.estado === 'aceptada' || documentos.some(x => x.origen_id === d.id);
     $('#dv2-estado').hidden = !cot;
     $('#dv2-estado').textContent = d.estado === 'rechazada' ? 'Marcar pendiente' : 'Marcar rechazada';
     $('#dv2-pagos').hidden = cot || !d.factura_id;
@@ -2456,26 +3039,31 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     const img = $('img', box);
     if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; });
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const canvas = await window.html2canvas($('.doc', box), { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    // El iPhone no dibuja imágenes de más de ~16 millones de puntos (sale en blanco): en documentos largos se baja la nitidez
+    const el = $('.doc', box), scale = Math.min(2, Math.sqrt(16e6 / (816 * Math.max(1056, el.offsetHeight))));
+    const canvas = await window.html2canvas(el, { scale, backgroundColor: '#ffffff', useCORS: true, logging: false });
     box.innerHTML = '';
     return canvas;
   }
+  const NO_IMAGEN = 'No se pudo preparar la imagen del documento (puede ser muy largo para este teléfono). Prueba dividirlo en dos.';
+  const jpeg = c => { const u = c.toDataURL('image/jpeg', 0.92); if (!/^data:image\/jpeg/.test(u)) throw new Error(NO_IMAGEN); return u; };
   async function prepareFiles(d) {
     const canvas = await renderCanvas(d);
     const png = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (!png || !png.size) throw new Error(NO_IMAGEN);
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     const pdf = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
     const pw = 612, ph = 792, pagePx = Math.floor(canvas.width * ph / pw), fullH = canvas.height * pw / canvas.width;
     if (fullH <= ph * 1.45) {
       // Cabe en una sola hoja carta (se reduce un poco si hace falta)
       const k = Math.min(1, ph / fullH);
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pw - pw * k) / 2, 0, pw * k, fullH * k);
+      pdf.addImage(jpeg(canvas), 'JPEG', (pw - pw * k) / 2, 0, pw * k, fullH * k);
     } else for (let y = 0, page = 0; y < canvas.height; y += pagePx, page++) {
       const h = Math.min(pagePx, canvas.height - y);
       const part = document.createElement('canvas'); part.width = canvas.width; part.height = h;
       const ctx = part.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, h); ctx.drawImage(canvas, 0, -y);
       if (page) pdf.addPage();
-      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, h * pw / canvas.width);
+      pdf.addImage(jpeg(part), 'JPEG', 0, 0, pw, h * pw / canvas.width);
     }
     const name = fileBase(d);
     shareFiles = { id: d.id, png: new File([png], name + '.png', { type: 'image/png' }), pdf: new File([pdf.output('blob')], name + '.pdf', { type: 'application/pdf' }) };
@@ -2516,10 +3104,26 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     if (img && !img.complete) img.onload = img.onerror = go; else go();
   });
   $('#dv2-edit').addEventListener('click', () => { const d = viewDoc; $('#d-view').close(); openEditor(d); });
-  $('#dv2-convert').addEventListener('click', () => {
-    const d = viewDoc; $('#d-view').close();
+  $('#dv2-convert').addEventListener('click', async () => {
+    const d = viewDoc, b = $('#dv2-convert'); if (!d || b.disabled) return;
+    const hecha = await conBoton(b, 'Revisando…', () => yaConvertida(d.id));
+    if (hecha === null) return;  // no se pudo revisar (ya se avisó)
+    if (hecha) { b.hidden = true; toast(hecha, true, 9000); load(); return; }
+    $('#d-view').close();
     newDoc('factura', { cliente_id: d.cliente_id, condiciones: d.condiciones, items: d.items, itbis: d.itbis, notas: '', origen_id: d.id });
   });
+  // ¿Ya se hizo una factura con esta cotización? Se pregunta a la base: el otro teléfono pudo convertirla hace poco.
+  // Devuelve el aviso si ya está convertida, '' si no, o null si no se pudo revisar. «salvo»: el documento que se está guardando.
+  async function yaConvertida(id, salvo) {
+    const [o, h] = await Promise.all([sb.from('documentos').select('id, estado').eq('id', id), sb.from('documentos').select('id, numero').eq('origen_id', id)]);
+    const err = o.error || h.error;
+    if (err) { toast(`No se pudo revisar la cotización (${motivo(err)}). Intenta otra vez.`, true); return null; }
+    const hechas = (h.data || []).filter(x => x.id !== salvo);
+    if (hechas.length) return `Esta cotización ya se convirtió en la factura ${hechas[0].numero || ''} (quizás en el otro teléfono). No se hizo otra.`;
+    if (!(o.data || []).length) return 'Esta cotización ya no existe: la borraron en el otro teléfono.';
+    if (o.data[0].estado === 'aceptada') return 'Esta cotización ya está «Aceptada»: ya se convirtió en factura. No se hizo otra.';
+    return '';
+  }
   $('#dv2-estado').addEventListener('click', async () => {
     const d = viewDoc, nuevo = d.estado === 'rechazada' ? 'pendiente' : 'rechazada';
     const { error } = await sb.from('documentos').update({ estado: nuevo }).eq('id', d.id);
@@ -2529,29 +3133,35 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   });
   $('#dv2-pagos').addEventListener('click', () => { const d = viewDoc; $('#d-view').close(); openTab('facturas'); openInvoice(d.factura_id); });
   $('#dv2-delete').addEventListener('click', async () => {
-    const d = viewDoc; if (!d) return;
+    const d = viewDoc, b = $('#dv2-delete'); if (!d || b.disabled) return;
     const f = d.factura_id && facturas.find(x => x.id === d.factura_id);
     if (!confirm(f ? '¿Borrar esta factura? También se borra de la lista de Facturas, con sus abonos. No se puede deshacer.' : `¿Borrar esta ${TIPO[d.tipo].toLowerCase()}? No se puede deshacer.`)) return;
-    const r = await sb.from('documentos').delete().eq('id', d.id);
-    if (r.error) return toast(errText(r.error), true);
-    if (f) {
-      const files = [f.archivo, ...abonos.filter(a => a.factura_id === f.id).map(a => a.archivo)].filter(Boolean);
-      if (files.length) await sb.storage.from(BUCKET).remove(files);
-      await sb.from('facturas').delete().eq('id', f.id);
-    }
+    // Con factura: el documento, la factura (con sus abonos) y al final los archivos. «Borrada» solo si todo salió bien.
+    const error = await conBoton(b, 'Borrando…', async () => f ? borrarFactura(f) : (await sb.from('documentos').delete().eq('id', d.id)).error);
+    if (error) { toast(errText(error), true); load(); return; }
     $('#d-view').close(); toast('Borrada'); load();
   });
 
   // ----- Datos de la empresa -----
+  // El mensaje al pie sale siempre (con este texto si está vacío), salvo que marquen «No mostrar mensaje al pie»
+  const GRACIAS = '¡Gracias por preferirnos!';
+  const sinGracias = () => { const f = $('#f-empresa'); f.elements.gracias.disabled = f.elements.sin_gracias.checked; };
+  $('#f-empresa').elements.sin_gracias.addEventListener('change', sinGracias);
   $('#b-empresa').addEventListener('click', () => {
+    // Sin los datos guardados cargados, la ventana saldría vacía y al guardar borraría el teléfono, el RNC y la dirección
+    if (faltaCargar('docs')) return;
     const f = $('#f-empresa'); f.reset();
-    ['telefono', 'rnc', 'direccion', 'correo', 'gracias', 'condiciones', 'validez', 'notas_cot'].forEach(k => f.elements[k].value = empresa[k] || '');
+    ['telefono', 'rnc', 'direccion', 'correo', 'condiciones', 'validez', 'notas_cot'].forEach(k => f.elements[k].value = empresa[k] || '');
+    f.elements.gracias.value = empresa.gracias || GRACIAS;
+    f.elements.sin_gracias.checked = empresa.sin_gracias === true; sinGracias();
     $('#d-empresa').showModal();
   });
   $('#f-empresa').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, valor = {};
     ['telefono', 'rnc', 'direccion', 'correo', 'gracias', 'condiciones', 'validez', 'notas_cot'].forEach(k => valor[k] = f.elements[k].value.trim());
+    valor.sin_gracias = f.elements.sin_gracias.checked;
+    if (!valor.gracias) valor.gracias = valor.sin_gracias ? '' : GRACIAS;
     const { error } = await sb.from('ajustes').upsert({ clave: 'empresa', valor, actualizado: new Date().toISOString() });
     if (error) return toast(errText(error), true);
     empresa = valor; $('#d-empresa').close(); toast('Datos guardados');
@@ -2560,9 +3170,24 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   $('#di-viewdoc').addEventListener('click', () => { const d = docDeFactura(openInvoiceId); if (d) { $('#d-invoice').close(); openView(d.id); } });
   $('#di-editdoc').addEventListener('click', () => { const d = docDeFactura(openInvoiceId); if (d) { $('#d-invoice').close(); openEditor(d); } });
 
-  // Cerrar ventanas
+  // Cerrar ventanas. × y Cancelar cierran siempre. Tocar fuera o pulsar «atrás» (o Esc) también cierra,
+  // pero si en una ventana con formulario ya escribiste algo, primero pregunta para no perderlo.
+  const LECTURA = ['d-dia', 'd-prod', 'd-pick', 'd-view'];
   $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
-  $$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+  $$('dialog').forEach(d => {
+    let abajo = null, reabrir = false;
+    const salir = () => !sucias.has(d) || confirm('¿Salir sin guardar? Se perderá lo que escribiste.');
+    if (!LECTURA.includes(d.id)) ['input', 'change'].forEach(ev => d.addEventListener(ev, e => { if (e.target.id !== 'dd-margen') sucias.add(d); }));
+    d.addEventListener('close', () => { if (reabrir) { reabrir = false; d.showModal(); } else sucias.delete(d); });
+    // Solo cuenta como «tocar fuera» si el dedo también bajó fuera (así, seleccionar texto arrastrando no la cierra)
+    d.addEventListener('pointerdown', e => { abajo = e.target; });
+    d.addEventListener('click', e => { const fuera = e.target === d && (!abajo || abajo === d); abajo = null; if (fuera && salir()) d.close(); });
+    d.addEventListener('cancel', e => {
+      if (e.target !== d || salir()) return;
+      // Si el navegador no deja impedir el cierre (por ejemplo, «atrás» dos veces seguidas), se vuelve a abrir con lo escrito
+      if (e.cancelable) e.preventDefault(); else { reabrir = true; setTimeout(() => { if (d.open) reabrir = false; }); }
+    });
+  });
 })();
 </script>
 </body>
