@@ -172,6 +172,8 @@
   .row .completo { display: block; white-space: normal; overflow: visible; overflow-wrap: anywhere; -webkit-line-clamp: none; }
   .row .main > .badge { margin-top: 4px; }
   .row .amount { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  /* Un monto nunca se parte en dos líneas (ni el «-» de una pérdida queda solo al final de una línea, ver montoHtml()) */
+  .monto { white-space: nowrap; }
   .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text);
     display: grid; place-items: center; font-weight: 700; flex: none; }
   .badge { display: inline-block; font-size: .78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
@@ -414,7 +416,7 @@
         <label class="check"><input type="checkbox" id="c-itbis"> Mostrar precio con ITBIS (18%)</label>
 
         <div class="results" id="c-results"></div>
-        <p class="explain"><b>Margen</b>: de cada RD$100 que cobras, cuánto es ganancia.<br><b>Sobre el costo</b>: cuánto le subiste al costo (también se llama "markup").</p>
+        <p class="explain"><b>Margen</b>: de cada <span class="monto">RD$100</span> que cobras, cuánto es ganancia.<br><b>Sobre el costo</b>: cuánto le subiste al costo (también se llama "markup").</p>
       </div>
     </section>
 
@@ -961,6 +963,11 @@
   const pct = n => Number.isFinite(n) ? n.toLocaleString('es-DO', { maximumFractionDigits: 1 }) + '%' : '—';
   const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Montos dentro de la página (HTML): van en un <span class="monto"> que nunca se parte en dos líneas, así una pérdida
+  // no sale como «ganancia -» en una línea y «RD$50.00» en la otra. El texto de alrededor sí baja de línea entre palabras.
+  // Los mensajes de WhatsApp, los avisos y los documentos usan fmt (texto simple).
+  const sinPartir = s => `<span class="monto">${esc(s)}</span>`;
+  const montoHtml = n => sinPartir(fmt(n));
   const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
   const fdate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const initials = s => String(s || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -1048,24 +1055,45 @@
     try { const { error } = await sb.storage.from(BUCKET).remove(files); if (error) console.warn('No se pudieron borrar archivos', files, error); }
     catch (e) { console.warn('No se pudieron borrar archivos', files, e); }
   }
-  // Sube el archivo de un registro ya guardado y lo anota. Si no se puede anotar, se borra lo subido (no quedan archivos sueltos)
+  // Archivos que quedaron en duda (se perdió la respuesta y no se pudo preguntar a la base), por registro: el que se subió
+  // y el que tenía antes. No se sabe cuál usa, así que no se borra ninguno. Cuando ese registro anota otro archivo, ya
+  // se sabe que no usa ninguno de los dos y se borran.
+  const subidosDudosos = new Map();
+  // Sube el archivo de un registro ya guardado y lo anota. Si no se anotó, se borra lo subido (no quedan archivos sueltos)
   async function subirArchivo(tabla, carpeta, id, file, anterior) {
     const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
-    const path = `${carpeta}${id}/${Date.now()}-${safe}`;
+    const path = `${carpeta}${id}/${Date.now()}-${safe}`, k = tabla + ':' + id;
     const up = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined });
     if (up.error) throw up.error;
     const u2 = await sb.from(tabla).update({ archivo: path }).eq('id', id);
-    if (u2.error) { borrarArchivos([path]); throw u2.error; }
-    if (anterior && anterior !== path) borrarArchivos([anterior]);
+    if (u2.error) {
+      // Puede que sí se anotara y solo se perdió la respuesta (internet que se corta): antes de borrar lo subido se le
+      // pregunta a la base. Si el registro ya apunta a este archivo, todo salió bien. Si no se puede preguntar, no se
+      // borra nada: el registro podría quedar apuntando a un archivo que ya no existe.
+      let r;
+      try { r = await sb.from(tabla).select('archivo').eq('id', id); } catch (e) { r = { error: e }; }
+      if (r.error) {
+        subidosDudosos.set(k, [...(subidosDudosos.get(k) || []), path, anterior].filter(Boolean));
+        throw { ...u2.error, message: u2.error.message, dudoso: true };
+      }
+      const fila = (r.data || [])[0];
+      if (!fila || fila.archivo !== path) { borrarArchivos([path]); throw u2.error; }
+    }
+    const sueltos = (subidosDudosos.get(k) || []).filter(p => p !== path);
+    subidosDudosos.delete(k);
+    borrarArchivos([...new Set([anterior !== path && anterior, ...sueltos])]);
   }
   // Motivo corto de un error, para ponerlo entre paréntesis dentro de un aviso
   const motivo = er => {
     const m = (er && (er.message || er.error_description)) || String(er);
     return sinRed(m) ? 'sin conexión a internet' : errText(er).replace(/^Hubo un problema: /, '').replace(/\.$/, '');
   };
-  // Aviso cuando el registro sí se guardó pero el archivo no subió: sale en rojo y también queda escrito junto al archivo
+  // Aviso cuando el registro sí se guardó pero el archivo no subió (o no se sabe si quedó guardado, er.dudoso):
+  // sale en rojo y también queda escrito junto al archivo
   function sinArchivo(que, er, donde) {
-    const t = `${que}, pero el archivo no subió (${motivo(er)}). Pulsa Guardar otra vez para subirlo. Si cierras la ventana, puedes adjuntarlo después.`;
+    const t = er && er.dudoso
+      ? `${que}, pero no se sabe si el archivo quedó guardado (${motivo(er)}). Pulsa Guardar otra vez para subirlo de nuevo. Si cierras la ventana, mira después si sale el 📎; si no sale, adjúntalo otra vez.`
+      : `${que}, pero el archivo no subió (${motivo(er)}). Pulsa Guardar otra vez para subirlo. Si cierras la ventana, puedes adjuntarlo después.`;
     toast(t, true, 9000);
     $(donde).innerHTML = `<b style="color:var(--bad)">${esc(t)}</b>`;
   }
@@ -1107,17 +1135,17 @@
     const markup = costo > 0 ? gan / costo * 100 : NaN;
     const neg = gan < 0 ? ' neg' : '';
     let html = '';
-    if (mode === 'margen') html += `<div class="stat big"><div class="k">Precio de venta sugerido</div><div class="v">${fmt(precio)}</div></div>`;
+    if (mode === 'margen') html += `<div class="stat big"><div class="k">Precio de venta sugerido</div><div class="v">${montoHtml(precio)}</div></div>`;
     else html += `<div class="stat big"><div class="k">Margen de ganancia</div><div class="v${neg}">${pct(margen)}</div></div>`;
-    html += `<div class="stat"><div class="k">Ganancia por unidad</div><div class="v${neg}">${fmt(gan)}</div></div>`;
-    html += `<div class="stat"><div class="k">Ganancia total (${q.toLocaleString('es-DO')} u.)</div><div class="v${neg}">${fmt(gan * q)}</div></div>`;
+    html += `<div class="stat"><div class="k">Ganancia por unidad</div><div class="v${neg}">${montoHtml(gan)}</div></div>`;
+    html += `<div class="stat"><div class="k">Ganancia total (${q.toLocaleString('es-DO')} u.)</div><div class="v${neg}">${montoHtml(gan * q)}</div></div>`;
     if (mode === 'margen') html += `<div class="stat"><div class="k">Margen</div><div class="v">${pct(margen)}</div></div>`;
     html += `<div class="stat"><div class="k">Sobre el costo</div><div class="v${neg}">${pct(markup)}</div></div>`;
-    html += `<div class="stat"><div class="k">Venta total</div><div class="v">${fmt(precio * q)}</div></div>`;
-    if (mode === 'precio') html += `<div class="stat"><div class="k">Costo total</div><div class="v">${fmt(costo * q)}</div></div>`;
+    html += `<div class="stat"><div class="k">Venta total</div><div class="v">${montoHtml(precio * q)}</div></div>`;
+    if (mode === 'precio') html += `<div class="stat"><div class="k">Costo total</div><div class="v">${montoHtml(costo * q)}</div></div>`;
     if (itbis) {
-      html += `<div class="stat"><div class="k">Precio con ITBIS (unidad)</div><div class="v">${fmt(precio * 1.18)}</div></div>`;
-      html += `<div class="stat"><div class="k">Total con ITBIS</div><div class="v">${fmt(precio * q * 1.18)}</div></div>`;
+      html += `<div class="stat"><div class="k">Precio con ITBIS (unidad)</div><div class="v">${montoHtml(precio * 1.18)}</div></div>`;
+      html += `<div class="stat"><div class="k">Total con ITBIS</div><div class="v">${montoHtml(precio * q * 1.18)}</div></div>`;
     }
     if (gan < 0) html += `<div class="stat big" style="background:var(--bad-soft)"><div class="k">Atención</div><div class="v neg" style="font-size:1.05rem">Estás vendiendo por debajo del costo.</div></div>`;
     box.innerHTML = html;
@@ -1355,7 +1383,7 @@
       const sub = [c.telefono, c.rnc && 'RNC ' + c.rnc, fs.length + (fs.length === 1 ? ' factura' : ' facturas')].filter(Boolean).join(' · ');
       return `<button class="row" data-id="${c.id}"><div class="avatar">${esc(initials(c.nombre))}</div>
         <div class="main"><div class="title">${esc(c.nombre)}</div><div class="sub">${esc(sub)}</div>
-        ${archivado(c) ? '<span class="badge archivado">Archivado</span> ' : ''}${pend > 0 ? `<span class="badge pendiente">Debe ${esc(fmt(pend))}</span>` : ''}</div></button>`;
+        ${archivado(c) ? '<span class="badge archivado">Archivado</span> ' : ''}${pend > 0 ? `<span class="badge pendiente">Debe ${montoHtml(pend)}</span>` : ''}</div></button>`;
     }).join('');
     $$('.row', el).forEach(r => r.addEventListener('click', () => openClient(r.dataset.id)));
   }
@@ -1386,7 +1414,7 @@
     const fs = facturas.filter(f => f.cliente_id === id);
     const debe = deudaCliente(id);
     $('#dc-wa-box').hidden = !(debe > 0);
-    $('#dc-debe').textContent = debe > 0 ? 'Debe ' + fmt(debe) : '';
+    $('#dc-debe').innerHTML = debe > 0 ? 'Debe ' + montoHtml(debe) : '';
     const el = $('#dc-list');
     el.innerHTML = fs.length ? fs.map(f => invoiceRow(f, true)).join('') : '<div class="empty" style="padding:14px">Este cliente aún no tiene facturas.</div>';
     bindInvoiceRows(el);
@@ -1470,7 +1498,7 @@
     const sub = [fdate(f.fecha), !enCliente && f.numero && '#' + f.numero, docDeFactura(f.id) && '📄', f.archivo && '📎'].filter(Boolean).join(' · ');
     return `<button class="row" data-inv="${f.id}"><div class="main">
       <div class="title">${esc(enCliente ? 'Factura' + (f.numero ? ' #' + f.numero : '') : clientName(f.cliente_id))}</div><div class="sub">${esc(sub)}</div></div>
-      <div class="amount">${esc(fmt(Number(f.monto)))}<br><span class="badge ${s.estado}">${s.estado === 'abonada' ? 'Falta ' + esc(fmt(s.falta)) : ESTADO_TXT[s.estado]}</span></div></button>`;
+      <div class="amount">${montoHtml(Number(f.monto))}<br><span class="badge ${s.estado}">${s.estado === 'abonada' ? 'Falta ' + montoHtml(s.falta) : ESTADO_TXT[s.estado]}</span></div></button>`;
   }
   function bindInvoiceRows(el) { $$('[data-inv]', el).forEach(r => r.addEventListener('click', () => openInvoice(r.dataset.inv))); }
 
@@ -1485,9 +1513,9 @@
     const ventaConCosto = conCosto.reduce((s, f) => s + Number(f.monto || 0), 0);
     const pend = list.reduce((s, f) => s + saldo(f).falta, 0);
     $('#f-totals').innerHTML =
-      `<div class="stat"><div class="k">Total facturado</div><div class="v">${fmt(total)}</div></div>
-       <div class="stat"><div class="k">Ganancia${ventaConCosto ? ' (' + pct(gan / ventaConCosto * 100) + ')' : ''}</div><div class="v${gan < 0 ? ' neg' : ''}">${conCosto.length ? fmt(gan) : '—'}</div></div>
-       <div class="stat"><div class="k">Por cobrar</div><div class="v">${fmt(pend)}</div></div>`;
+      `<div class="stat"><div class="k">Total facturado</div><div class="v">${montoHtml(total)}</div></div>
+       <div class="stat"><div class="k">Ganancia${ventaConCosto ? ' (' + pct(gan / ventaConCosto * 100) + ')' : ''}</div><div class="v${gan < 0 ? ' neg' : ''}">${conCosto.length ? montoHtml(gan) : '—'}</div></div>
+       <div class="stat"><div class="k">Por cobrar</div><div class="v">${montoHtml(pend)}</div></div>`;
     const el = $('#l-facturas');
     if (!facturas.length) el.innerHTML = '<div class="empty">Aún no hay facturas. Pulsa <b>+ Crear factura</b> para hacer una con el diseño de Surteme, o <b>Subir factura</b> si ya la tienes en papel o PDF.</div>';
     else if (!list.length) el.innerHTML = '<div class="empty">Ninguna factura coincide con el filtro.</div>';
@@ -1544,7 +1572,7 @@
     const el = $('#di-profit');
     if (Number.isFinite(m) && Number.isFinite(c) && m > 0) {
       const g = m - c;
-      el.innerHTML = `Ganancia: <span style="color:${g < 0 ? 'var(--bad)' : 'var(--ok)'}">${esc(fmt(g))} (${esc(pct(g / m * 100))})</span>`;
+      el.innerHTML = `Ganancia: <span style="color:${g < 0 ? 'var(--bad)' : 'var(--ok)'}">${montoHtml(g)} (${esc(pct(g / m * 100))})</span>`;
     } else el.textContent = '';
   }
 
@@ -1674,13 +1702,13 @@ grant select, insert, update, delete on abonos to authenticated;`;
     const s = saldo(f), aMano = s.estado === 'pagada' && s.pagado < s.total - 0.005;
     // «Pagado» es solo lo que se ha anotado en abonos (no se inventa un pago si se marcó pagada a mano)
     $('#di-saldo').innerHTML =
-      `<div class="stat"><div class="k">Total</div><div class="v">${fmt(s.total)}</div></div>
-       <div class="stat"><div class="k">Pagado</div><div class="v" style="color:var(--ok)">${fmt(Math.min(s.pagado, s.total))}</div></div>
-       <div class="stat"><div class="k">Falta</div><div class="v${s.falta > 0 ? ' neg' : ''}">${fmt(s.falta)}</div></div>`;
+      `<div class="stat"><div class="k">Total</div><div class="v">${montoHtml(s.total)}</div></div>
+       <div class="stat"><div class="k">Pagado</div><div class="v" style="color:var(--ok)">${montoHtml(Math.min(s.pagado, s.total))}</div></div>
+       <div class="stat"><div class="k">Falta</div><div class="v${s.falta > 0 ? ' neg' : ''}">${montoHtml(s.falta)}</div></div>`;
     const lista = abonos.filter(a => a.factura_id === f.id).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.creado || '').localeCompare(a.creado || ''));
-    const nota = aMano ? `<p class="hint" style="margin:0 0 10px"><b>Marcada como pagada.</b> ${s.pagado > 0 ? `Los abonos anotados suman ${esc(fmt(s.pagado))} de ${esc(fmt(s.total))}.` : 'No tiene abonos anotados.'} Si todavía te deben, cambia arriba el <b>Estado</b> a «Pendiente de cobro» y pulsa <b>Guardar</b>.</p>` : '';
+    const nota = aMano ? `<p class="hint" style="margin:0 0 10px"><b>Marcada como pagada.</b> ${s.pagado > 0 ? `Los abonos anotados suman ${montoHtml(s.pagado)} de ${montoHtml(s.total)}.` : 'No tiene abonos anotados.'} Si todavía te deben, cambia arriba el <b>Estado</b> a «Pendiente de cobro» y pulsa <b>Guardar</b>.</p>` : '';
     $('#di-abonos').innerHTML = nota + (lista.length ? lista.map(a => `<button class="row" data-abono="${a.id}"><div class="main">
-        <div class="title">${esc(fmt(Number(a.monto)))}</div><div class="sub">${esc([fdate(a.fecha), a.metodo, a.archivo && '📎', a.notas].filter(Boolean).join(' · '))}</div></div>
+        <div class="title">${montoHtml(Number(a.monto))}</div><div class="sub">${esc([fdate(a.fecha), a.metodo, a.archivo && '📎', a.notas].filter(Boolean).join(' · '))}</div></div>
         <div class="amount sub" style="font-weight:500">Editar</div></button>`).join('')
       : aMano ? '' : `<div class="empty" style="padding:10px">Todavía no hay abonos.</div>`);
     $$('[data-abono]', $('#di-abonos')).forEach(b => b.addEventListener('click', () => openAbono(b.dataset.abono)));
@@ -1747,7 +1775,7 @@ grant select, insert, update, delete on abonos to authenticated;`;
     form.elements.metodo.value = a.metodo || 'Efectivo';
     form.elements.notas.value = a.notas || '';
     $('#da-title').textContent = id ? 'Editar abono' : 'Nuevo abono';
-    $('#da-sub').textContent = `${clientName(f.cliente_id)}${f.numero ? ' · Factura #' + f.numero : ''} · Falta ${fmt(saldo(f).falta)}`;
+    $('#da-sub').innerHTML = `${esc(clientName(f.cliente_id))}${f.numero ? ' · Factura #' + esc(f.numero) : ''} · Falta ${montoHtml(saldo(f).falta)}`;
     $('#da-delete').hidden = !id;
     $('#da-file').innerHTML = a.archivo ? 'Comprobante guardado: <a href="#" id="da-open">verlo</a>. Si eliges otro, se reemplaza.' : 'Puedes tomarle una foto al comprobante o a la transferencia.';
     if (a.archivo) $('#da-open').addEventListener('click', ev => { ev.preventDefault(); openFile(a.archivo); });
@@ -2027,11 +2055,12 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
     const rows = [...p.rows].sort((a, b) => (unitItbis(a) || Infinity) - (unitItbis(b) || Infinity));
     $('#dp-list').innerHTML = rows.map(r => {
       const u = unitItbis(r), best = p.nSup >= 2 && Number.isFinite(u) && Math.abs(u - p.best) < 1e-9;
-      const sub = [r.descripcion, r.presentacion && 'Pres. ' + r.presentacion + (r.asumida ? ' (por confirmar)' : ''),
-        Number.isFinite(pkgItbis(r)) && 'Paquete ' + fmt(pkgItbis(r)), r.notas].filter(Boolean).join(' · ');
+      // Cada parte ya va lista para la página (el texto escapado; el monto, sin partirse)
+      const sub = [r.descripcion && esc(r.descripcion), r.presentacion && esc('Pres. ' + r.presentacion + (r.asumida ? ' (por confirmar)' : '')),
+        Number.isFinite(pkgItbis(r)) && 'Paquete ' + montoHtml(pkgItbis(r)), r.notas && esc(r.notas)].filter(Boolean).join(' · ');
       return `<button class="row" data-price="${r.id}"><div class="main"><div class="title">${best ? '✓ ' : ''}${esc(provName(r.proveedor_id))}</div>
-        <div class="sub" style="white-space:normal">${esc(sub)}</div></div>
-        <div class="amount" style="${best ? 'color:var(--ok)' : ''}">${esc(unitFmt(u))}<br><span class="sub" style="font-weight:500">Editar</span></div></button>`;
+        <div class="sub" style="white-space:normal">${sub}</div></div>
+        <div class="amount" style="${best ? 'color:var(--ok)' : ''}">${sinPartir(unitFmt(u))}<br><span class="sub" style="font-weight:500">Editar</span></div></button>`;
     }).join('');
     $$('[data-price]', $('#dp-list')).forEach(b => b.addEventListener('click', () => openPrice(b.dataset.price)));
     $('#dp-calc').hidden = !Number.isFinite(p.best);
@@ -2075,7 +2104,7 @@ grant select, insert, update, delete on proveedores, precios to authenticated;`;
     const r = { proveedor_id: f.elements.proveedor_id.value, unidades: num(f.elements.unidades.value), precio: f.elements.precio.value === '' ? null : num(f.elements.precio.value) };
     const pk = pkgItbis(r), u = unitItbis(r);
     let t = prov ? (prov.incluye_itbis === false ? 'Este suplidor cotiza <b>sin ITBIS</b>: se le suma el 18%. ' : 'Este suplidor cotiza <b>con ITBIS</b> incluido. ') : '';
-    if (Number.isFinite(pk)) t += `Con ITBIS: <b>${esc(fmt(pk))}</b> el paquete` + (Number.isFinite(u) ? ` · <b>${esc(unitFmt(u))}</b>` : '');
+    if (Number.isFinite(pk)) t += `Con ITBIS: <b>${montoHtml(pk)}</b> el paquete` + (Number.isFinite(u) ? ` · <b>${sinPartir(unitFmt(u))}</b>` : '');
     $('#dpr-calc').innerHTML = t;
   }
   $('#f-price').addEventListener('submit', e => {
@@ -2261,20 +2290,20 @@ grant select, insert, update, delete on gastos to authenticated;`;
     const ganVendido = conCosto.reduce((s, x) => s + Number(x.monto || 0) - Number(x.costo || 0), 0);
     const neta = ganVendido - total, sinCosto = vendidos.length - conCosto.length;
     $('#g-totals').innerHTML =
-      `<div class="stat"><div class="k">Gastos</div><div class="v">${fmt(total)}</div></div>
-       <div class="stat"><div class="k">Combustible</div><div class="v">${fmt(fuel)}</div></div>
+      `<div class="stat"><div class="k">Gastos</div><div class="v">${montoHtml(total)}</div></div>
+       <div class="stat"><div class="k">Combustible</div><div class="v">${montoHtml(fuel)}</div></div>
        ${conCosto.length
-        ? `<div class="stat"><div class="k">Ganancia real</div><div class="v${neta < 0 ? ' neg' : ''}">${fmt(neta)}</div></div>`
-        : `<div class="stat"><div class="k">Vendido</div><div class="v">${fmt(sum(vendidos, 'monto'))}</div></div>`}`;
+        ? `<div class="stat"><div class="k">Ganancia real</div><div class="v${neta < 0 ? ' neg' : ''}">${montoHtml(neta)}</div></div>`
+        : `<div class="stat"><div class="k">Vendido</div><div class="v">${montoHtml(sum(vendidos, 'monto'))}</div></div>`}`;
     $('#g-neta-hint').innerHTML = conCosto.length
-      ? `<b>Ganancia real</b> = lo que ganaste en tus ventas y facturas (${esc(fmt(ganVendido))}) menos los gastos.` +
+      ? `<b>Ganancia real</b> = lo que ganaste en tus ventas y facturas (${montoHtml(ganVendido)}) menos los gastos.` +
         (sinCosto === 1 ? ' Hay 1 venta o factura sin «lo que te costó»: no entra en esta cuenta.'
           : sinCosto ? ` Hay ${sinCosto} ventas o facturas sin «lo que te costó»: no entran en esta cuenta.` : '')
       : 'Para ver tu <b>ganancia real</b>, pon "lo que te costó" en cada venta o factura.';
     const porCat = {};
     gm.forEach(g => porCat[g.categoria] = (porCat[g.categoria] || 0) + Number(g.monto || 0));
     const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
-    $('#g-bars').innerHTML = cats.length > 1 ? cats.map(([c, v]) => `<div class="bar-row"><span>${esc(c)}</span><span class="amt">${esc(fmt(v))}</span>
+    $('#g-bars').innerHTML = cats.length > 1 ? cats.map(([c, v]) => `<div class="bar-row"><span>${esc(c)}</span><span class="amt">${montoHtml(v)}</span>
       <div class="bar"><span style="width:${total > 0 ? Math.max(2, v / total * 100) : 0}%"></span></div></div>`).join('') : '';
     const list = gm.filter(g => !cat || g.categoria === cat);
     const el = $('#l-gastos');
@@ -2284,7 +2313,7 @@ grant select, insert, update, delete on gastos to authenticated;`;
       const sub = [fdate(g.fecha), g.descripcion ? g.categoria : null, Number(g.galones) > 0 && `${Number(g.galones).toLocaleString('es-DO', { maximumFractionDigits: 2 })} gal`,
         g.vehiculo, g.archivo && '📎'].filter(Boolean).join(' · ');
       return `<button class="row" data-gasto="${g.id}"><div class="main"><div class="title">${esc(g.descripcion || g.categoria)}</div>
-        <div class="sub">${esc(sub)}</div></div><div class="amount">${esc(fmt(Number(g.monto)))}</div></button>`;
+        <div class="sub">${esc(sub)}</div></div><div class="amount">${montoHtml(Number(g.monto))}</div></button>`;
     }).join('');
     $$('[data-gasto]', el).forEach(r => r.addEventListener('click', () => openGasto(r.dataset.gasto)));
   }
@@ -2331,11 +2360,11 @@ grant select, insert, update, delete on gastos to authenticated;`;
     const dist = km * ($('#fu-ida').checked ? 2 : 1), gal = dist / rend, costo = gal * precio;
     lastFuel = { dist, gal, precio, costo };
     box.innerHTML =
-      `<div class="stat big"><div class="k">Costo del viaje en combustible</div><div class="v">${fmt(costo)}</div></div>
-       <div class="stat"><div class="k">Por entrega${ent > 1 ? ` (${ent})` : ''}</div><div class="v">${fmt(costo / ent)}</div></div>
+      `<div class="stat big"><div class="k">Costo del viaje en combustible</div><div class="v">${montoHtml(costo)}</div></div>
+       <div class="stat"><div class="k">Por entrega${ent > 1 ? ` (${ent})` : ''}</div><div class="v">${montoHtml(costo / ent)}</div></div>
        <div class="stat"><div class="k">Galones</div><div class="v">${gal.toLocaleString('es-DO', { maximumFractionDigits: 2 })}</div></div>
        <div class="stat"><div class="k">Distancia total</div><div class="v">${dist.toLocaleString('es-DO', { maximumFractionDigits: 1 })} km</div></div>
-       <div class="stat"><div class="k">Costo por km</div><div class="v">${fmt(costo / dist)}</div></div>`;
+       <div class="stat"><div class="k">Costo por km</div><div class="v">${montoHtml(costo / dist)}</div></div>`;
     $('#fu-save').hidden = gTablaFalta;
   }
   fuelCalc();
@@ -2473,12 +2502,14 @@ grant select, insert, update, delete on ventas to authenticated;`;
       hayCosto: conCostoV.length + conCostoF.length > 0, n: vs.length + fs.length };
   }
   const ventaRow = v => {
-    const sub = [hora(v), v.metodo, v.cliente_id && clientName(v.cliente_id), v.costo !== null && v.costo !== undefined && 'ganancia ' + fmt(Number(v.monto) - Number(v.costo))].filter(Boolean).join(' · ');
-    return `<button class="row" data-venta="${v.id}"><div class="main"><div class="title">${esc(v.descripcion || 'Venta')}</div><div class="sub">${esc(sub)}</div></div>
-      <div class="amount">${esc(fmt(Number(v.monto)))}</div></button>`;
+    // Cada parte ya va lista para la página (el texto escapado; la ganancia, sin partirse aunque sea negativa)
+    const sub = [hora(v), v.metodo, v.cliente_id && clientName(v.cliente_id)].filter(Boolean).map(esc);
+    if (v.costo !== null && v.costo !== undefined) sub.push('ganancia ' + montoHtml(Number(v.monto) - Number(v.costo)));
+    return `<button class="row" data-venta="${v.id}"><div class="main"><div class="title">${esc(v.descripcion || 'Venta')}</div><div class="sub">${sub.join(' · ')}</div></div>
+      <div class="amount">${montoHtml(Number(v.monto))}</div></button>`;
   };
   const facturaDiaRow = f => { const s = saldo(f); return `<button class="row" data-fact="${f.id}"><div class="main"><div class="title">${esc(clientName(f.cliente_id))}</div>
-      <div class="sub completo">${esc('Factura' + (f.numero ? ' #' + f.numero : '') + ' · ' + (s.estado === 'abonada' ? 'Abonada, falta ' + fmt(s.falta) : ESTADO_TXT[s.estado]))}</div></div><div class="amount">${esc(fmt(Number(f.monto)))}</div></button>`; };
+      <div class="sub completo">${esc('Factura' + (f.numero ? ' #' + f.numero : '') + ' · ')}${s.estado === 'abonada' ? 'Abonada, falta ' + montoHtml(s.falta) : esc(ESTADO_TXT[s.estado])}</div></div><div class="amount">${montoHtml(Number(f.monto))}</div></button>`; };
   function bindDiaRows(el) {
     $$('[data-venta]', el).forEach(b => b.addEventListener('click', () => openVenta(b.dataset.venta)));
     $$('[data-fact]', el).forEach(b => b.addEventListener('click', () => { if ($('#d-dia').open) $('#d-dia').close(); openTab('facturas'); openInvoice(b.dataset.fact); }));
@@ -2495,12 +2526,12 @@ grant select, insert, update, delete on ventas to authenticated;`;
     $('#vh-fecha').textContent = 'Ventas de hoy · ' + diaLargo(vDia);
     $('#vh-total').textContent = fmt(d.total);
     $('#vh-detalle').innerHTML = d.n
-      ? `${d.n} ${d.n === 1 ? 'venta' : 'ventas'}` + (d.hayCosto ? ` · ganancia <b style="color:var(--ok)">${esc(fmt(d.ganancia))}</b>` : '')
+      ? `${d.n} ${d.n === 1 ? 'venta' : 'ventas'}` + (d.hayCosto ? ` · ganancia <b style="color:var(--ok)">${montoHtml(d.ganancia)}</b>` : '')
       : 'Todavía no hay ventas hoy. Empieza en cero cada día.';
     const porMetodo = {};
     d.vs.forEach(v => porMetodo[v.metodo || 'Otro'] = (porMetodo[v.metodo || 'Otro'] || 0) + Number(v.monto || 0));
-    const partes = Object.entries(porMetodo).map(([m, x]) => `<span><b>${esc(fmt(x))}</b> ${esc(m.toLowerCase())}</span>`);
-    if (d.fs.length) partes.push(`<span><b>${esc(fmt(d.facturas))}</b> en facturas</span>`);
+    const partes = Object.entries(porMetodo).map(([m, x]) => `<span><b>${montoHtml(x)}</b> ${esc(m.toLowerCase())}</span>`);
+    if (d.fs.length) partes.push(`<span><b>${montoHtml(d.facturas)}</b> en facturas</span>`);
     $('#vh-split').innerHTML = partes.join('');
     // Lista de hoy
     const el = $('#l-ventas-hoy');
@@ -2527,14 +2558,14 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const totalMes = delMes.reduce((s, x) => s + x.total, 0), ganMes = delMes.reduce((s, x) => s + x.ganancia, 0);
     const conVentas = delMes.filter(x => x.total > 0);
     $('#vh-mes-tot').innerHTML =
-      `<div class="stat"><div class="k">Vendido en el mes</div><div class="v">${fmt(totalMes)}</div></div>
-       <div class="stat"><div class="k">Promedio por día</div><div class="v">${fmt(conVentas.length ? totalMes / conVentas.length : 0)}</div></div>
-       <div class="stat"><div class="k">Ganancia</div><div class="v">${delMes.some(x => x.hayCosto) ? fmt(ganMes) : '—'}</div></div>`;
+      `<div class="stat"><div class="k">Vendido en el mes</div><div class="v">${montoHtml(totalMes)}</div></div>
+       <div class="stat"><div class="k">Promedio por día</div><div class="v">${montoHtml(conVentas.length ? totalMes / conVentas.length : 0)}</div></div>
+       <div class="stat"><div class="k">Ganancia</div><div class="v">${delMes.some(x => x.hayCosto) ? montoHtml(ganMes) : '—'}</div></div>`;
     const max = Math.max(0, ...delMes.map(x => x.total));
     $('#l-dias').innerHTML = delMes.length ? delMes.map(x => `<button class="row" data-dia="${x.dia}" style="display:block">
         <div style="display:flex;gap:10px;align-items:baseline"><div class="main"><div class="title">${esc(diaLargo(x.dia))}${x.dia === today() ? ' (hoy)' : ''}</div>
-        <div class="sub">${x.n} ${x.n === 1 ? 'venta' : 'ventas'}${x.hayCosto ? ' · ganancia ' + esc(fmt(x.ganancia)) : ''}</div></div>
-        <div class="amount">${esc(fmt(x.total))}</div></div>
+        <div class="sub">${x.n} ${x.n === 1 ? 'venta' : 'ventas'}${x.hayCosto ? ' · ganancia ' + montoHtml(x.ganancia) : ''}</div></div>
+        <div class="amount">${montoHtml(x.total)}</div></div>
         <div class="bar" style="margin-top:8px"><span style="width:${max > 0 ? Math.max(2, x.total / max * 100) : 0}%"></span></div></button>`).join('')
       : '<div class="empty">No hay ventas en este mes.</div>';
     $$('[data-dia]', $('#l-dias')).forEach(b => b.addEventListener('click', () => openDia(b.dataset.dia)));
@@ -2546,9 +2577,9 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const d = delDia(dia);
     $('#ddia-title').textContent = diaLargo(dia);
     $('#ddia-tot').innerHTML =
-      `<div class="stat"><div class="k">Total del día</div><div class="v">${fmt(d.total)}</div></div>
+      `<div class="stat"><div class="k">Total del día</div><div class="v">${montoHtml(d.total)}</div></div>
        <div class="stat"><div class="k">Ventas</div><div class="v">${d.n}</div></div>
-       <div class="stat"><div class="k">Ganancia</div><div class="v">${d.hayCosto ? fmt(d.ganancia) : '—'}</div></div>`;
+       <div class="stat"><div class="k">Ganancia</div><div class="v">${d.hayCosto ? montoHtml(d.ganancia) : '—'}</div></div>`;
     const el = $('#ddia-list');
     el.innerHTML = d.n ? d.vs.map(ventaRow).join('') + d.fs.map(facturaDiaRow).join('') : '<div class="empty">No hay ventas este día.</div>';
     bindDiaRows(el);
@@ -2699,7 +2730,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       const badge = d.estado === 'aceptada' ? 'pagada' : d.estado === 'rechazada' ? 'rechazada' : 'pendiente';
       return `<button class="row" data-doc="${d.id}"><div class="main"><div class="title">${esc(d.cliente_nombre || 'Sin cliente')}</div>
         <div class="sub">${esc(['No. ' + (d.numero || '—'), fdate(d.fecha), n + (n === 1 ? ' producto' : ' productos')].join(' · '))}</div></div>
-        <div class="amount">${esc(fmt(Number(d.total)))}<br><span class="badge ${badge}">${COT_ESTADO[d.estado] || d.estado}</span></div></button>`;
+        <div class="amount">${montoHtml(Number(d.total))}<br><span class="badge ${badge}">${COT_ESTADO[d.estado] || d.estado}</span></div></button>`;
     }).join('');
     $$('[data-doc]', el).forEach(r => r.addEventListener('click', () => openView(r.dataset.doc)));
   }
@@ -2801,15 +2832,15 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   function updateSums() {
     $$('#dd-items [data-i]').forEach(card => {
       const it = edItems[+card.dataset.i], t = lineaTotal(it);
-      $('.tot', card).textContent = fmt(t);
+      $('.tot', card).innerHTML = montoHtml(t);
       const c = Number(it.costo);
       $('.gan', card).innerHTML = it.costo !== null && it.costo !== '' && Number.isFinite(c) && Number(it.precio) > 0
-        ? `Ganas <b style="color:${it.precio - c < 0 ? 'var(--bad)' : 'var(--ok)'}">${esc(fmt((Number(it.cantidad) || 0) * (it.precio - c)))}</b> (${esc(pct((it.precio - c) / it.precio * 100))})` : '';
+        ? `Ganas <b style="color:${it.precio - c < 0 ? 'var(--bad)' : 'var(--ok)'}">${montoHtml((Number(it.cantidad) || 0) * (it.precio - c))}</b> (${esc(pct((it.precio - c) / it.precio * 100))})` : '';
     });
     const t = calcTotals(edItems, $('#f-doc').elements.itbis.checked);
-    $('#dd-sums').innerHTML = (t.itbisMonto ? `<div><span>Subtotal</span><b>${fmt(t.subtotal)}</b></div><div><span>ITBIS 18%</span><b>${fmt(t.itbisMonto)}</b></div>` : '') +
-      `<div class="t"><span>Total</span><span>${fmt(t.total)}</span></div>` +
-      (t.hayCosto ? `<div style="color:var(--muted)"><span>Tu ganancia estimada</span><b style="color:${t.ganancia < 0 ? 'var(--bad)' : 'var(--ok)'}">${fmt(t.ganancia)}</b></div>` : '');
+    $('#dd-sums').innerHTML = (t.itbisMonto ? `<div><span>Subtotal</span><b>${montoHtml(t.subtotal)}</b></div><div><span>ITBIS 18%</span><b>${montoHtml(t.itbisMonto)}</b></div>` : '') +
+      `<div class="t"><span>Total</span><span>${montoHtml(t.total)}</span></div>` +
+      (t.hayCosto ? `<div style="color:var(--muted)"><span>Tu ganancia estimada</span><b style="color:${t.ganancia < 0 ? 'var(--bad)' : 'var(--ok)'}">${montoHtml(t.ganancia)}</b></div>` : '');
   }
   $('#f-doc').elements.itbis.addEventListener('input', updateSums);
   $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); sucias.add($('#d-doc')); renderItems(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
@@ -2833,7 +2864,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       const r = mejorOferta(p), pk = pkgItbis(r);
       return `<button class="row" data-pk="${productos.indexOf(p)}"><div class="main"><div class="title completo">${esc(p.nombre)}</div>
         <div class="sub completo">${esc([r.presentacion && 'Pres. ' + r.presentacion, provName(r.proveedor_id)].filter(Boolean).join(' · '))}</div></div>
-        <div class="amount">${Number.isFinite(pk) ? esc(fmt(pk)) : '—'}<br><span class="sub" style="font-weight:500">tu costo</span></div></button>`;
+        <div class="amount">${Number.isFinite(pk) ? montoHtml(pk) : '—'}<br><span class="sub" style="font-weight:500">tu costo</span></div></button>`;
     }).join('') : '<div class="empty">No se encontró ese producto.</div>';
     $$('[data-pk]', $('#pk-list')).forEach(b => b.addEventListener('click', () => {
       const p = productos[+b.dataset.pk], r = mejorOferta(p), costo = pkgItbis(r);
