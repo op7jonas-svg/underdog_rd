@@ -388,6 +388,7 @@
         <button role="tab" data-tab="clientes" aria-selected="false">Clientes</button>
         <button role="tab" data-tab="cotiz" aria-selected="false">Cotizar</button>
         <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
+        <button role="tab" data-tab="inventario" aria-selected="false">Inventario</button>
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
         <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
       </nav>
@@ -440,6 +441,8 @@
         <h3 style="font-size:1.05rem;margin-bottom:10px">Registrar una venta</h3>
         <div class="grid">
           <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required placeholder="0.00"></label>
+          <label class="field" id="vr-inv-w" hidden><span>Del inventario (opcional)</span><select name="producto_id"></select></label>
+          <label class="field" id="vr-cant-w" hidden><span>Cantidad</span><input name="cantidad" type="number" inputmode="decimal" step="any" min="0" value="1"></label>
           <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" placeholder="Ej. 2 cajas de bandejas"></label>
           <div class="field full"><span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">¿Cómo pagó?</span>
             <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none">
@@ -519,6 +522,27 @@
     </section>
 
     <!-- Suplidores -->
+    <section id="t-inventario" hidden>
+      <div class="section-head">
+        <div><h2>Inventario</h2><p class="hint">Lo que tienes en el almacén. Cuando vendes un producto de aquí, se descuenta solo.</p></div>
+        <div class="spacer"></div>
+        <button class="btn" id="b-inv-sup">+ De Suplidores</button>
+        <button class="btn primary" id="b-new-inv">+ Nuevo producto</button>
+      </div>
+      <div class="card" id="inv-setup" hidden style="margin-bottom:14px">
+        <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
+        <p class="hint">Para llevar el inventario hay que preparar dos "cajones" nuevos. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
+        <textarea class="sql" id="inv-sql" readonly></textarea>
+        <div class="actions"><button class="btn primary" id="b-copy-invsql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
+      </div>
+      <div class="totals" id="inv-totals"></div>
+      <div class="filters">
+        <input class="search" id="s-inv" type="search" placeholder="Buscar producto…">
+        <select id="inv-filtro"><option value="">Todos</option><option value="bajo">Por agotarse</option></select>
+      </div>
+      <div class="list" id="l-inv"></div>
+    </section>
+
     <section id="t-suplidores" hidden>
       <div class="section-head">
         <div><h2>Suplidores</h2><p class="hint">Precios con ITBIS y por unidad, para comparar paquetes distintos.</p></div>
@@ -765,7 +789,59 @@
 </dialog>
 <datalist id="dl-veh"></datalist>
 
-<!-- Ventana: producto -->
+<!-- Ventana: producto del inventario -->
+<dialog id="d-inv">
+  <div class="dlg-head"><h3 id="di2-title">Producto</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-inv">
+      <div class="grid">
+        <label class="field full"><span>Nombre *</span><input name="nombre" required placeholder="Ej. Vaso 12 onz"></label>
+        <label class="field"><span>Se cuenta en</span><input name="unidad" placeholder="Ej. caja, paquete, unidad"></label>
+        <label class="field" id="w-stock0"><span>Cuántos tienes ahora</span><input name="stock0" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></label>
+        <label class="field"><span>Avisarme si quedan menos de</span><input name="minimo" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 5"></label>
+        <label class="field"><span>Lo que te cuesta (RD$)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+        <label class="field"><span>Precio de venta (RD$)</span><input name="precio" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div id="inv-existente" hidden>
+        <div class="card" style="margin-top:14px">
+          <div class="k">En existencia ahora</div>
+          <div class="today-total" id="inv-stock-big" style="font-size:2rem"></div>
+          <div class="actions" style="margin-top:10px">
+            <button type="button" class="btn" id="inv-entrada">+ Entró mercancía</button>
+            <button type="button" class="btn" id="inv-ajuste">Contar y corregir</button>
+          </div>
+        </div>
+        <h4 class="sub-title"><span>Últimos movimientos</span></h4>
+        <div class="list" id="inv-movs"></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="inv-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary" id="inv-save">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Ventana: entró mercancía / contar y corregir -->
+<dialog id="d-inv-mov">
+  <div class="dlg-head"><h3 id="im-title">Entró mercancía</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-inv-mov">
+      <p class="hint" id="im-hint" style="margin:0 0 12px"></p>
+      <div class="grid">
+        <label class="field full"><span id="im-label">Cuántas entraron *</span><input name="cantidad" type="number" inputmode="decimal" step="any" min="0" required></label>
+        <label class="field full" id="im-costo-w"><span>Nuevo costo por unidad (RD$, opcional)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0"></label>
+        <label class="field full"><span>Nota (opcional)</span><input name="nota" placeholder="Ej. Compra a Suplidor X"></label>
+      </div>
+      <div class="actions"><span class="push"></span><button type="button" class="btn" data-close>Cancelar</button><button class="btn primary" id="im-save">Guardar</button></div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Ventana: producto (precios de suplidores) -->
 <dialog id="d-prod">
   <div class="dlg-head"><h3 id="dp-title">Producto</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
   <div class="dlg-body">
@@ -848,6 +924,7 @@
       <h4 class="sub-title"><span>Productos</span></h4>
       <div id="dd-items"></div>
       <div class="actions" style="margin-top:10px">
+        <button type="button" class="btn" id="dd-pick-inv">+ Del inventario</button>
         <button type="button" class="btn" id="dd-pick">+ De mi lista de precios</button>
         <button type="button" class="btn" id="dd-add">+ Escribir producto</button>
       </div>
@@ -924,7 +1001,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-19a"></script>
+<script src="config.js?v=2026-10-20a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -935,7 +1012,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-19a';
+  const APP_VERSION = '2026-10-20a';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -953,7 +1030,7 @@
   function ocupado() {
     const a = document.activeElement;
     return [...document.querySelectorAll('dialog')].some(d => d.open) || !!(a && a.matches && a.matches('input, textarea, select')) ||
-      [...document.querySelectorAll('#f-venta-rapida input, #c-costo, #c-precio, #c-margen, #fu-km')].some(i => i.value);
+      [...document.querySelectorAll('#f-venta-rapida input:not([name=cantidad]), #f-venta-rapida [name=producto_id], #c-costo, #c-precio, #c-margen, #fu-km')].some(i => i.value);
   }
   revisarVersion();
 
@@ -1156,7 +1233,7 @@
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
     $$('nav.tabs button').forEach(x => { x.setAttribute('aria-selected', x.dataset.tab === tab); if (x.dataset.tab === tab && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
-    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'inventario', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -1232,8 +1309,8 @@
   }
   // Partes que ya cargaron bien al menos una vez. Mientras una no ha cargado, sus totales salen con «—» (no un RD$0.00 falso)
   // y no se crean clientes, facturas ni cotizaciones (saldrían repetidos o con un número ya usado).
-  const listo = { base: false, sup: false, gastos: false, ventas: false, docs: false };
-  const SECCIONES = { base: ['clientes', 'facturas', 'ventas', 'gastos'], ventas: ['ventas', 'gastos'], gastos: ['gastos'], sup: ['suplidores'], docs: ['cotiz'] };
+  const listo = { base: false, sup: false, gastos: false, ventas: false, docs: false, inv: false };
+  const SECCIONES = { base: ['clientes', 'facturas', 'ventas', 'gastos'], ventas: ['ventas', 'gastos'], gastos: ['gastos'], sup: ['suplidores'], docs: ['cotiz'], inv: ['inventario'] };
   let ultimaCarga = 0, cargando = null, otraVez = false, fallo = {};
   // Lo que no se pudo cargar la última vez, por partes (base, sup, gastos, ventas, docs)
   const fallos = () => Object.values(fallo).filter(Boolean);
@@ -1253,7 +1330,7 @@
     const inicio = Date.now();
     await cargarBase();
     // Si una parte falla, las demás se cargan igual
-    await Promise.all([loadSup(true), loadGastos(true), loadVentas(true), loadDocs(true)]);
+    await Promise.all([loadSup(true), loadGastos(true), loadVentas(true), loadDocs(true), loadInv(true)]);
     if (!fallos().length) ultimaCarga = inicio;
     mostrarCarga();
     refrescarVentanas();
@@ -1279,7 +1356,7 @@
   // Aviso fijo arriba si algo no cargó, y «—» en los totales de lo que nunca ha cargado
   function mostrarCarga() {
     const nunca = Object.keys(listo).filter(k => !listo[k]), secs = new Set(nunca.flatMap(k => SECCIONES[k]));
-    ['ventas', 'clientes', 'cotiz', 'facturas', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).classList.toggle('sin-datos', secs.has(t)));
+    ['ventas', 'clientes', 'cotiz', 'facturas', 'inventario', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).classList.toggle('sin-datos', secs.has(t)));
     const fs = fallos(), hay = fs.length > 0, red = fs.some(e => sinRed((e && e.message) || String(e)));
     $('#v-app').classList.toggle('con-fallo', hay);
     $('#carga-error').hidden = !hay;
@@ -1646,6 +1723,8 @@
   // y al final los archivos. Si algo falla se avisa y no se borran los archivos, así nada queda apuntando a un archivo borrado.
   async function borrarFactura(f) {
     const files = await archivosDeFactura(f.id);
+    const ds = await sb.from('documentos').select('id').eq('factura_id', f.id);
+    if (!ds.error && (ds.data || []).length) { const q = await quitarStock(ds.data.map(x => x.id)); if (q) return q; }
     const r = await sb.from('documentos').delete().eq('factura_id', f.id);
     if (r.error && !missingTable(r.error)) return r.error;
     const { error } = await sb.from('facturas').delete().eq('id', f.id);
@@ -2597,22 +2676,37 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const data = { fecha: today(), monto: num(f.elements.monto.value) || 0, descripcion: f.elements.descripcion.value.trim() || null,
       metodo: vMetodo, costo: Number.isFinite(costo) ? costo : null, cliente_id: f.elements.cliente_id.value || null };
     if (!(data.monto > 0)) return toast('Escribe el monto de la venta.', true);
+    // Si es un producto del inventario, se descuenta lo que se vendió
+    const pid = f.elements.producto_id.value, cant = num(f.elements.cantidad.value), prod = pid && inventario.find(p => p.id === pid);
+    if (prod) {
+      if (!(cant > 0)) return toast('Escribe cuántos vendiste.', true);
+      if ((Number(prod.stock) || 0) < cant && !confirm(`Solo quedan ${stockTxt(prod)} ${prod.unidad || ''} de «${prod.nombre}» en el inventario. ¿Vender igual?`)) return;
+    }
     if (btn.disabled) return;
     btn.disabled = true; btn.textContent = 'Guardando…';
     // Con su id ya hecho: si se pierde la respuesta y se pulsa otra vez con lo mismo, no queda la venta repetida.
     // Si se cambió algo, es otra venta y lleva otro id.
-    const firma = JSON.stringify(data);
+    const firma = JSON.stringify([data, prod ? pid : null, prod ? cant : null]);
     if (firma !== ventaFirma) { ventaNueva = nuevoId(); ventaFirma = firma; }
     const { error } = await sb.from('ventas').upsert({ id: ventaNueva, ...data });
+    if (error) { btn.disabled = false; btn.textContent = 'Registrar venta'; return toast(errText(error), true); }
+    let negativos = [];
+    if (prod) {
+      try { negativos = await sincronizarStock(ventaNueva, 'venta', 'Venta rápida', { [pid]: cant }); }
+      catch (er) {
+        btn.disabled = false; btn.textContent = 'Registrar venta';
+        await loadVentas();
+        return toast('La venta se guardó, pero no se pudo descontar del inventario (' + motivo(er) + '). Pulsa «Registrar venta» otra vez para terminar de descontarlo.', true, 9000);
+      }
+    }
     btn.disabled = false; btn.textContent = 'Registrar venta';
-    if (error) return toast(errText(error), true);
     ventaFirma = null;
     ['monto', 'descripcion', 'costo'].forEach(k => f.elements[k].value = '');
-    f.elements.cliente_id.value = '';
+    f.elements.cliente_id.value = ''; f.elements.producto_id.value = ''; f.elements.cantidad.value = '1'; vrAuto = {};
     vMetodo = 'Efectivo';
     $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === 'Efectivo'));
-    toast('Venta registrada: ' + fmt(data.monto));
-    await loadVentas();
+    toast('Venta registrada: ' + fmt(data.monto) + (negativos.length ? '. Ojo: el inventario de ' + negativos.join(', ') + ' quedó en negativo.' : ''), !!negativos.length);
+    await loadVentas(); if (prod) loadInv(true);
   });
 
   // Editar / borrar una venta
@@ -2641,7 +2735,9 @@ grant select, insert, update, delete on ventas to authenticated;`;
     despuesDeCambiarVenta();
   });
   $('#dvt-delete').addEventListener('click', async () => {
-    if (!confirm('¿Borrar esta venta? No se puede deshacer.')) return;
+    if (!confirm('¿Borrar esta venta? No se puede deshacer. Si descontó del inventario, se devuelve.')) return;
+    const quita = await quitarStock([openVentaId]);
+    if (quita) return toast(errText(quita), true);
     const { error } = await sb.from('ventas').delete().eq('id', openVentaId);
     if (error) return toast(errText(error), true);
     $('#d-venta').close(); toast('Venta borrada');
@@ -2649,6 +2745,256 @@ grant select, insert, update, delete on ventas to authenticated;`;
   });
 
   // A la medianoche (o al volver a abrir la página otro día) el total de hoy vuelve a cero solo: ver «Al volver a la app»
+
+  // ---------- Inventario ----------
+  const INV_SQL = `create table if not exists inventario (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  nombre text not null,
+  unidad text,
+  stock numeric not null default 0,
+  minimo numeric not null default 0,
+  costo numeric,
+  precio numeric,
+  notas text
+);
+create table if not exists inventario_mov (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  producto_id uuid not null references inventario(id) on delete cascade,
+  cantidad numeric not null,
+  motivo text not null default 'ajuste',
+  ref_id uuid,
+  nota text
+);
+create index if not exists inventario_mov_producto_idx on inventario_mov (producto_id);
+create index if not exists inventario_mov_ref_idx on inventario_mov (ref_id);
+create or replace function inventario_mov_stock() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    update inventario set stock = stock + new.cantidad where id = new.producto_id;
+  elsif tg_op = 'DELETE' then
+    update inventario set stock = stock - old.cantidad where id = old.producto_id;
+  end if;
+  return null;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_trigger where tgname = 'inventario_mov_stock_tr') then
+    create trigger inventario_mov_stock_tr after insert or delete on inventario_mov
+      for each row execute function inventario_mov_stock();
+  end if;
+end $$;
+alter table inventario enable row level security;
+alter table inventario_mov enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'usuarios_inventario') then
+    create policy "usuarios_inventario" on inventario for all to authenticated using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'usuarios_inventario_mov') then
+    create policy "usuarios_inventario_mov" on inventario_mov for all to authenticated using (true) with check (true);
+  end if;
+end $$;
+grant select, insert, update, delete on inventario, inventario_mov to authenticated;`;
+  $('#inv-sql').value = INV_SQL;
+  $('#b-copy-invsql').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(INV_SQL); toast('Texto copiado'); }
+    catch (e) { $('#inv-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
+  });
+
+  let inventario = [], invTablaFalta = false, openInvId = null, invNuevo = null, invMovNuevo = null, prodAntes = {}, imModo = null, vrAuto = {};
+  const CAMPOS_INV = ['nombre', 'unidad', 'minimo', 'costo', 'precio', 'notas'];
+  const stockTxt = p => (Number(p.stock) || 0).toLocaleString('es-DO', { maximumFractionDigits: 2 });
+  const MOTIVO_MOV = { entrada: 'Entró mercancía', ajuste: 'Corrección', venta: 'Venta', factura: 'Factura' };
+
+  async function loadInv(callado) {
+    const r = await todas(() => sb.from('inventario').select('*').order('nombre').order('id'));
+    const falta = missingTable(r.error);
+    if (r.error && !falta) { if (!callado) toast(errText(r.error), true); if (listo.inv) return marcar('inv', r.error); }  // se quedan los que había
+    invTablaFalta = falta;
+    $('#inv-setup').hidden = !falta;
+    inventario = r.error ? [] : r.data;
+    if (!r.error || falta) listo.inv = true;
+    renderInv(); fillInvSelect();
+    if ($('#d-inv').open && openInvId) mostrarStockAbierto();
+    return marcar('inv', r.error && !falta ? r.error : null);
+  }
+
+  const estadoInv = p => {
+    const s = Number(p.stock) || 0, min = Number(p.minimo) || 0;
+    return s <= 0 ? ['rechazada', 'Agotado'] : min > 0 && s <= min ? ['pendiente', 'Por agotarse'] : null;
+  };
+  function renderInv() {
+    const bajos = inventario.filter(estadoInv), valor = inventario.reduce((t, p) => t + Math.max(Number(p.stock) || 0, 0) * (Number(p.costo) || 0), 0);
+    $('#inv-totals').innerHTML = `<div class="stat"><div class="k">Productos</div><div class="v">${inventario.length}</div></div>
+      <div class="stat"><div class="k">Por agotarse</div><div class="v${bajos.length ? ' neg' : ''}">${bajos.length}</div></div>
+      <div class="stat"><div class="k">Valor a tu costo</div><div class="v">${montoHtml(valor)}</div></div>`;
+    const ws = palabras($('#s-inv').value), solo = $('#inv-filtro').value;
+    const list = inventario.filter(p => tieneTodas(ws, p.nombre) && (solo !== 'bajo' || estadoInv(p)));
+    const el = $('#l-inv');
+    if (invTablaFalta) { el.innerHTML = ''; return; }
+    if (!inventario.length) { el.innerHTML = '<div class="empty">Aún no hay productos. Pulsa <b>+ Nuevo producto</b>, o <b>+ De Suplidores</b> para traerlos de tu lista de precios.</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty">No hay productos con ese filtro.</div>'; return; }
+    el.innerHTML = list.map(p => {
+      const e = estadoInv(p);
+      return `<button class="row" data-inv="${p.id}"><div class="main"><div class="title">${esc(p.nombre)}</div>
+        <div class="sub">${esc('Quedan ' + stockTxt(p) + (p.unidad ? ' ' + p.unidad : ''))}</div>${e ? `<span class="badge ${e[0]}">${e[1]}</span>` : ''}</div>
+        <div class="amount">${Number(p.precio) > 0 ? montoHtml(Number(p.precio)) : '—'}</div></button>`;
+    }).join('');
+    $$('[data-inv]', el).forEach(r => r.addEventListener('click', () => openInv(r.dataset.inv)));
+  }
+  $('#s-inv').addEventListener('input', renderInv);
+  $('#inv-filtro').addEventListener('change', renderInv);
+
+  // Productos del inventario en la venta rápida
+  function fillInvSelect() {
+    const sel = $('#f-venta-rapida').elements.producto_id, v = sel.value, hay = inventario.length > 0;
+    $('#vr-inv-w').hidden = !hay; $('#vr-cant-w').hidden = !hay;
+    ponerOpciones(sel, '<option value="">— Ninguno —</option>' + inventario.map(p => `<option value="${p.id}">${esc(p.nombre)} (${esc(stockTxt(p))})</option>`).join(''));
+    sel.value = inventario.some(p => p.id === v) ? v : '';
+  }
+  // Al elegir el producto y la cantidad se llenan solos el monto, lo vendido y lo que costó (si están vacíos o los puso esta función)
+  function autollenarVenta() {
+    const f = $('#f-venta-rapida'), p = inventario.find(x => x.id === f.elements.producto_id.value), c = num(f.elements.cantidad.value);
+    if (!p || !(c > 0)) return;
+    const vals = { monto: Number(p.precio) > 0 ? String(round2(p.precio * c)) : '', costo: Number(p.costo) > 0 ? String(round2(p.costo * c)) : '',
+      descripcion: `${c.toLocaleString('es-DO', { maximumFractionDigits: 2 })} ${p.unidad ? p.unidad + ' ' : ''}${p.nombre}`.replace(/\s+/g, ' ') };
+    Object.entries(vals).forEach(([k, v]) => { const el = f.elements[k]; if (v && (el.value === '' || el.value === vrAuto[k])) { el.value = v; vrAuto[k] = v; } });
+  }
+  $('#f-venta-rapida').elements.producto_id.addEventListener('change', autollenarVenta);
+  $('#f-venta-rapida').elements.cantidad.addEventListener('input', autollenarVenta);
+
+  // Deja el inventario como debe quedar según una venta o factura (ref_id): mira lo que ya se descontó por ella y mueve solo la diferencia.
+  // Así guardar dos veces lo mismo, o cambiar la cantidad, nunca descuenta de más. quiere = { producto_id: cantidad vendida }.
+  // Devuelve los nombres de los productos que quedan en negativo.
+  async function sincronizarStock(refId, motivoMov, nota, quiere) {
+    if (invTablaFalta) return [];
+    const ids = Object.keys(quiere);
+    if (ids.length && !listo.inv) throw new Error('El inventario aún no ha cargado');
+    ids.forEach(id => { if (!inventario.some(p => p.id === id)) delete quiere[id]; });  // producto borrado del inventario
+    const r = await sb.from('inventario_mov').select('producto_id,cantidad').eq('ref_id', refId);
+    if (r.error) throw r.error;
+    const hay = {};
+    (r.data || []).forEach(m => hay[m.producto_id] = (hay[m.producto_id] || 0) + Number(m.cantidad));
+    const filas = [];
+    new Set([...Object.keys(hay), ...Object.keys(quiere)]).forEach(pid => {
+      const dif = round2(-(quiere[pid] || 0) - (hay[pid] || 0));
+      if (dif) filas.push({ id: nuevoId(), producto_id: pid, cantidad: dif, motivo: motivoMov, ref_id: refId, nota });
+    });
+    if (!filas.length) return [];
+    const w = await sb.from('inventario_mov').insert(filas);
+    if (w.error) throw w.error;
+    loadInv(true);
+    return filas.map(x => { const p = inventario.find(y => y.id === x.producto_id); return p && x.cantidad < 0 && (Number(p.stock) || 0) + x.cantidad < 0 ? p.nombre : null; }).filter(Boolean);
+  }
+  const pedidoPorProducto = items => items.reduce((o, it) => { if (it.producto_id) o[it.producto_id] = round2((o[it.producto_id] || 0) + (Number(it.cantidad) || 0)); return o; }, {});
+  // Al borrar una venta o factura se devuelve lo que descontó. Devuelve el error, si hubo.
+  async function quitarStock(refIds) {
+    if (invTablaFalta || !refIds.length) return null;
+    const { error } = await sb.from('inventario_mov').delete().in('ref_id', refIds);
+    return error && !missingTable(error) ? error : null;
+  }
+
+  // Ver / crear un producto
+  function openInv(id, base) {
+    const p = id ? inventario.find(x => x.id === id) : null; if (id && !p) return;
+    if (invTablaFalta) { toast('Primero termina el paso de Supabase que sale arriba.', true); return; }
+    openInvId = p ? p.id : null;
+    invNuevo = p ? null : nuevoId(); invMovNuevo = nuevoId();
+    const f = $('#f-inv'); f.reset();
+    const v = p || base || {};
+    CAMPOS_INV.forEach(k => f.elements[k].value = v[k] ?? '');
+    $('#di2-title').textContent = p ? p.nombre : 'Nuevo producto';
+    $('#w-stock0').hidden = !!p; $('#inv-existente').hidden = !p; $('#inv-delete').hidden = !p;
+    prodAntes = leerCampos(f, CAMPOS_INV);
+    if (p) { mostrarStockAbierto(); cargarMovs(); }
+    $('#d-inv').showModal();
+  }
+  function mostrarStockAbierto() {
+    const p = inventario.find(x => x.id === openInvId); if (!p) return;
+    $('#inv-stock-big').textContent = stockTxt(p) + (p.unidad ? ' ' + p.unidad : '');
+    $('#inv-stock-big').style.color = (Number(p.stock) || 0) <= 0 ? 'var(--bad)' : '';
+    cargarMovs();
+  }
+  async function cargarMovs() {
+    const id = openInvId, el = $('#inv-movs'); if (!id) return;
+    const r = await sb.from('inventario_mov').select('*').eq('producto_id', id).order('creado', { ascending: false }).limit(15);
+    if (id !== openInvId) return;
+    if (r.error) { el.innerHTML = `<div class="empty">${esc(errText(r.error))}</div>`; return; }
+    el.innerHTML = (r.data || []).length ? r.data.map(m => {
+      const c = Number(m.cantidad), cuando = new Date(m.creado).toLocaleString('es-DO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+      return `<div class="row" style="cursor:default"><div class="main"><div class="title">${esc(MOTIVO_MOV[m.motivo] || m.motivo)}</div>
+        <div class="sub completo">${esc([cuando, m.nota].filter(Boolean).join(' · '))}</div></div>
+        <div class="amount" style="color:${c < 0 ? 'var(--bad)' : 'var(--ok)'}">${(c > 0 ? '+' : '') + c.toLocaleString('es-DO', { maximumFractionDigits: 2 })}</div></div>`;
+    }).join('') : '<div class="empty">Todavía no hay movimientos.</div>';
+  }
+  $('#b-new-inv').addEventListener('click', () => { if (faltaCargar('inv')) return; openInv(null); });
+  $('#f-inv').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, btn = $('#inv-save'), ahora = leerCampos(f, CAMPOS_INV);
+    const n = k => { const v = num(f.elements[k].value); return Number.isFinite(v) ? v : null; };
+    const data = { nombre: f.elements.nombre.value.trim(), unidad: f.elements.unidad.value.trim() || null, minimo: n('minimo') || 0,
+      costo: n('costo'), precio: n('precio'), notas: f.elements.notas.value.trim() || null };
+    if (!data.nombre) return toast('Escribe el nombre del producto.', true);
+    await conBoton(btn, 'Guardando…', async () => {
+      if (openInvId) {
+        const envio = soloCambios(data, ahora, prodAntes);
+        if (Object.keys(envio).length) { const { error } = await sb.from('inventario').update(envio).eq('id', openInvId); if (error) return toast(errText(error), true); }
+        prodAntes = ahora;
+      } else {
+        const { error } = await sb.from('inventario').upsert({ id: invNuevo, stock: 0, ...data });
+        if (error) return toast(errText(error), true);
+        const inicial = n('stock0');
+        if (inicial > 0) {
+          const m = await sb.from('inventario_mov').upsert({ id: invMovNuevo, producto_id: invNuevo, cantidad: inicial, motivo: 'entrada', nota: 'Cantidad inicial' });
+          if (m.error) { openInvId = invNuevo; invNuevo = null; $('#w-stock0').hidden = true; await loadInv(true); return toast('El producto se guardó, pero no se pudo anotar cuántos hay (' + motivo(m.error) + '). Usa «+ Entró mercancía».', true, 9000); }
+        }
+      }
+      $('#d-inv').close(); toast(openInvId ? 'Producto actualizado' : 'Producto agregado');
+      await loadInv(true);
+    });
+  });
+  $('#inv-delete').addEventListener('click', async () => {
+    const p = inventario.find(x => x.id === openInvId); if (!p) return;
+    if (!confirm(`¿Borrar «${p.nombre}» del inventario? Se pierde su historial de movimientos. Las ventas y facturas ya hechas no cambian.`)) return;
+    const { error } = await sb.from('inventario').delete().eq('id', p.id);
+    if (error) return toast(errText(error), true);
+    $('#d-inv').close(); toast('Producto borrado'); loadInv(true);
+  });
+
+  // Entró mercancía / contar y corregir
+  function abrirMov(modo) {
+    const p = inventario.find(x => x.id === openInvId); if (!p) return;
+    imModo = modo; invMovNuevo = nuevoId();
+    const f = $('#f-inv-mov'); f.reset();
+    const ent = modo === 'entrada';
+    $('#im-title').textContent = ent ? 'Entró mercancía' : 'Contar y corregir';
+    $('#im-label').textContent = ent ? 'Cuántas entraron *' : 'Cuántas hay en realidad (las que contaste) *';
+    $('#im-hint').textContent = ent ? `Ahora hay ${stockTxt(p)} ${p.unidad || ''}. Lo que escribas se suma.` : `El sistema dice que hay ${stockTxt(p)} ${p.unidad || ''}. Escribe lo que contaste y se corrige la diferencia.`;
+    $('#im-costo-w').hidden = !ent;
+    $('#d-inv-mov').showModal();
+  }
+  $('#inv-entrada').addEventListener('click', () => abrirMov('entrada'));
+  $('#inv-ajuste').addEventListener('click', () => abrirMov('ajuste'));
+  $('#f-inv-mov').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, q = num(f.elements.cantidad.value), ent = imModo === 'entrada', id = openInvId;
+    if (!(q >= 0) || (ent && !(q > 0))) return toast(ent ? 'Escribe cuántas entraron.' : 'Escribe cuántas hay.', true);
+    await conBoton($('#im-save'), 'Guardando…', async () => {
+      // Se pide el stock actual a la base: el otro teléfono pudo vender mientras tanto
+      const cur = await sb.from('inventario').select('stock').eq('id', id).single();
+      if (cur.error) return toast(errText(cur.error), true);
+      const delta = ent ? q : round2(q - Number(cur.data.stock));
+      if (!delta) { $('#d-inv-mov').close(); return toast('Ya coincide: no hay nada que corregir.'); }
+      const nota = f.elements.nota.value.trim() || null;
+      const { error } = await sb.from('inventario_mov').upsert({ id: invMovNuevo, producto_id: id, cantidad: delta, motivo: ent ? 'entrada' : 'ajuste', nota });
+      if (error) return toast(errText(error), true);
+      const costo = num(f.elements.costo.value);
+      if (ent && costo > 0) await sb.from('inventario').update({ costo }).eq('id', id);
+      $('#d-inv-mov').close(); toast(ent ? 'Mercancía anotada' : 'Inventario corregido');
+      await loadInv(true);
+    });
+  });
 
   // ---------- Cotizaciones y facturas con el diseño de Surteme ----------
   const DOC_SQL = `create table if not exists documentos (
@@ -2796,6 +3142,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     const el = $('#dd-items');
     el.innerHTML = edItems.map((it, i) => `<div class="item-card" data-i="${i}">
       <div class="item-head">Producto ${i + 1}<button type="button" class="x" data-del="${i}" aria-label="Quitar">×</button></div>
+      ${it.producto_id ? `<p class="hint" style="margin:-4px 0 8px">📦 ${edDoc && edDoc.tipo === 'factura' ? 'Se descuenta del inventario al guardar' : 'Se descontará del inventario cuando la hagas factura'}</p>` : ''}
       <div class="grid">
         <label class="field full"><span>Producto *</span><input data-k="descripcion" value="${esc(it.descripcion)}" placeholder="Ej. Vaso de 12 onz"></label>
         <label class="field full"><span>Detalle (opcional)</span><input data-k="detalle" value="${esc(it.detalle)}" placeholder="Ej. Transparente, ideal para bebidas."></label>
@@ -2846,16 +3193,54 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); sucias.add($('#d-doc')); renderItems(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
 
   // Elegir de la lista de precios de los suplidores
+  let pickModo = 'doc-sup';  // doc-sup: producto de la cotización desde Suplidores · doc-inv: desde el inventario · inv-sup: producto nuevo del inventario desde Suplidores
+  function abrirPick(modo) {
+    pickModo = modo;
+    $('#d-pick h3').textContent = modo === 'doc-inv' ? 'Elegir del inventario' : 'Elegir producto';
+    $('#pk-q').value = ''; renderPick(); $('#d-pick').showModal();
+  }
   $('#dd-pick').addEventListener('click', () => {
     if (!productos.length) { toast('Aún no hay precios cargados en Suplidores. Puedes escribir el producto a mano.', true); return; }
-    $('#pk-q').value = ''; renderPick(); $('#d-pick').showModal();
+    abrirPick('doc-sup');
+  });
+  $('#dd-pick-inv').addEventListener('click', () => {
+    if (invTablaFalta) { toast('Primero termina el paso de Supabase que sale en Inventario.', true); return; }
+    if (!inventario.length) { toast('Aún no hay productos en Inventario. Agrégalos en la pestaña Inventario.', true); return; }
+    abrirPick('doc-inv');
+  });
+  $('#b-inv-sup').addEventListener('click', () => {
+    if (invTablaFalta) { toast('Primero termina el paso de Supabase que sale arriba.', true); return; }
+    if (!productos.length) { toast('Aún no hay precios cargados en Suplidores.', true); return; }
+    abrirPick('inv-sup');
   });
   $('#pk-q').addEventListener('input', renderPick);
+  // Lista del inventario para agregar a una cotización o factura
+  function renderPickInv() {
+    const ws = palabras($('#pk-q').value), list = inventario.filter(p => tieneTodas(ws, p.nombre)).slice(0, 60);
+    $('#pk-list').innerHTML = list.length ? list.map(p => `<button class="row" data-pi="${p.id}"><div class="main"><div class="title completo">${esc(p.nombre)}</div>
+      <div class="sub completo">${esc('Quedan ' + stockTxt(p) + (p.unidad ? ' ' + p.unidad : ''))}</div></div>
+      <div class="amount">${Number(p.precio) > 0 ? montoHtml(Number(p.precio)) : '—'}</div></button>`).join('') : '<div class="empty">No se encontró ese producto.</div>';
+    $$('[data-pi]', $('#pk-list')).forEach(b => b.addEventListener('click', () => {
+      const p = inventario.find(x => x.id === b.dataset.pi); if (!p) return;
+      const ya = edItems.find(it => it.producto_id === p.id);
+      if (ya) ya.cantidad = (Number(ya.cantidad) || 0) + 1;
+      else {
+        const it = { descripcion: p.nombre, detalle: '', cantidad: 1, unidad: p.unidad || '', precio: Number(p.precio) > 0 ? Number(p.precio) : null,
+          costo: Number(p.costo) > 0 ? Number(p.costo) : null, producto_id: p.id };
+        const vacio = edItems.length === 1 && !edItems[0].descripcion && !edItems[0].precio;
+        if (vacio) edItems[0] = it; else edItems.push(it);
+      }
+      sucias.add($('#d-doc'));
+      $('#d-pick').close(); renderItems();
+      toast(`${p.nombre} agregado`);
+    }));
+  }
   function mejorOferta(p) {
     const conUnidad = p.rows.filter(r => Number.isFinite(unitItbis(r))).sort((a, b) => unitItbis(a) - unitItbis(b));
     return conUnidad[0] || p.rows.find(r => Number.isFinite(pkgItbis(r))) || p.rows[0];
   }
   function renderPick() {
+    if (pickModo === 'doc-inv') return renderPickInv();
     // Primero los productos que lo dicen en su nombre; después los que solo coinciden por la categoría
     // (así «vaso» muestra primero los vasos, y no las cajas de la categoría «porta-vasos»)
     const ws = palabras($('#pk-q').value), enNombre = productos.filter(p => tieneTodas(ws, p.nombre));
@@ -2870,6 +3255,11 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       const p = productos[+b.dataset.pk], r = mejorOferta(p), costo = pkgItbis(r);
       const m = Math.min(95, Math.max(0, num($('#dd-margen').value) || 0));
       const precio = Number.isFinite(costo) ? Math.ceil(costo / (1 - m / 100)) : null;
+      if (pickModo === 'inv-sup') {  // producto nuevo del inventario, con el costo y el precio de esta lista
+        $('#d-pick').close();
+        openInv(null, { nombre: p.nombre, unidad: r.presentacion || '', costo: Number.isFinite(costo) ? round2(costo) : '', precio: precio ?? '' });
+        return;
+      }
       const vacio = edItems.length === 1 && !edItems[0].descripcion && !edItems[0].precio;
       const it = { descripcion: p.nombre, detalle: '', cantidad: 1, unidad: r.presentacion || '', precio, costo: Number.isFinite(costo) ? round2(costo) : null };
       if (vacio) edItems[0] = it; else edItems.push(it);
@@ -2883,7 +3273,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   // Productos tal como se guardan (sin los que no tienen nombre, con números). También sirve para saber si cambiaste alguno.
   const limpiarItems = arr => (arr || []).filter(it => String(it.descripcion || '').trim()).map(it => ({
     descripcion: String(it.descripcion).trim(), detalle: String(it.detalle || '').trim(), cantidad: Number(it.cantidad) || 0,
-    unidad: String(it.unidad || '').trim(), precio: Number(it.precio) || 0, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
+    unidad: String(it.unidad || '').trim(), precio: Number(it.precio) || 0, producto_id: it.producto_id || null, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
   const vacio = v => v === '' || v === undefined ? null : v;
   $('#f-doc').addEventListener('submit', async e => {
     e.preventDefault();
@@ -2984,6 +3374,13 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       }
       if (res.error) throw res.error;
       docGuardado = true;
+      // Factura: se descuenta del inventario lo que lleva (y si se cambió o se quitó un producto, se corrige la diferencia)
+      if (data.tipo === 'factura' && !invTablaFalta) {
+        try {
+          const neg = await sincronizarStock(res.data.id, 'factura', 'Factura ' + (data.numero || ''), pedidoPorProducto(data.items));
+          if (neg.length) { malo = true; avisos.push('Ojo: el inventario de ' + neg.join(', ') + ' quedó en negativo.'); }
+        } catch (er) { malo = true; avisos.push('No se pudo descontar del inventario (' + motivo(er) + '). Abre la factura y guárdala otra vez.'); }
+      }
       if (edDoc.origen_id) {
         const o = await sb.from('documentos').update({ estado: 'aceptada' }).eq('id', edDoc.origen_id);
         if (o.error) { malo = true; avisos.push('No se pudo marcar la cotización como «Aceptada» (revisa tu internet), pero ya no se puede volver a convertir.'); }
@@ -3168,7 +3565,11 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     const f = d.factura_id && facturas.find(x => x.id === d.factura_id);
     if (!confirm(f ? '¿Borrar esta factura? También se borra de la lista de Facturas, con sus abonos. No se puede deshacer.' : `¿Borrar esta ${TIPO[d.tipo].toLowerCase()}? No se puede deshacer.`)) return;
     // Con factura: el documento, la factura (con sus abonos) y al final los archivos. «Borrada» solo si todo salió bien.
-    const error = await conBoton(b, 'Borrando…', async () => f ? borrarFactura(f) : (await sb.from('documentos').delete().eq('id', d.id)).error);
+    const error = await conBoton(b, 'Borrando…', async () => {
+      if (f) return borrarFactura(f);
+      if (d.tipo === 'factura') { const q = await quitarStock([d.id]); if (q) return q; }
+      return (await sb.from('documentos').delete().eq('id', d.id)).error;
+    });
     if (error) { toast(errText(error), true); load(); return; }
     $('#d-view').close(); toast('Borrada'); load();
   });

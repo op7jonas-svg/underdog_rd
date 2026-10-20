@@ -181,3 +181,54 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ===== Inventario =====
+create table if not exists inventario (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  nombre text not null,
+  unidad text,
+  stock numeric not null default 0,
+  minimo numeric not null default 0,
+  costo numeric,
+  precio numeric,
+  notas text
+);
+create table if not exists inventario_mov (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  producto_id uuid not null references inventario(id) on delete cascade,
+  cantidad numeric not null,
+  motivo text not null default 'ajuste',
+  ref_id uuid,
+  nota text
+);
+create index if not exists inventario_mov_producto_idx on inventario_mov (producto_id);
+create index if not exists inventario_mov_ref_idx on inventario_mov (ref_id);
+create or replace function inventario_mov_stock() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    update inventario set stock = stock + new.cantidad where id = new.producto_id;
+  elsif tg_op = 'DELETE' then
+    update inventario set stock = stock - old.cantidad where id = old.producto_id;
+  end if;
+  return null;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_trigger where tgname = 'inventario_mov_stock_tr') then
+    create trigger inventario_mov_stock_tr after insert or delete on inventario_mov
+      for each row execute function inventario_mov_stock();
+  end if;
+end $$;
+alter table inventario enable row level security;
+alter table inventario_mov enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'usuarios_inventario') then
+    create policy "usuarios_inventario" on inventario for all to authenticated using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'usuarios_inventario_mov') then
+    create policy "usuarios_inventario_mov" on inventario_mov for all to authenticated using (true) with check (true);
+  end if;
+end $$;
+grant select, insert, update, delete on inventario, inventario_mov to authenticated;

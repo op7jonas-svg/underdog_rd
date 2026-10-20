@@ -86,3 +86,11 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - **Historial por día:** cada día queda guardado con su total, cantidad de ventas y ganancia. Toca un día para ver el detalle.
 - Si la app se queda abierta cuando empieza un mes nuevo, el **Historial** y **Gastos** pasan solos al mes nuevo (si habías elegido otro mes o **Todo el tiempo**, se queda como lo elegiste).
 - Aunque haya miles de ventas, pagos o precios, se cargan todos (la página los pide de 1,000 en 1,000).
+
+## Inventario
+- En la pestaña **Inventario** anotas lo que tienes en el almacén: **+ Nuevo producto** (con cuántos tienes ahora) o **+ De Suplidores** (trae el nombre, el costo y un precio de venta de tu lista de precios).
+- Pon "Avisarme si quedan menos de…" y el producto sale como **Por agotarse**. Arriba ves cuántos hay por agotarse y cuánto vale tu mercancía a tu costo.
+- **Ventas:** en "Registrar una venta" elige el producto en **Del inventario** y la cantidad. El monto, lo vendido y lo que costó se llenan solos, y el inventario baja. Si quedan menos de lo que vendes, te pregunta antes.
+- **Facturas:** al crear una factura usa **+ Del inventario**. Al guardarla se descuenta. Si después cambias la cantidad o quitas el producto, el inventario se corrige solo. Las **cotizaciones no descuentan** (hasta que las conviertes en factura).
+- Si **borras** una venta o una factura, lo que descontó **regresa** al inventario.
+- Dentro de un producto: **+ Entró mercancía** suma lo que compraste (y puedes poner el costo nuevo) y **Contar y corregir** ajusta cuando cuentas y no coincide. Abajo ves el historial de movimientos.
