@@ -445,7 +445,7 @@
           <label class="field" id="vr-inv-w" hidden><span>Del inventario (opcional)</span><select name="producto_id"></select></label>
           <label class="field" id="vr-cant-w" hidden><span>Cantidad</span><input name="cantidad" type="number" inputmode="decimal" step="any" min="0" value="1"></label>
           <label class="field" id="vr-nivel-w" hidden><span>¿En qué?</span><select name="nivel"></select></label>
-          <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" placeholder="Ej. 2 cajas de bandejas"></label>
+          <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" list="dl-vendido" autocomplete="off" placeholder="Ej. 2 cajas de bandejas"></label>
           <div class="field full"><span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">¿Cómo pagó?</span>
             <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none">
               <button type="button" data-m="Efectivo" aria-pressed="true">Efectivo</button>
@@ -762,7 +762,7 @@
       <div class="grid">
         <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
         <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
-        <label class="field full"><span>¿Qué vendiste?</span><input name="descripcion"></label>
+        <label class="field full"><span>¿Qué vendiste?</span><input name="descripcion" list="dl-vendido" autocomplete="off"></label>
         <label class="field"><span>¿Cómo pagó?</span><select name="metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></label>
         <label class="field"><span>Lo que te costó</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
         <label class="field full"><span>Cliente</span><select name="cliente_id"></select></label>
@@ -805,6 +805,7 @@
   </div>
 </dialog>
 <datalist id="dl-veh"></datalist>
+<datalist id="dl-vendido"></datalist>
 
 <!-- Ventana: producto del inventario -->
 <dialog id="d-inv">
@@ -1077,7 +1078,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-28a"></script>
+<script src="config.js?v=2026-10-28b"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1088,7 +1089,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-28a';
+  const APP_VERSION = '2026-10-28b';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -2649,7 +2650,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     $('#f-venta-rapida').hidden = vTablaFalta;
     ventas = r.error ? [] : r.data;
     if (!r.error || falta) listo.ventas = true;
-    renderVentas();
+    renderVentas(); fillVendido();
     fillGastoFilters(); renderGastos();  // la «Ganancia real» de Gastos también cuenta estas ventas
     return marcar('ventas', r.error && !falta ? r.error : null);
   }
@@ -2977,7 +2978,7 @@ grant select, insert, update, delete on compras to authenticated;`;
     inventario = r.error ? [] : r.data;
     if (!c.error || comprasFalta) compras = c.error ? [] : c.data;
     if (!r.error || falta) listo.inv = true;
-    renderInv(); renderCompras(); fillInvSelect();
+    renderInv(); renderCompras(); fillInvSelect(); fillVendido();
     if ($('#d-inv').open && openInvId) mostrarStockAbierto();
     return marcar('inv', (r.error && !falta) ? r.error : (c.error && !comprasFalta) ? c.error : null);
   }
@@ -3015,6 +3016,16 @@ grant select, insert, update, delete on compras to authenticated;`;
   }
   $('#s-inv').addEventListener('input', renderInv);
   $('#inv-filtro').addEventListener('change', renderInv);
+
+  // Sugerencias al escribir «¿Qué vendiste?»: lo que ya has vendido (lo más reciente primero) y los productos del inventario
+  function fillVendido() {
+    const vistos = new Set(), lista = [];
+    [...ventas.map(v => v.descripcion), ...inventario.map(p => p.nombre)].forEach(t => {
+      t = (t || '').trim().replace(/\s+/g, ' '); const k = t.toLowerCase();
+      if (t && !vistos.has(k) && lista.length < 300) { vistos.add(k); lista.push(t); }
+    });
+    ponerOpciones($('#dl-vendido'), lista.map(t => `<option value="${esc(t)}">`).join(''));
+  }
 
   // ----- Venta rápida con un producto del inventario -----
   function fillInvSelect() {
