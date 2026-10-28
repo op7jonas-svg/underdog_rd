@@ -232,3 +232,33 @@ do $$ begin
   end if;
 end $$;
 grant select, insert, update, delete on inventario, inventario_mov to authenticated;
+
+-- ===== Empaques del inventario y compras =====
+alter table inventario add column if not exists empaque text;
+alter table inventario add column if not exists paquetes numeric;
+alter table inventario add column if not exists unidades numeric;
+alter table inventario add column if not exists precio_paquete numeric;
+alter table inventario add column if not exists precio_unidad numeric;
+alter table inventario add column if not exists ganancia numeric;
+create table if not exists compras (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  fecha date not null default current_date,
+  proveedor_id uuid references proveedores(id) on delete set null,
+  proveedor_nombre text,
+  numero text,
+  items jsonb not null default '[]',
+  total numeric not null default 0,
+  pagada boolean not null default false,
+  archivo text,
+  notas text
+);
+create index if not exists compras_fecha_idx on compras (fecha);
+create index if not exists compras_proveedor_idx on compras (proveedor_id);
+alter table compras enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'usuarios_compras') then
+    create policy "usuarios_compras" on compras for all to authenticated using (true) with check (true);
+  end if;
+end $$;
+grant select, insert, update, delete on compras to authenticated;

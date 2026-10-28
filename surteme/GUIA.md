@@ -88,9 +88,23 @@ Página: https://op7jonas-svg.github.io/underdog_rd/surteme/
 - Aunque haya miles de ventas, pagos o precios, se cargan todos (la página los pide de 1,000 en 1,000).
 
 ## Inventario
-- En la pestaña **Inventario** anotas lo que tienes en el almacén: **+ Nuevo producto** (con cuántos tienes ahora) o **+ De Suplidores** (trae el nombre, el costo y un precio de venta de tu lista de precios).
-- Pon "Avisarme si quedan menos de…" y el producto sale como **Por agotarse**. Arriba ves cuántos hay por agotarse y cuánto vale tu mercancía a tu costo.
-- **Ventas:** en "Registrar una venta" elige el producto en **Del inventario** y la cantidad. El monto, lo vendido y lo que costó se llenan solos, y el inventario baja. Si quedan menos de lo que vendes, te pregunta antes.
-- **Facturas:** al crear una factura usa **+ Del inventario**. Al guardarla se descuenta. Si después cambias la cantidad o quitas el producto, el inventario se corrige solo. Las **cotizaciones no descuentan** (hasta que las conviertes en factura).
+- En la pestaña **Inventario** anotas lo que tienes en el almacén: **+ Nuevo producto** o **+ De Suplidores** (trae el nombre y el costo de tu lista de precios).
+- **Empaques:** elige cómo lo compras (**fardo, caja, paquete o unidad**), cuántos paquetes trae el fardo o la caja y cuántas unidades trae cada paquete. La página te muestra la equivalencia, por ejemplo "1 caja = 10 paquetes = 1,000 unidades".
+- **Precios:** pon lo que te cuesta la caja y el **% que le quieres ganar**, y los precios de caja, paquete y unidad salen solos. También puedes escribir el precio de la caja y los demás se calculan. Si escribes un precio de paquete o de unidad, se usa el tuyo. Abajo ves cuánto ganas en cada empaque.
+- **Existencia:** se puede escribir combinando, por ejemplo 3 cajas y 4 paquetes. Se muestra igual: "Quedan 3 cajas, 4 paquetes".
+- Pon "Avisarme si quedan menos de…" y el producto sale como **Por agotarse**.
+- **Ventas:** en "Registrar una venta" elige el producto en **Del inventario**, si es por caja, paquete o unidad, y la cantidad. El monto, lo vendido y lo que costó se llenan solos, y el inventario baja.
+- **Facturas:** al crear una factura usa **+ Del inventario** y toca el empaque (Caja, Paquete o Unidad). Al guardarla se descuenta. Las **cotizaciones no descuentan** hasta que las conviertes en factura.
 - Si **borras** una venta o una factura, lo que descontó **regresa** al inventario.
-- Dentro de un producto: **+ Entró mercancía** suma lo que compraste (y puedes poner el costo nuevo) y **Contar y corregir** ajusta cuando cuentas y no coincide. Abajo ves el historial de movimientos.
+- Dentro de un producto: **+ Entró mercancía** suma algo suelto y **Contar y corregir** ajusta cuando cuentas y no coincide.
+
+## Compras de mercancía
+- En **Inventario → Compras** pulsa **+ Registrar compra** cada vez que llega mercancía de un suplidor.
+- Elige el suplidor, agrega los productos (**+ Del inventario** o **+ Producto nuevo**), la cantidad, si viene en cajas, paquetes o unidades, y el costo. El total se suma solo.
+- Al guardar, **el inventario sube solo** y el costo de esos productos se actualiza (puedes quitar esa casilla).
+- Marca **Ya la pagué** o déjala como **Debo**: arriba ves cuánto le debes a los suplidores.
+- Puedes guardar la foto de la factura del suplidor.
+- Las compras **no van en Gastos**: su costo ya se descuenta de tu ganancia cuando vendes.
+
+## Calculadora: sumarle un %
+- En **Calcular → Sumarle un %**: escribe lo que te cuesta y el % que le quieres ganar. Ejemplo: RD$10 + 15% = **RD$11.50** (ganas RD$1.50).

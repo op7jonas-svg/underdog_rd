@@ -402,14 +402,15 @@
       <div class="card">
         <div class="section-head"><div><h2>Calculadora de ganancia</h2><p class="hint">Todo en pesos (RD$). Los precios van sin ITBIS.</p></div></div>
         <div class="seg" role="group">
-          <button type="button" data-mode="precio" aria-pressed="true">Ya tengo el precio</button>
-          <button type="button" data-mode="margen" aria-pressed="false">Quiero ganar un %</button>
+          <button type="button" data-mode="precio" aria-pressed="true">Tengo el precio</button>
+          <button type="button" data-mode="subir" aria-pressed="false">Sumarle un %</button>
+          <button type="button" data-mode="margen" aria-pressed="false">Margen %</button>
         </div>
 
         <div class="grid">
           <label class="field"><span>¿Cuánto te cuesta? (por unidad)</span><input id="c-costo" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></label>
           <label class="field" id="w-precio"><span>¿En cuánto lo vendes? (por unidad)</span><input id="c-precio" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></label>
-          <label class="field" id="w-margen" hidden><span>¿Qué % quieres ganar?</span><input id="c-margen" type="number" inputmode="decimal" step="any" min="0" max="99" placeholder="30">
+          <label class="field" id="w-margen" hidden><span id="l-margen">¿Qué % quieres ganar?</span><input id="c-margen" type="number" inputmode="decimal" step="any" min="0" max="99" placeholder="30">
             <div class="chips"><button type="button" data-m="15">15%</button><button type="button" data-m="20">20%</button><button type="button" data-m="25">25%</button><button type="button" data-m="30">30%</button><button type="button" data-m="40">40%</button><button type="button" data-m="50">50%</button></div>
           </label>
           <label class="field"><span>Cantidad de unidades</span><input id="c-cant" type="number" inputmode="numeric" step="any" min="0" value="1"></label>
@@ -443,6 +444,7 @@
           <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required placeholder="0.00"></label>
           <label class="field" id="vr-inv-w" hidden><span>Del inventario (opcional)</span><select name="producto_id"></select></label>
           <label class="field" id="vr-cant-w" hidden><span>Cantidad</span><input name="cantidad" type="number" inputmode="decimal" step="any" min="0" value="1"></label>
+          <label class="field" id="vr-nivel-w" hidden><span>¿En qué?</span><select name="nivel"></select></label>
           <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" placeholder="Ej. 2 cajas de bandejas"></label>
           <div class="field full"><span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">¿Cómo pagó?</span>
             <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none">
@@ -524,23 +526,38 @@
     <!-- Suplidores -->
     <section id="t-inventario" hidden>
       <div class="section-head">
-        <div><h2>Inventario</h2><p class="hint">Lo que tienes en el almacén. Cuando vendes un producto de aquí, se descuenta solo.</p></div>
-        <div class="spacer"></div>
-        <button class="btn" id="b-inv-sup">+ De Suplidores</button>
-        <button class="btn primary" id="b-new-inv">+ Nuevo producto</button>
+        <div><h2>Inventario</h2><p class="hint">Lo que tienes en el almacén y lo que le compras a tus suplidores. Al vender se descuenta solo; al registrar una compra, se suma solo.</p></div>
       </div>
       <div class="card" id="inv-setup" hidden style="margin-bottom:14px">
         <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
-        <p class="hint">Para llevar el inventario hay que preparar dos "cajones" nuevos. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
+        <p class="hint">Para llevar el inventario hay que preparar unos "cajones" nuevos. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
         <textarea class="sql" id="inv-sql" readonly></textarea>
         <div class="actions"><button class="btn primary" id="b-copy-invsql">Copiar texto</button><button class="btn" onclick="location.reload()">Ya lo hice, recargar</button></div>
       </div>
-      <div class="totals" id="inv-totals"></div>
-      <div class="filters">
-        <input class="search" id="s-inv" type="search" placeholder="Buscar producto…">
-        <select id="inv-filtro"><option value="">Todos</option><option value="bajo">Por agotarse</option></select>
+      <div class="seg" role="group" id="inv-seg">
+        <button type="button" data-v="productos" aria-pressed="true">Productos</button>
+        <button type="button" data-v="compras" aria-pressed="false">Compras</button>
       </div>
-      <div class="list" id="l-inv"></div>
+      <div id="inv-productos">
+        <div class="actions" style="margin:0 0 12px">
+          <button class="btn" id="b-inv-sup">+ De Suplidores</button>
+          <button class="btn primary" id="b-new-inv">+ Nuevo producto</button>
+        </div>
+        <div class="totals" id="inv-totals"></div>
+        <div class="filters">
+          <input class="search" id="s-inv" type="search" placeholder="Buscar producto…">
+          <select id="inv-filtro"><option value="">Todos</option><option value="bajo">Por agotarse</option></select>
+        </div>
+        <div class="list" id="l-inv"></div>
+      </div>
+      <div id="inv-compras" hidden>
+        <div class="actions" style="margin:0 0 12px">
+          <p class="hint" style="margin:0;flex:1 1 220px">Anota aquí cada mercancía que compras. Sube el inventario sola y no se cuenta en Gastos (su costo ya se descuenta de tu ganancia cuando vendes).</p>
+          <button class="btn primary" id="b-new-compra">+ Registrar compra</button>
+        </div>
+        <div class="totals" id="co-totals"></div>
+        <div class="list" id="l-compras"></div>
+      </div>
     </section>
 
     <section id="t-suplidores" hidden>
@@ -796,17 +813,40 @@
     <form id="f-inv">
       <div class="grid">
         <label class="field full"><span>Nombre *</span><input name="nombre" required placeholder="Ej. Vaso 12 onz"></label>
-        <label class="field"><span>Se cuenta en</span><input name="unidad" placeholder="Ej. caja, paquete, unidad"></label>
-        <label class="field" id="w-stock0"><span>Cuántos tienes ahora</span><input name="stock0" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></label>
+        <label class="field"><span>¿Cómo lo compras?</span><select name="empaque"><option value="fardo">Fardo</option><option value="caja">Caja</option><option value="paquete">Paquete</option><option value="unidad">Unidad</option></select></label>
+        <label class="field" id="w-paquetes"><span id="l-paquetes">¿Cuántos paquetes trae cada caja?</span><input name="paquetes" type="number" inputmode="decimal" step="any" min="0" placeholder="Vacío si trae unidades sueltas"></label>
+        <label class="field" id="w-unidades"><span id="l-unidades">¿Cuántas unidades trae cada paquete?</span><input name="unidades" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+      </div>
+      <p class="hint" id="inv-equiv" style="margin:8px 0 0"></p>
+
+      <h4 class="sub-title"><span>Costo y precio</span></h4>
+      <div class="grid">
+        <label class="field"><span id="l-costo">¿Cuánto te cuesta cada caja? (RD$)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></label>
+        <label class="field"><span>¿Qué % le quieres ganar?</span><input name="ganancia" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 15">
+          <div class="chips" id="inv-chips"><button type="button" data-g="10">10%</button><button type="button" data-g="15">15%</button><button type="button" data-g="20">20%</button><button type="button" data-g="25">25%</button><button type="button" data-g="30">30%</button></div></label>
+        <label class="field" id="w-p-empaque"><span id="l-p-empaque">Precio de venta por caja (RD$)</span><input name="precio" type="number" inputmode="decimal" step="any" min="0"></label>
+        <label class="field" id="w-p-paquete"><span>Precio por paquete (RD$)</span><input name="precio_paquete" type="number" inputmode="decimal" step="any" min="0"></label>
+        <label class="field" id="w-p-unidad"><span>Precio por unidad (RD$)</span><input name="precio_unidad" type="number" inputmode="decimal" step="any" min="0"></label>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Si solo pones el precio de la caja (o el %), los demás precios se calculan solos. Si escribes otro precio, se usa el tuyo.</p>
+      <div class="list" id="inv-calc" style="margin-top:10px"></div>
+
+      <h4 class="sub-title"><span>Existencia</span></h4>
+      <div id="w-stock0">
+        <p class="hint" style="margin:0 0 8px">¿Cuántos tienes ahora? (puedes combinar, ej. 3 cajas y 4 paquetes)</p>
+        <div class="grid" id="inv-stock0"></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
         <label class="field"><span>Avisarme si quedan menos de</span><input name="minimo" type="number" inputmode="decimal" step="any" min="0" placeholder="Ej. 5"></label>
-        <label class="field"><span>Lo que te cuesta (RD$)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
-        <label class="field"><span>Precio de venta (RD$)</span><input name="precio" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
+        <label class="field"><span>Contado en</span><select name="minimo_nivel"></select></label>
+        <label class="field full"><span>Cómo sale en la factura (opcional)</span><input name="unidad" placeholder="Ej. Caja 10/100"></label>
         <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
       </div>
       <div id="inv-existente" hidden>
         <div class="card" style="margin-top:14px">
           <div class="k">En existencia ahora</div>
-          <div class="today-total" id="inv-stock-big" style="font-size:2rem"></div>
+          <div class="today-total" id="inv-stock-big" style="font-size:1.6rem;white-space:normal"></div>
+          <div class="hint" id="inv-stock-total" style="margin:2px 0 0"></div>
           <div class="actions" style="margin-top:10px">
             <button type="button" class="btn" id="inv-entrada">+ Entró mercancía</button>
             <button type="button" class="btn" id="inv-ajuste">Contar y corregir</button>
@@ -831,12 +871,48 @@
   <div class="dlg-body">
     <form id="f-inv-mov">
       <p class="hint" id="im-hint" style="margin:0 0 12px"></p>
-      <div class="grid">
-        <label class="field full"><span id="im-label">Cuántas entraron *</span><input name="cantidad" type="number" inputmode="decimal" step="any" min="0" required></label>
-        <label class="field full" id="im-costo-w"><span>Nuevo costo por unidad (RD$, opcional)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0"></label>
-        <label class="field full"><span>Nota (opcional)</span><input name="nota" placeholder="Ej. Compra a Suplidor X"></label>
+      <div class="grid" id="im-campos"></div>
+      <p class="hint" id="im-total" style="margin:8px 0 0"></p>
+      <div class="grid" style="margin-top:10px">
+        <label class="field full" id="im-costo-w"><span id="im-costo-l">Nuevo costo por caja (RD$, opcional)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0"></label>
+        <label class="field full"><span>Nota (opcional)</span><input name="nota" placeholder="Ej. Llegó de más"></label>
       </div>
       <div class="actions"><span class="push"></span><button type="button" class="btn" data-close>Cancelar</button><button class="btn primary" id="im-save">Guardar</button></div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Ventana: compra de mercancía -->
+<dialog id="d-compra" class="wide">
+  <div class="dlg-head"><h3 id="co-title">Registrar compra</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-compra">
+      <div class="grid">
+        <label class="field"><span>Suplidor</span><select name="proveedor_id"></select></label>
+        <label class="field" id="w-co-otro"><span>Nombre del suplidor</span><input name="proveedor_nombre" placeholder="Opcional"></label>
+        <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
+        <label class="field"><span>No. de factura del suplidor</span><input name="numero" placeholder="Opcional"></label>
+      </div>
+      <h4 class="sub-title"><span>Mercancía que llegó</span></h4>
+      <div id="co-items"></div>
+      <div class="actions" style="margin-top:10px">
+        <button type="button" class="btn" id="co-pick">+ Del inventario</button>
+        <button type="button" class="btn" id="co-nuevo">+ Producto nuevo</button>
+      </div>
+      <div class="doc-sums" id="co-sums"></div>
+      <label class="check"><input type="checkbox" name="pagada"> Ya la pagué</label>
+      <label class="check" style="margin-top:8px"><input type="checkbox" name="act_costo" checked> Actualizar el costo de estos productos en el inventario</label>
+      <div class="grid" style="margin-top:12px">
+        <label class="field full"><span>Factura del suplidor (foto o PDF)</span><input name="archivo" type="file" accept="application/pdf,image/*">
+          <div class="file-now" id="co-file"></div></label>
+        <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="co-delete">Borrar</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary" id="co-save">Guardar</button>
+      </div>
     </form>
   </div>
 </dialog>
@@ -1001,7 +1077,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-20a"></script>
+<script src="config.js?v=2026-10-28a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1012,7 +1088,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-20a';
+  const APP_VERSION = '2026-10-28a';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -1181,10 +1257,11 @@
     mode = b.dataset.mode;
     $$('#t-calc .seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
     $('#w-precio').hidden = mode !== 'precio';
-    $('#w-margen').hidden = mode !== 'margen';
+    $('#w-margen').hidden = mode === 'precio';
+    $('#l-margen').textContent = mode === 'subir' ? '¿Cuánto % le quieres sumar al costo?' : '¿Qué % del precio quieres que sea ganancia?';
     calc();
   }));
-  $$('.chips button').forEach(b => b.addEventListener('click', () => { $('#c-margen').value = b.dataset.m; calc(); }));
+  $$('#w-margen .chips button').forEach(b => b.addEventListener('click', () => { $('#c-margen').value = b.dataset.m; calc(); }));
   ['#c-costo', '#c-precio', '#c-margen', '#c-cant', '#c-itbis'].forEach(s => $(s).addEventListener('input', calc));
 
   function calc() {
@@ -1195,6 +1272,10 @@
     let precio = NaN, nota = '';
     if (mode === 'precio') {
       precio = num($('#c-precio').value);
+    } else if (mode === 'subir') {
+      // Sumarle un % al costo: RD$10 + 15% = RD$11.50
+      const m = num($('#c-margen').value);
+      if (Number.isFinite(costo) && Number.isFinite(m)) precio = costo * (1 + m / 100);
     } else {
       const m = num($('#c-margen').value);
       if (Number.isFinite(costo) && Number.isFinite(m)) {
@@ -1212,11 +1293,12 @@
     const markup = costo > 0 ? gan / costo * 100 : NaN;
     const neg = gan < 0 ? ' neg' : '';
     let html = '';
-    if (mode === 'margen') html += `<div class="stat big"><div class="k">Precio de venta sugerido</div><div class="v">${montoHtml(precio)}</div></div>`;
+    if (mode === 'subir') html += `<div class="stat big"><div class="k">${montoHtml(costo)} + ${esc(pct(num($('#c-margen').value)))} =</div><div class="v">${montoHtml(precio)}</div></div>`;
+    else if (mode === 'margen') html += `<div class="stat big"><div class="k">Precio de venta sugerido</div><div class="v">${montoHtml(precio)}</div></div>`;
     else html += `<div class="stat big"><div class="k">Margen de ganancia</div><div class="v${neg}">${pct(margen)}</div></div>`;
     html += `<div class="stat"><div class="k">Ganancia por unidad</div><div class="v${neg}">${montoHtml(gan)}</div></div>`;
     html += `<div class="stat"><div class="k">Ganancia total (${q.toLocaleString('es-DO')} u.)</div><div class="v${neg}">${montoHtml(gan * q)}</div></div>`;
-    if (mode === 'margen') html += `<div class="stat"><div class="k">Margen</div><div class="v">${pct(margen)}</div></div>`;
+    if (mode !== 'precio') html += `<div class="stat"><div class="k">Margen</div><div class="v">${pct(margen)}</div></div>`;
     html += `<div class="stat"><div class="k">Sobre el costo</div><div class="v${neg}">${pct(markup)}</div></div>`;
     html += `<div class="stat"><div class="k">Venta total</div><div class="v">${montoHtml(precio * q)}</div></div>`;
     if (mode === 'precio') html += `<div class="stat"><div class="k">Costo total</div><div class="v">${montoHtml(costo * q)}</div></div>`;
@@ -2678,21 +2760,22 @@ grant select, insert, update, delete on ventas to authenticated;`;
     if (!(data.monto > 0)) return toast('Escribe el monto de la venta.', true);
     // Si es un producto del inventario, se descuenta lo que se vendió
     const pid = f.elements.producto_id.value, cant = num(f.elements.cantidad.value), prod = pid && inventario.find(p => p.id === pid);
+    const base = prod ? round2(cant * nivelDe(prod, f.elements.nivel.value).factor) : 0;  // en el empaque más chico
     if (prod) {
       if (!(cant > 0)) return toast('Escribe cuántos vendiste.', true);
-      if ((Number(prod.stock) || 0) < cant && !confirm(`Solo quedan ${stockTxt(prod)} ${prod.unidad || ''} de «${prod.nombre}» en el inventario. ¿Vender igual?`)) return;
+      if ((Number(prod.stock) || 0) < base && !confirm(`Solo quedan ${stockTxt(prod)} de «${prod.nombre}» en el inventario. ¿Vender igual?`)) return;
     }
     if (btn.disabled) return;
     btn.disabled = true; btn.textContent = 'Guardando…';
     // Con su id ya hecho: si se pierde la respuesta y se pulsa otra vez con lo mismo, no queda la venta repetida.
     // Si se cambió algo, es otra venta y lleva otro id.
-    const firma = JSON.stringify([data, prod ? pid : null, prod ? cant : null]);
+    const firma = JSON.stringify([data, prod ? pid : null, prod ? base : null]);
     if (firma !== ventaFirma) { ventaNueva = nuevoId(); ventaFirma = firma; }
     const { error } = await sb.from('ventas').upsert({ id: ventaNueva, ...data });
     if (error) { btn.disabled = false; btn.textContent = 'Registrar venta'; return toast(errText(error), true); }
     let negativos = [];
     if (prod) {
-      try { negativos = await sincronizarStock(ventaNueva, 'venta', 'Venta rápida', { [pid]: cant }); }
+      try { negativos = await sincronizarStock(ventaNueva, 'venta', 'Venta rápida', { [pid]: -base }); }
       catch (er) {
         btn.disabled = false; btn.textContent = 'Registrar venta';
         await loadVentas();
@@ -2702,7 +2785,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     btn.disabled = false; btn.textContent = 'Registrar venta';
     ventaFirma = null;
     ['monto', 'descripcion', 'costo'].forEach(k => f.elements[k].value = '');
-    f.elements.cliente_id.value = ''; f.elements.producto_id.value = ''; f.elements.cantidad.value = '1'; vrAuto = {};
+    f.elements.cliente_id.value = ''; f.elements.producto_id.value = ''; f.elements.cantidad.value = '1'; vrAuto = {}; fillNivelVenta();
     vMetodo = 'Efectivo';
     $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === 'Efectivo'));
     toast('Venta registrada: ' + fmt(data.monto) + (negativos.length ? '. Ojo: el inventario de ' + negativos.join(', ') + ' quedó en negativo.' : ''), !!negativos.length);
@@ -2795,37 +2878,124 @@ do $$ begin
     create policy "usuarios_inventario_mov" on inventario_mov for all to authenticated using (true) with check (true);
   end if;
 end $$;
-grant select, insert, update, delete on inventario, inventario_mov to authenticated;`;
+grant select, insert, update, delete on inventario, inventario_mov to authenticated;
+alter table inventario add column if not exists empaque text;
+alter table inventario add column if not exists paquetes numeric;
+alter table inventario add column if not exists unidades numeric;
+alter table inventario add column if not exists precio_paquete numeric;
+alter table inventario add column if not exists precio_unidad numeric;
+alter table inventario add column if not exists ganancia numeric;
+create table if not exists compras (
+  id uuid primary key default gen_random_uuid(),
+  creado timestamptz not null default now(),
+  fecha date not null default current_date,
+  proveedor_id uuid references proveedores(id) on delete set null,
+  proveedor_nombre text,
+  numero text,
+  items jsonb not null default '[]',
+  total numeric not null default 0,
+  pagada boolean not null default false,
+  archivo text,
+  notas text
+);
+create index if not exists compras_fecha_idx on compras (fecha);
+create index if not exists compras_proveedor_idx on compras (proveedor_id);
+alter table compras enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'usuarios_compras') then
+    create policy "usuarios_compras" on compras for all to authenticated using (true) with check (true);
+  end if;
+end $$;
+grant select, insert, update, delete on compras to authenticated;`;
   $('#inv-sql').value = INV_SQL;
   $('#b-copy-invsql').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(INV_SQL); toast('Texto copiado'); }
     catch (e) { $('#inv-sql').select(); document.execCommand('copy'); toast('Texto copiado'); }
   });
 
-  let inventario = [], invTablaFalta = false, openInvId = null, invNuevo = null, invMovNuevo = null, prodAntes = {}, imModo = null, vrAuto = {};
-  const CAMPOS_INV = ['nombre', 'unidad', 'minimo', 'costo', 'precio', 'notas'];
-  const stockTxt = p => (Number(p.stock) || 0).toLocaleString('es-DO', { maximumFractionDigits: 2 });
-  const MOTIVO_MOV = { entrada: 'Entró mercancía', ajuste: 'Corrección', venta: 'Venta', factura: 'Factura' };
+  let inventario = [], compras = [], invTablaFalta = false, comprasFalta = false, openInvId = null, invNuevo = null, invMovNuevo = null,
+    prodAntes = {}, imModo = null, vrAuto = {}, trasGuardarInv = null;
+  const CAMPOS_INV = ['nombre', 'empaque', 'paquetes', 'unidades', 'costo', 'ganancia', 'precio', 'precio_paquete', 'precio_unidad', 'minimo', 'minimo_nivel', 'unidad', 'notas'];
+  const MOTIVO_MOV = { entrada: 'Entró mercancía', ajuste: 'Corrección', venta: 'Venta', factura: 'Factura', compra: 'Compra' };
 
+  // ----- Empaques: fardo, caja, paquete y unidad -----
+  // El inventario se cuenta en el empaque más chico que tenga el producto (por ejemplo, en unidades), y cada empaque
+  // dice cuántos de esos trae: así se puede vender por caja, por paquete o por unidad y siempre cuadra.
+  const EMPAQUES = { fardo: ['fardo', 'fardos'], caja: ['caja', 'cajas'], paquete: ['paquete', 'paquetes'], unidad: ['unidad', 'unidades'] };
+  const plural = (n, nombres) => Math.abs(n) === 1 ? nombres[0] : nombres[1];
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const cantTxt = n => Number(n).toLocaleString('es-DO', { maximumFractionDigits: 2 });
+  const nPos = v => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : 0; };
+  // Niveles de un producto, del más grande al más chico, con cuántos «del más chico» trae cada uno
+  function niveles(p) {
+    const e = p.empaque;
+    if (!EMPAQUES[e]) { const n = (p.unidad || 'unidad').trim(); return [{ k: 'empaque', nombres: [n, n], factor: 1 }]; }  // productos de antes
+    const paq = (e === 'fardo' || e === 'caja') ? nPos(p.paquetes) : 0, uni = e !== 'unidad' ? nPos(p.unidades) : 0;
+    const out = [{ k: 'empaque', nombres: EMPAQUES[e], factor: (paq || 1) * (uni || 1) }];
+    if (paq) out.push({ k: 'paquete', nombres: EMPAQUES.paquete, factor: uni || 1 });
+    if (uni) out.push({ k: 'unidad', nombres: EMPAQUES.unidad, factor: 1 });
+    return out;
+  }
+  const nivelDe = (p, k) => niveles(p).find(n => n.k === k) || niveles(p)[0];
+  // «2 cajas, 3 paquetes, 50 unidades»
+  function stockTxt(p, base) {
+    let s = round2(base === undefined ? Number(p.stock) || 0 : base);
+    const ns = niveles(p), chico = ns[ns.length - 1];
+    if (s <= 0 || ns.length === 1) return `${cantTxt(s / chico.factor)} ${plural(s / chico.factor, chico.nombres)}`;
+    const partes = [];
+    ns.forEach((n, i) => {
+      const q = i === ns.length - 1 ? round2(s / n.factor) : Math.floor(s / n.factor + 1e-9);
+      if (q) { partes.push(`${cantTxt(q)} ${plural(q, n.nombres)}`); s = round2(s - q * n.factor); }
+    });
+    return partes.join(', ');
+  }
+  // «1 caja = 10 paquetes = 1,000 unidades»
+  const equivTxt = p => { const ns = niveles(p); return ns.length > 1 ? ns.map((n, i) => `${cantTxt(ns[0].factor / n.factor)} ${plural(i ? ns[0].factor / n.factor : 1, n.nombres)}`).join(' = ') : ''; };
+  // Precios de venta: el que escribiste para ese empaque; si no, se saca del precio de otro empaque (el más grande que tenga)
+  // y, si no hay ninguno, del costo más el % de ganancia
+  const PRECIO_COL = { empaque: 'precio', paquete: 'precio_paquete', unidad: 'precio_unidad' };
+  function precioBase(p) {
+    for (const n of niveles(p)) { const v = nPos(p[PRECIO_COL[n.k]]); if (v) return v / n.factor; }
+    const c = nPos(p.costo), g = p.ganancia === null || p.ganancia === undefined || p.ganancia === '' ? NaN : Number(p.ganancia);
+    return c && Number.isFinite(g) ? c * (1 + g / 100) / niveles(p)[0].factor : NaN;
+  }
+  const precioDe = (p, k) => { const n = nivelDe(p, k), v = nPos(p[PRECIO_COL[n.k]]); return v || round2(precioBase(p) * n.factor); };
+  const costoDe = (p, k) => nPos(p.costo) ? Number(p.costo) * nivelDe(p, k).factor / niveles(p)[0].factor : NaN;
+  const guessEmpaque = t => /fard/i.test(t || '') ? 'fardo' : /caj/i.test(t || '') ? 'caja' : /paq/i.test(t || '') ? 'paquete' : /unid/i.test(t || '') ? 'unidad' : 'caja';
+
+  // ----- Cargar -----
   async function loadInv(callado) {
-    const r = await todas(() => sb.from('inventario').select('*').order('nombre').order('id'));
+    const [r, c] = await Promise.all([
+      todas(() => sb.from('inventario').select('*').order('nombre').order('id')),
+      todas(() => sb.from('compras').select('*').order('fecha', { ascending: false }).order('creado', { ascending: false }).order('id')),
+    ]);
     const falta = missingTable(r.error);
     if (r.error && !falta) { if (!callado) toast(errText(r.error), true); if (listo.inv) return marcar('inv', r.error); }  // se quedan los que había
     invTablaFalta = falta;
-    $('#inv-setup').hidden = !falta;
+    comprasFalta = missingTable(c.error);
+    $('#inv-setup').hidden = !falta && !comprasFalta;
     inventario = r.error ? [] : r.data;
+    if (!c.error || comprasFalta) compras = c.error ? [] : c.data;
     if (!r.error || falta) listo.inv = true;
-    renderInv(); fillInvSelect();
+    renderInv(); renderCompras(); fillInvSelect();
     if ($('#d-inv').open && openInvId) mostrarStockAbierto();
-    return marcar('inv', r.error && !falta ? r.error : null);
+    return marcar('inv', (r.error && !falta) ? r.error : (c.error && !comprasFalta) ? c.error : null);
   }
+
+  // Productos / Compras
+  $$('#inv-seg button').forEach(b => b.addEventListener('click', () => {
+    $$('#inv-seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    $('#inv-productos').hidden = b.dataset.v !== 'productos';
+    $('#inv-compras').hidden = b.dataset.v !== 'compras';
+  }));
 
   const estadoInv = p => {
     const s = Number(p.stock) || 0, min = Number(p.minimo) || 0;
     return s <= 0 ? ['rechazada', 'Agotado'] : min > 0 && s <= min ? ['pendiente', 'Por agotarse'] : null;
   };
   function renderInv() {
-    const bajos = inventario.filter(estadoInv), valor = inventario.reduce((t, p) => t + Math.max(Number(p.stock) || 0, 0) * (Number(p.costo) || 0), 0);
+    const bajos = inventario.filter(estadoInv);
+    const valor = inventario.reduce((t, p) => t + Math.max(Number(p.stock) || 0, 0) * (nPos(p.costo) / niveles(p)[0].factor), 0);
     $('#inv-totals').innerHTML = `<div class="stat"><div class="k">Productos</div><div class="v">${inventario.length}</div></div>
       <div class="stat"><div class="k">Por agotarse</div><div class="v${bajos.length ? ' neg' : ''}">${bajos.length}</div></div>
       <div class="stat"><div class="k">Valor a tu costo</div><div class="v">${montoHtml(valor)}</div></div>`;
@@ -2836,36 +3006,49 @@ grant select, insert, update, delete on inventario, inventario_mov to authentica
     if (!inventario.length) { el.innerHTML = '<div class="empty">Aún no hay productos. Pulsa <b>+ Nuevo producto</b>, o <b>+ De Suplidores</b> para traerlos de tu lista de precios.</div>'; return; }
     if (!list.length) { el.innerHTML = '<div class="empty">No hay productos con ese filtro.</div>'; return; }
     el.innerHTML = list.map(p => {
-      const e = estadoInv(p);
+      const e = estadoInv(p), n0 = niveles(p)[0], pr = precioDe(p, 'empaque');
       return `<button class="row" data-inv="${p.id}"><div class="main"><div class="title">${esc(p.nombre)}</div>
-        <div class="sub">${esc('Quedan ' + stockTxt(p) + (p.unidad ? ' ' + p.unidad : ''))}</div>${e ? `<span class="badge ${e[0]}">${e[1]}</span>` : ''}</div>
-        <div class="amount">${Number(p.precio) > 0 ? montoHtml(Number(p.precio)) : '—'}</div></button>`;
+        <div class="sub">${esc('Quedan ' + stockTxt(p))}</div>${e ? `<span class="badge ${e[0]}">${e[1]}</span>` : ''}</div>
+        <div class="amount">${Number.isFinite(pr) && pr > 0 ? montoHtml(pr) + `<br><span class="sub" style="font-weight:500">por ${esc(n0.nombres[0])}</span>` : '—'}</div></button>`;
     }).join('');
     $$('[data-inv]', el).forEach(r => r.addEventListener('click', () => openInv(r.dataset.inv)));
   }
   $('#s-inv').addEventListener('input', renderInv);
   $('#inv-filtro').addEventListener('change', renderInv);
 
-  // Productos del inventario en la venta rápida
+  // ----- Venta rápida con un producto del inventario -----
   function fillInvSelect() {
-    const sel = $('#f-venta-rapida').elements.producto_id, v = sel.value, hay = inventario.length > 0;
+    const f = $('#f-venta-rapida'), sel = f.elements.producto_id, v = sel.value, hay = inventario.length > 0;
     $('#vr-inv-w').hidden = !hay; $('#vr-cant-w').hidden = !hay;
-    ponerOpciones(sel, '<option value="">— Ninguno —</option>' + inventario.map(p => `<option value="${p.id}">${esc(p.nombre)} (${esc(stockTxt(p))})</option>`).join(''));
+    ponerOpciones(sel, '<option value="">— Ninguno —</option>' + inventario.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join(''));
     sel.value = inventario.some(p => p.id === v) ? v : '';
+    fillNivelVenta();
   }
-  // Al elegir el producto y la cantidad se llenan solos el monto, lo vendido y lo que costó (si están vacíos o los puso esta función)
+  function fillNivelVenta() {
+    const f = $('#f-venta-rapida'), p = inventario.find(x => x.id === f.elements.producto_id.value), sel = f.elements.nivel, v = sel.value;
+    const ns = p ? niveles(p) : [];
+    $('#vr-nivel-w').hidden = ns.length < 2;
+    ponerOpciones(sel, ns.map(n => `<option value="${n.k}">${esc(cap(n.nombres[0]))}</option>`).join(''));
+    sel.value = ns.some(n => n.k === v) ? v : (ns[0] ? ns[0].k : '');
+  }
+  // Al elegir el producto, el empaque y la cantidad se llenan solos el monto, lo vendido y lo que costó
+  // (si están vacíos o los puso esta función)
   function autollenarVenta() {
     const f = $('#f-venta-rapida'), p = inventario.find(x => x.id === f.elements.producto_id.value), c = num(f.elements.cantidad.value);
     if (!p || !(c > 0)) return;
-    const vals = { monto: Number(p.precio) > 0 ? String(round2(p.precio * c)) : '', costo: Number(p.costo) > 0 ? String(round2(p.costo * c)) : '',
-      descripcion: `${c.toLocaleString('es-DO', { maximumFractionDigits: 2 })} ${p.unidad ? p.unidad + ' ' : ''}${p.nombre}`.replace(/\s+/g, ' ') };
-    Object.entries(vals).forEach(([k, v]) => { const el = f.elements[k]; if (v && (el.value === '' || el.value === vrAuto[k])) { el.value = v; vrAuto[k] = v; } });
+    const k = f.elements.nivel.value, n = nivelDe(p, k), pr = precioDe(p, k), co = costoDe(p, k);
+    const vals = { monto: pr > 0 ? String(round2(pr * c)) : '', costo: co > 0 ? String(round2(co * c)) : '',
+      descripcion: `${cantTxt(c)} ${niveles(p).length > 1 || EMPAQUES[p.empaque] ? plural(c, n.nombres) + ' ' : ''}${p.nombre}`.replace(/\s+/g, ' ') };
+    Object.entries(vals).forEach(([key, v]) => { const el = f.elements[key]; if (v && (el.value === '' || el.value === vrAuto[key])) { el.value = v; vrAuto[key] = v; } });
   }
-  $('#f-venta-rapida').elements.producto_id.addEventListener('change', autollenarVenta);
+  $('#f-venta-rapida').elements.producto_id.addEventListener('change', () => { fillNivelVenta(); autollenarVenta(); });
+  $('#f-venta-rapida').elements.nivel.addEventListener('change', autollenarVenta);
   $('#f-venta-rapida').elements.cantidad.addEventListener('input', autollenarVenta);
 
-  // Deja el inventario como debe quedar según una venta o factura (ref_id): mira lo que ya se descontó por ella y mueve solo la diferencia.
-  // Así guardar dos veces lo mismo, o cambiar la cantidad, nunca descuenta de más. quiere = { producto_id: cantidad vendida }.
+  // ----- Mover el inventario -----
+  // Deja el inventario como debe quedar según una venta, factura o compra (ref_id): mira lo que ya se movió por ella y mueve
+  // solo la diferencia. Así guardar dos veces lo mismo, o cambiar la cantidad, nunca mueve de más.
+  // quiere = { producto_id: cuánto debe moverse en total (negativo al vender, positivo al comprar) }, en el empaque más chico.
   // Devuelve los nombres de los productos que quedan en negativo.
   async function sincronizarStock(refId, motivoMov, nota, quiere) {
     if (invTablaFalta) return [];
@@ -2878,7 +3061,7 @@ grant select, insert, update, delete on inventario, inventario_mov to authentica
     (r.data || []).forEach(m => hay[m.producto_id] = (hay[m.producto_id] || 0) + Number(m.cantidad));
     const filas = [];
     new Set([...Object.keys(hay), ...Object.keys(quiere)]).forEach(pid => {
-      const dif = round2(-(quiere[pid] || 0) - (hay[pid] || 0));
+      const dif = round2((quiere[pid] || 0) - (hay[pid] || 0));
       if (dif) filas.push({ id: nuevoId(), producto_id: pid, cantidad: dif, motivo: motivoMov, ref_id: refId, nota });
     });
     if (!filas.length) return [];
@@ -2887,33 +3070,89 @@ grant select, insert, update, delete on inventario, inventario_mov to authentica
     loadInv(true);
     return filas.map(x => { const p = inventario.find(y => y.id === x.producto_id); return p && x.cantidad < 0 && (Number(p.stock) || 0) + x.cantidad < 0 ? p.nombre : null; }).filter(Boolean);
   }
-  const pedidoPorProducto = items => items.reduce((o, it) => { if (it.producto_id) o[it.producto_id] = round2((o[it.producto_id] || 0) + (Number(it.cantidad) || 0)); return o; }, {});
-  // Al borrar una venta o factura se devuelve lo que descontó. Devuelve el error, si hubo.
+  // Lo que una factura saca del inventario (negativo), en el empaque más chico de cada producto
+  const pedidoPorProducto = items => items.reduce((o, it) => { if (it.producto_id) o[it.producto_id] = round2((o[it.producto_id] || 0) - (Number(it.cantidad) || 0) * (Number(it.factor) || 1)); return o; }, {});
+  // Al borrar una venta, factura o compra se deshace lo que movió. Devuelve el error, si hubo.
   async function quitarStock(refIds) {
     if (invTablaFalta || !refIds.length) return null;
     const { error } = await sb.from('inventario_mov').delete().in('ref_id', refIds);
     return error && !missingTable(error) ? error : null;
   }
 
-  // Ver / crear un producto
+  // ----- Campos «cuántos hay», uno por empaque (ej. 3 cajas y 4 paquetes) -----
+  function camposNiveles(el, p) {
+    el.innerHTML = niveles(p).map(n => `<label class="field"><span>${esc(cap(n.nombres[1]))}</span><input data-f="${n.factor}" type="number" inputmode="decimal" step="any" min="0" placeholder="0"></label>`).join('');
+  }
+  const leerNiveles = el => { const ins = $$('input[data-f]', el); return { base: round2(ins.reduce((s, i) => s + (num(i.value) || 0) * Number(i.dataset.f), 0)), algo: ins.some(i => i.value !== '') }; };
+
+  // ----- Ver / crear un producto -----
+  // El producto tal como está escrito en el formulario (para calcular empaques y precios mientras se escribe)
+  function prodDelForm() {
+    const f = $('#f-inv'), n = k => { const v = num(f.elements[k].value); return Number.isFinite(v) ? v : null; };
+    return { nombre: f.elements.nombre.value.trim(), empaque: f.elements.empaque.value, paquetes: n('paquetes'), unidades: n('unidades'),
+      costo: n('costo'), ganancia: n('ganancia'), precio: n('precio'), precio_paquete: n('precio_paquete'), precio_unidad: n('precio_unidad'),
+      unidad: f.elements.unidad.value.trim() || null, notas: f.elements.notas.value.trim() || null };
+  }
+  // Etiquetas, campos que aplican y cálculos del formulario del producto
+  function formInv() {
+    const f = $('#f-inv'), p = prodDelForm(), e = p.empaque, nom = EMPAQUES[e][0], ns = niveles(p);
+    const conPaq = e === 'fardo' || e === 'caja';
+    $('#w-paquetes').hidden = !conPaq;
+    $('#l-paquetes').textContent = `¿Cuántos paquetes trae cada ${nom}?`;
+    $('#w-unidades').hidden = e === 'unidad';
+    $('#l-unidades').textContent = `¿Cuántas unidades trae cada ${conPaq && nPos(p.paquetes) ? 'paquete' : nom}?`;
+    $('#inv-equiv').textContent = equivTxt(p);
+    $('#l-costo').textContent = `¿Cuánto te cuesta cada ${nom}? (RD$)`;
+    $('#l-p-empaque').textContent = `Precio de venta por ${nom} (RD$)`;
+    $('#w-p-paquete').hidden = !ns.some(n => n.k === 'paquete');
+    $('#w-p-unidad').hidden = !ns.some(n => n.k === 'unidad');
+    // Lo que se calcula solo sale como guía dentro del campo vacío
+    ns.forEach(n => { const v = precioDe(p, n.k); f.elements[PRECIO_COL[n.k]].placeholder = Number.isFinite(v) && v > 0 ? 'Se calcula: ' + fmt(v) : (n.k === 'empaque' ? 'Escribe el precio o el %' : 'Se calcula solo'); });
+    // Por cada empaque: cuánto cuesta, en cuánto se vende y cuánto se gana
+    $('#inv-calc').innerHTML = ns.map(n => {
+      const c = costoDe(p, n.k), v = precioDe(p, n.k), g = v - c;
+      if (!(c > 0) && !(v > 0)) return '';
+      return `<div class="row" style="cursor:default"><div class="main"><div class="title">${esc(cap(n.nombres[0]))}</div>
+        <div class="sub completo">${[c > 0 && 'Te cuesta ' + montoHtml(c), v > 0 && 'la vendes a ' + montoHtml(v)].filter(Boolean).join(' · ')}</div></div>
+        <div class="amount" style="color:${g < 0 ? 'var(--bad)' : 'var(--ok)'}">${c > 0 && v > 0 ? 'Ganas ' + montoHtml(g) + `<br><span class="sub" style="font-weight:500">${esc(pct(g / c * 100))} sobre el costo</span>` : ''}</div></div>`;
+    }).join('');
+    // «Contado en» del aviso de pocas existencias
+    const sel = f.elements.minimo_nivel, v = sel.value;
+    ponerOpciones(sel, ns.map(n => `<option value="${n.k}">${esc(cap(n.nombres[1]))}</option>`).join(''));
+    sel.value = ns.some(n => n.k === v) ? v : ns[0].k;
+    // Cambió el empaque: los campos de «cuántos tienes» se rehacen (solo en producto nuevo)
+    if (!openInvId) { const firma = JSON.stringify(ns.map(n => [n.k, n.factor, n.nombres])); if ($('#inv-stock0').dataset.firma !== firma) { camposNiveles($('#inv-stock0'), p); $('#inv-stock0').dataset.firma = firma; } }
+  }
+  $('#f-inv').addEventListener('input', e => { if (e.target.dataset.f === undefined) formInv(); });
+  $$('#inv-chips button').forEach(b => b.addEventListener('click', () => { $('#f-inv').elements.ganancia.value = b.dataset.g; sucias.add($('#d-inv')); formInv(); }));
+
   function openInv(id, base) {
     const p = id ? inventario.find(x => x.id === id) : null; if (id && !p) return;
     if (invTablaFalta) { toast('Primero termina el paso de Supabase que sale arriba.', true); return; }
     openInvId = p ? p.id : null;
     invNuevo = p ? null : nuevoId(); invMovNuevo = nuevoId();
     const f = $('#f-inv'); f.reset();
-    const v = p || base || {};
-    CAMPOS_INV.forEach(k => f.elements[k].value = v[k] ?? '');
+    const v = Object.assign({}, p || base || {});
+    if (!EMPAQUES[v.empaque]) v.empaque = guessEmpaque(v.unidad);  // productos de antes: se adivina por cómo se llamaba
+    ['nombre', 'empaque', 'paquetes', 'unidades', 'costo', 'ganancia', 'precio', 'precio_paquete', 'precio_unidad', 'unidad', 'notas'].forEach(k => f.elements[k].value = v[k] ?? '');
+    delete $('#inv-stock0').dataset.firma;
+    formInv();
+    // El aviso de pocas existencias se muestra en el empaque más grande en que dé un número redondo
+    const ns = niveles(p || v), min = Number(v.minimo) || 0, nm = ns.find(n => min && Number.isInteger(round2(min / n.factor))) || ns[ns.length - 1];
+    f.elements.minimo_nivel.value = nm.k;
+    f.elements.minimo.value = min ? round2(min / nm.factor) : '';
     $('#di2-title').textContent = p ? p.nombre : 'Nuevo producto';
     $('#w-stock0').hidden = !!p; $('#inv-existente').hidden = !p; $('#inv-delete').hidden = !p;
     prodAntes = leerCampos(f, CAMPOS_INV);
-    if (p) { mostrarStockAbierto(); cargarMovs(); }
+    if (p) mostrarStockAbierto();
     $('#d-inv').showModal();
   }
   function mostrarStockAbierto() {
     const p = inventario.find(x => x.id === openInvId); if (!p) return;
-    $('#inv-stock-big').textContent = stockTxt(p) + (p.unidad ? ' ' + p.unidad : '');
+    const ns = niveles(p), chico = ns[ns.length - 1];
+    $('#inv-stock-big').textContent = stockTxt(p);
     $('#inv-stock-big').style.color = (Number(p.stock) || 0) <= 0 ? 'var(--bad)' : '';
+    $('#inv-stock-total').textContent = ns.length > 1 && (Number(p.stock) || 0) > 0 ? `En total: ${cantTxt(Number(p.stock) / chico.factor)} ${plural(Number(p.stock), chico.nombres)}` : '';
     cargarMovs();
   }
   async function cargarMovs() {
@@ -2921,67 +3160,91 @@ grant select, insert, update, delete on inventario, inventario_mov to authentica
     const r = await sb.from('inventario_mov').select('*').eq('producto_id', id).order('creado', { ascending: false }).limit(15);
     if (id !== openInvId) return;
     if (r.error) { el.innerHTML = `<div class="empty">${esc(errText(r.error))}</div>`; return; }
+    const p = inventario.find(x => x.id === id) || {};
     el.innerHTML = (r.data || []).length ? r.data.map(m => {
       const c = Number(m.cantidad), cuando = new Date(m.creado).toLocaleString('es-DO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
       return `<div class="row" style="cursor:default"><div class="main"><div class="title">${esc(MOTIVO_MOV[m.motivo] || m.motivo)}</div>
         <div class="sub completo">${esc([cuando, m.nota].filter(Boolean).join(' · '))}</div></div>
-        <div class="amount" style="color:${c < 0 ? 'var(--bad)' : 'var(--ok)'}">${(c > 0 ? '+' : '') + c.toLocaleString('es-DO', { maximumFractionDigits: 2 })}</div></div>`;
+        <div class="amount" style="color:${c < 0 ? 'var(--bad)' : 'var(--ok)'}">${esc((c > 0 ? '+' : '−') + stockTxt(p, Math.abs(c)))}</div></div>`;
     }).join('') : '<div class="empty">Todavía no hay movimientos.</div>';
   }
-  $('#b-new-inv').addEventListener('click', () => { if (faltaCargar('inv')) return; openInv(null); });
+  $('#b-new-inv').addEventListener('click', () => { if (faltaCargar('inv')) return; trasGuardarInv = null; openInv(null); });
   $('#f-inv').addEventListener('submit', async e => {
     e.preventDefault();
-    const f = e.target, btn = $('#inv-save'), ahora = leerCampos(f, CAMPOS_INV);
-    const n = k => { const v = num(f.elements[k].value); return Number.isFinite(v) ? v : null; };
-    const data = { nombre: f.elements.nombre.value.trim(), unidad: f.elements.unidad.value.trim() || null, minimo: n('minimo') || 0,
-      costo: n('costo'), precio: n('precio'), notas: f.elements.notas.value.trim() || null };
-    if (!data.nombre) return toast('Escribe el nombre del producto.', true);
+    const f = e.target, btn = $('#inv-save'), ahora = leerCampos(f, CAMPOS_INV), p = prodDelForm();
+    if (!p.nombre) return toast('Escribe el nombre del producto.', true);
+    const ns = niveles(p), fE = ns[0].factor;
+    const data = { ...p, minimo: round2((num(f.elements.minimo.value) || 0) * nivelDe(p, f.elements.minimo_nivel.value).factor) };
+    // Sin paquetes o unidades que apliquen a este empaque, no se guardan
+    if (!(p.empaque === 'fardo' || p.empaque === 'caja')) data.paquetes = null;
+    if (p.empaque === 'unidad') data.unidades = null;
     await conBoton(btn, 'Guardando…', async () => {
       if (openInvId) {
+        const viejo = inventario.find(x => x.id === openInvId) || {}, fViejo = niveles(viejo)[0].factor;
         const envio = soloCambios(data, ahora, prodAntes);
+        if (['minimo', 'minimo_nivel', 'empaque', 'paquetes', 'unidades'].some(k => ahora[k] !== prodAntes[k])) envio.minimo = data.minimo;
+        if (!EMPAQUES[viejo.empaque]) envio.empaque = data.empaque;
+        delete envio.minimo_nivel;
         if (Object.keys(envio).length) { const { error } = await sb.from('inventario').update(envio).eq('id', openInvId); if (error) return toast(errText(error), true); }
+        // Si cambió cuántos trae cada empaque, lo que hay se convierte: las mismas cajas, ahora contadas con sus paquetes o unidades
+        if (fViejo !== fE) {
+          const cur = await sb.from('inventario').select('stock').eq('id', openInvId).single();
+          const s = cur.error ? NaN : Number(cur.data.stock), dif = round2(s * fE / fViejo - s);
+          if (Number.isFinite(dif) && dif) await sb.from('inventario_mov').upsert({ id: invMovNuevo, producto_id: openInvId, cantidad: dif, motivo: 'ajuste', nota: 'Cambio de empaque: ' + equivTxt(p) });
+        }
         prodAntes = ahora;
       } else {
-        const { error } = await sb.from('inventario').upsert({ id: invNuevo, stock: 0, ...data });
+        const { minimo_nivel, ...fila } = data;
+        const { error } = await sb.from('inventario').upsert({ id: invNuevo, stock: 0, ...fila });
         if (error) return toast(errText(error), true);
-        const inicial = n('stock0');
+        const inicial = leerNiveles($('#inv-stock0')).base;
         if (inicial > 0) {
           const m = await sb.from('inventario_mov').upsert({ id: invMovNuevo, producto_id: invNuevo, cantidad: inicial, motivo: 'entrada', nota: 'Cantidad inicial' });
           if (m.error) { openInvId = invNuevo; invNuevo = null; $('#w-stock0').hidden = true; await loadInv(true); return toast('El producto se guardó, pero no se pudo anotar cuántos hay (' + motivo(m.error) + '). Usa «+ Entró mercancía».', true, 9000); }
         }
       }
-      $('#d-inv').close(); toast(openInvId ? 'Producto actualizado' : 'Producto agregado');
+      const nuevoProd = !openInvId ? invNuevo : null;
+      $('#d-inv').close(); toast(nuevoProd ? 'Producto agregado' : 'Producto actualizado');
       await loadInv(true);
+      if (nuevoProd && trasGuardarInv) { const fn = trasGuardarInv; trasGuardarInv = null; fn(nuevoProd); }
     });
   });
   $('#inv-delete').addEventListener('click', async () => {
     const p = inventario.find(x => x.id === openInvId); if (!p) return;
-    if (!confirm(`¿Borrar «${p.nombre}» del inventario? Se pierde su historial de movimientos. Las ventas y facturas ya hechas no cambian.`)) return;
+    if (!confirm(`¿Borrar «${p.nombre}» del inventario? Se pierde su historial de movimientos. Las ventas, facturas y compras ya hechas no cambian.`)) return;
     const { error } = await sb.from('inventario').delete().eq('id', p.id);
     if (error) return toast(errText(error), true);
     $('#d-inv').close(); toast('Producto borrado'); loadInv(true);
   });
 
-  // Entró mercancía / contar y corregir
+  // ----- Entró mercancía / contar y corregir -----
   function abrirMov(modo) {
     const p = inventario.find(x => x.id === openInvId); if (!p) return;
     imModo = modo; invMovNuevo = nuevoId();
     const f = $('#f-inv-mov'); f.reset();
-    const ent = modo === 'entrada';
+    const ent = modo === 'entrada', n0 = niveles(p)[0];
     $('#im-title').textContent = ent ? 'Entró mercancía' : 'Contar y corregir';
-    $('#im-label').textContent = ent ? 'Cuántas entraron *' : 'Cuántas hay en realidad (las que contaste) *';
-    $('#im-hint').textContent = ent ? `Ahora hay ${stockTxt(p)} ${p.unidad || ''}. Lo que escribas se suma.` : `El sistema dice que hay ${stockTxt(p)} ${p.unidad || ''}. Escribe lo que contaste y se corrige la diferencia.`;
+    $('#im-hint').textContent = ent ? `Ahora hay ${stockTxt(p)}. Escribe lo que entró y se suma. (Para una compra completa a un suplidor, mejor usa Compras.)`
+      : `El sistema dice que hay ${stockTxt(p)}. Escribe lo que contaste (puedes combinar cajas, paquetes y unidades) y se corrige la diferencia.`;
+    camposNiveles($('#im-campos'), p);
+    $('#im-total').textContent = '';
     $('#im-costo-w').hidden = !ent;
+    $('#im-costo-l').textContent = `Nuevo costo por ${n0.nombres[0]} (RD$, opcional)`;
     $('#d-inv-mov').showModal();
   }
+  $('#im-campos').addEventListener('input', () => {
+    const p = inventario.find(x => x.id === openInvId); if (!p) return;
+    const { base, algo } = leerNiveles($('#im-campos'));
+    $('#im-total').textContent = algo && niveles(p).length > 1 ? 'Son ' + stockTxt(p, base) : '';
+  });
   $('#inv-entrada').addEventListener('click', () => abrirMov('entrada'));
   $('#inv-ajuste').addEventListener('click', () => abrirMov('ajuste'));
   $('#f-inv-mov').addEventListener('submit', async e => {
     e.preventDefault();
-    const f = e.target, q = num(f.elements.cantidad.value), ent = imModo === 'entrada', id = openInvId;
-    if (!(q >= 0) || (ent && !(q > 0))) return toast(ent ? 'Escribe cuántas entraron.' : 'Escribe cuántas hay.', true);
+    const f = e.target, ent = imModo === 'entrada', id = openInvId, { base: q, algo } = leerNiveles($('#im-campos'));
+    if (!algo || (ent && !(q > 0))) return toast(ent ? 'Escribe cuánto entró.' : 'Escribe cuánto hay.', true);
     await conBoton($('#im-save'), 'Guardando…', async () => {
-      // Se pide el stock actual a la base: el otro teléfono pudo vender mientras tanto
+      // Se pide lo que hay ahora a la base: el otro teléfono pudo vender mientras tanto
       const cur = await sb.from('inventario').select('stock').eq('id', id).single();
       if (cur.error) return toast(errText(cur.error), true);
       const delta = ent ? q : round2(q - Number(cur.data.stock));
@@ -2993,6 +3256,156 @@ grant select, insert, update, delete on inventario, inventario_mov to authentica
       if (ent && costo > 0) await sb.from('inventario').update({ costo }).eq('id', id);
       $('#d-inv-mov').close(); toast(ent ? 'Mercancía anotada' : 'Inventario corregido');
       await loadInv(true);
+    });
+  });
+
+  // ---------- Compras de mercancía ----------
+  let openCompraId = null, compraNueva = null, coItems = [];
+  function renderCompras() {
+    const el = $('#l-compras'), mes = today().slice(0, 7);
+    const delMes = compras.filter(c => (c.fecha || '').slice(0, 7) === mes), debo = compras.filter(c => !c.pagada);
+    $('#co-totals').innerHTML = `<div class="stat"><div class="k">Comprado este mes</div><div class="v">${montoHtml(sum(delMes, 'total'))}</div></div>
+      <div class="stat"><div class="k">Por pagar a suplidores</div><div class="v${debo.length ? ' neg' : ''}">${montoHtml(sum(debo, 'total'))}</div></div>
+      <div class="stat"><div class="k">Compras este mes</div><div class="v">${delMes.length}</div></div>`;
+    if (comprasFalta) { el.innerHTML = '<div class="empty">Falta el paso de Supabase que sale arriba.</div>'; return; }
+    if (!compras.length) { el.innerHTML = '<div class="empty">Aún no hay compras. Pulsa <b>+ Registrar compra</b> cuando llegue mercancía.</div>'; return; }
+    el.innerHTML = compras.map(c => {
+      const n = (c.items || []).length, sub = [fdate(c.fecha), `${n} producto${n === 1 ? '' : 's'}`, c.numero && '#' + c.numero, c.archivo && '📎'].filter(Boolean).join(' · ');
+      return `<button class="row" data-compra="${c.id}"><div class="main"><div class="title">${esc(c.proveedor_nombre || 'Sin suplidor')}</div>
+        <div class="sub">${esc(sub)}</div><span class="badge ${c.pagada ? 'pagada' : 'pendiente'}">${c.pagada ? 'Pagada' : 'Debo'}</span></div>
+        <div class="amount">${montoHtml(Number(c.total))}</div></button>`;
+    }).join('');
+    $$('[data-compra]', el).forEach(r => r.addEventListener('click', () => openCompra(r.dataset.compra)));
+  }
+  function fillProvCompra(actual) {
+    const sel = $('#f-compra').elements.proveedor_id;
+    sel.innerHTML = proveedores.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('') + '<option value="">Otro / sin suplidor</option>';
+    sel.value = proveedores.some(p => p.id === actual) ? actual : (actual === undefined && proveedores[0] ? proveedores[0].id : '');
+    $('#w-co-otro').hidden = !!sel.value;
+  }
+  $('#f-compra').elements.proveedor_id.addEventListener('change', e => { $('#w-co-otro').hidden = !!e.target.value; });
+  $('#b-new-compra').addEventListener('click', () => openCompra(null));
+  function openCompra(id) {
+    if (invTablaFalta || comprasFalta) return toast('Primero termina el paso de Supabase que sale arriba.', true);
+    if (faltaCargar('inv')) return;
+    const c = id ? compras.find(x => x.id === id) : null; if (id && !c) return;
+    openCompraId = c ? c.id : null; compraNueva = c ? null : nuevoId();
+    const f = $('#f-compra'); f.reset();
+    fillProvCompra(c ? c.proveedor_id : undefined);
+    f.elements.proveedor_nombre.value = c && !c.proveedor_id ? c.proveedor_nombre || '' : '';
+    f.elements.fecha.value = c ? c.fecha : today();
+    f.elements.numero.value = c ? c.numero || '' : '';
+    f.elements.notas.value = c ? c.notas || '' : '';
+    f.elements.pagada.checked = c ? !!c.pagada : false;
+    f.elements.act_costo.checked = !c;
+    coItems = JSON.parse(JSON.stringify(c ? c.items || [] : []));
+    $('#co-title').textContent = c ? 'Compra' : 'Registrar compra';
+    $('#co-delete').hidden = !c;
+    $('#co-file').innerHTML = c && c.archivo ? 'Factura guardada: <a href="#" id="co-open">ver factura</a>. Si eliges otra, se reemplaza.' : 'Puedes tomarle una foto a la factura del suplidor.';
+    if (c && c.archivo) $('#co-open').addEventListener('click', ev => { ev.preventDefault(); openFile(c.archivo); });
+    renderCoItems();
+    $('#d-compra').showModal();
+  }
+  function agregarACompra(pid) {
+    const p = inventario.find(x => x.id === pid); if (!p) return;
+    const n0 = niveles(p)[0], co = costoDe(p, 'empaque');
+    coItems.push({ producto_id: p.id, descripcion: p.nombre, nivel: 'empaque', factor: n0.factor, cantidad: 1, costo: co > 0 ? round2(co) : null });
+    sucias.add($('#d-compra')); renderCoItems();
+    const ins = $$('#co-items input[data-k=cantidad]'); if (ins.length) ins[ins.length - 1].focus();
+  }
+  function renderCoItems() {
+    const el = $('#co-items');
+    el.innerHTML = coItems.map((it, i) => {
+      const p = inventario.find(x => x.id === it.producto_id), ns = p ? niveles(p) : [{ k: it.nivel, nombres: ['empaque', 'empaques'], factor: it.factor || 1 }];
+      return `<div class="item-card" data-i="${i}">
+        <div class="item-head">${esc(it.descripcion || (p && p.nombre) || 'Producto')}<button type="button" class="x" data-del="${i}" aria-label="Quitar">×</button></div>
+        <div class="grid">
+          <label class="field"><span>Cantidad</span><input data-k="cantidad" type="number" inputmode="decimal" step="any" min="0" value="${esc(it.cantidad ?? '')}"></label>
+          <label class="field"><span>En</span><select data-k="nivel">${ns.map(n => `<option value="${n.k}"${n.k === it.nivel ? ' selected' : ''}>${esc(cap(n.nombres[1]))}</option>`).join('')}</select></label>
+          <label class="field full"><span>Costo de cada ${esc((ns.find(n => n.k === it.nivel) || ns[0]).nombres[0])} (RD$)</span><input data-k="costo" type="number" inputmode="decimal" step="any" min="0" value="${esc(it.costo ?? '')}"></label>
+        </div>
+        <div class="item-foot"><span class="gan">${p && ns.length > 1 ? esc('Entran ' + stockTxt(p, (Number(it.cantidad) || 0) * (it.factor || 1))) : ''}</span><span>Total: <b class="tot"></b></span></div>
+      </div>`;
+    }).join('') || '<div class="empty" style="padding:12px">Agrega lo que compraste con <b>+ Del inventario</b> o <b>+ Producto nuevo</b>.</div>';
+    $$('[data-k]', el).forEach(inp => inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const i = +inp.closest('[data-i]').dataset.i, k = inp.dataset.k, it = coItems[i], p = inventario.find(x => x.id === it.producto_id);
+      if (k === 'nivel') {
+        it.nivel = inp.value; it.factor = p ? nivelDe(p, inp.value).factor : 1;
+        const co = p ? costoDe(p, inp.value) : NaN; it.costo = co > 0 ? round2(co) : it.costo;
+        return renderCoItems();
+      }
+      it[k] = inp.value === '' ? null : num(inp.value);
+      if (k === 'cantidad' && p) $('.gan', inp.closest('[data-i]')).textContent = niveles(p).length > 1 ? 'Entran ' + stockTxt(p, (Number(it.cantidad) || 0) * (it.factor || 1)) : '';
+      sumasCompra();
+    }));
+    $$('[data-del]', el).forEach(b => b.addEventListener('click', () => {
+      const it = coItems[+b.dataset.del];
+      if (!confirm(`¿Quitar «${it.descripcion}» de esta compra?`)) return;
+      coItems.splice(+b.dataset.del, 1); sucias.add($('#d-compra')); renderCoItems();
+    }));
+    sumasCompra();
+  }
+  const lineaCompra = it => round2((Number(it.cantidad) || 0) * (Number(it.costo) || 0));
+  function sumasCompra() {
+    $$('#co-items [data-i]').forEach(card => { $('.tot', card).innerHTML = montoHtml(lineaCompra(coItems[+card.dataset.i])); });
+    $('#co-sums').innerHTML = `<div class="t"><span>Total de la compra</span><span>${montoHtml(round2(coItems.reduce((s, it) => s + lineaCompra(it), 0)))}</span></div>`;
+  }
+  $('#co-pick').addEventListener('click', () => {
+    if (!inventario.length) return toast('Aún no hay productos en el inventario. Usa «+ Producto nuevo».', true);
+    abrirPick('compra-inv');
+  });
+  $('#co-nuevo').addEventListener('click', () => { trasGuardarInv = agregarACompra; openInv(null); });
+  $('#f-compra').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, btn = $('#co-save'), file = f.elements.archivo.files[0];
+    const items = coItems.filter(it => it.producto_id && Number(it.cantidad) > 0).map(it => ({ producto_id: it.producto_id, descripcion: it.descripcion, nivel: it.nivel,
+      factor: Number(it.factor) || 1, cantidad: Number(it.cantidad), costo: it.costo === null || it.costo === '' || it.costo === undefined ? null : Number(it.costo) }));
+    if (!items.length) return toast('Agrega al menos un producto con su cantidad.', true);
+    const provId = f.elements.proveedor_id.value || null;
+    const data = { fecha: f.elements.fecha.value || today(), proveedor_id: provId, proveedor_nombre: provId ? provName(provId) : f.elements.proveedor_nombre.value.trim() || null,
+      numero: f.elements.numero.value.trim() || null, items, total: round2(items.reduce((s, it) => s + lineaCompra(it), 0)), pagada: f.elements.pagada.checked,
+      notas: f.elements.notas.value.trim() || null };
+    const id = openCompraId || compraNueva, prev = openCompraId && compras.find(x => x.id === openCompraId);
+    let guardada = false;
+    await conBoton(btn, 'Guardando…', async () => {
+      try {
+        const r = await sb.from('compras').upsert({ id, ...data });
+        if (r.error) throw r.error;
+        guardada = true;
+        // La mercancía entra al inventario (si se cambió la compra, se corrige solo la diferencia)
+        const quiere = {};
+        items.forEach(it => { quiere[it.producto_id] = round2((quiere[it.producto_id] || 0) + it.cantidad * it.factor); });
+        const avisos = [];
+        try { await sincronizarStock(id, 'compra', 'Compra' + (data.proveedor_nombre ? ' a ' + data.proveedor_nombre : '') + (data.numero ? ' #' + data.numero : ''), quiere); }
+        catch (er) { avisos.push('No se pudo sumar al inventario (' + motivo(er) + '). Pulsa Guardar otra vez.'); }
+        // El costo nuevo queda en el producto (por su empaque más grande)
+        if (f.elements.act_costo.checked) {
+          for (const it of items) {
+            const p = inventario.find(x => x.id === it.producto_id); if (!p || !(it.costo > 0)) continue;
+            const nuevo = round2(it.costo * niveles(p)[0].factor / it.factor);
+            if (nuevo !== round2(Number(p.costo))) { const u = await sb.from('inventario').update({ costo: nuevo }).eq('id', p.id); if (!u.error) p.costo = nuevo; }
+          }
+        }
+        if (file) await subirArchivo('compras', 'compras/', id, file, prev && prev.archivo);
+        if (avisos.length) { toast('La compra se guardó. ' + avisos.join(' '), true, 9000); loadInv(true); return; }
+        $('#d-compra').close(); toast(openCompraId ? 'Compra actualizada' : 'Compra registrada: el inventario ya subió');
+        openCompraId = null;
+        await loadInv(true);
+      } catch (er) {
+        if (guardada) { openCompraId = id; compraNueva = null; sinArchivo('La compra se guardó', er, '#co-file'); loadInv(true); }
+        else toast(errText(er), true);
+      }
+    });
+  });
+  $('#co-delete').addEventListener('click', async () => {
+    const c = compras.find(x => x.id === openCompraId); if (!c) return;
+    if (!confirm('¿Borrar esta compra? Lo que sumó al inventario se quita.')) return;
+    await conBoton($('#co-delete'), 'Borrando…', async () => {
+      const q = await quitarStock([c.id]); if (q) return toast(errText(q), true);
+      const { error } = await sb.from('compras').delete().eq('id', c.id);
+      if (error) return toast(errText(error), true);
+      if (c.archivo) borrarArchivos([c.archivo]);
+      $('#d-compra').close(); toast('Compra borrada'); loadInv(true);
     });
   });
 
@@ -3196,7 +3609,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   let pickModo = 'doc-sup';  // doc-sup: producto de la cotización desde Suplidores · doc-inv: desde el inventario · inv-sup: producto nuevo del inventario desde Suplidores
   function abrirPick(modo) {
     pickModo = modo;
-    $('#d-pick h3').textContent = modo === 'doc-inv' ? 'Elegir del inventario' : 'Elegir producto';
+    $('#d-pick h3').textContent = modo === 'doc-inv' || modo === 'compra-inv' ? 'Elegir del inventario' : 'Elegir producto';
     $('#pk-q').value = ''; renderPick(); $('#d-pick').showModal();
   }
   $('#dd-pick').addEventListener('click', () => {
@@ -3211,22 +3624,28 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   $('#b-inv-sup').addEventListener('click', () => {
     if (invTablaFalta) { toast('Primero termina el paso de Supabase que sale arriba.', true); return; }
     if (!productos.length) { toast('Aún no hay precios cargados en Suplidores.', true); return; }
-    abrirPick('inv-sup');
+    trasGuardarInv = null; abrirPick('inv-sup');
   });
   $('#pk-q').addEventListener('input', renderPick);
-  // Lista del inventario para agregar a una cotización o factura
+  // Lista del inventario: para una cotización o factura (eligiendo si se vende por caja, paquete o unidad) o para una compra
   function renderPickInv() {
-    const ws = palabras($('#pk-q').value), list = inventario.filter(p => tieneTodas(ws, p.nombre)).slice(0, 60);
-    $('#pk-list').innerHTML = list.length ? list.map(p => `<button class="row" data-pi="${p.id}"><div class="main"><div class="title completo">${esc(p.nombre)}</div>
-      <div class="sub completo">${esc('Quedan ' + stockTxt(p) + (p.unidad ? ' ' + p.unidad : ''))}</div></div>
-      <div class="amount">${Number(p.precio) > 0 ? montoHtml(Number(p.precio)) : '—'}</div></button>`).join('') : '<div class="empty">No se encontró ese producto.</div>';
+    const ws = palabras($('#pk-q').value), list = inventario.filter(p => tieneTodas(ws, p.nombre)).slice(0, 60), compra = pickModo === 'compra-inv';
+    if (!list.length) { $('#pk-list').innerHTML = '<div class="empty">No se encontró ese producto.</div>'; return; }
+    $('#pk-list').innerHTML = list.map(p => compra
+      ? `<button class="row" data-pc="${p.id}"><div class="main"><div class="title completo">${esc(p.nombre)}</div><div class="sub completo">${esc('Quedan ' + stockTxt(p))}</div></div></button>`
+      : `<div class="row" style="cursor:default;flex-wrap:wrap"><div class="main" style="flex:1 1 100%"><div class="title completo">${esc(p.nombre)}</div>
+          <div class="sub completo">${esc('Quedan ' + stockTxt(p))}</div></div>
+          <div class="actions" style="margin:4px 0 0;width:100%">${niveles(p).map(n => { const v = precioDe(p, n.k);
+            return `<button type="button" class="btn small" data-pi="${p.id}" data-k="${n.k}">${esc(cap(n.nombres[0]))}${v > 0 ? ' · ' + esc(fmt(v)) : ''}</button>`; }).join('')}</div></div>`).join('');
+    $$('[data-pc]', $('#pk-list')).forEach(b => b.addEventListener('click', () => { $('#d-pick').close(); agregarACompra(b.dataset.pc); }));
     $$('[data-pi]', $('#pk-list')).forEach(b => b.addEventListener('click', () => {
       const p = inventario.find(x => x.id === b.dataset.pi); if (!p) return;
-      const ya = edItems.find(it => it.producto_id === p.id);
+      const n = nivelDe(p, b.dataset.k), pr = precioDe(p, n.k), co = costoDe(p, n.k);
+      const ya = edItems.find(it => it.producto_id === p.id && (Number(it.factor) || 1) === n.factor);
       if (ya) ya.cantidad = (Number(ya.cantidad) || 0) + 1;
       else {
-        const it = { descripcion: p.nombre, detalle: '', cantidad: 1, unidad: p.unidad || '', precio: Number(p.precio) > 0 ? Number(p.precio) : null,
-          costo: Number(p.costo) > 0 ? Number(p.costo) : null, producto_id: p.id };
+        const it = { descripcion: p.nombre, detalle: '', cantidad: 1, unidad: n.k === 'empaque' && p.unidad ? p.unidad : cap(n.nombres[0]),
+          precio: pr > 0 ? pr : null, costo: co > 0 ? round2(co) : null, producto_id: p.id, factor: n.factor };
         const vacio = edItems.length === 1 && !edItems[0].descripcion && !edItems[0].precio;
         if (vacio) edItems[0] = it; else edItems.push(it);
       }
@@ -3240,7 +3659,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     return conUnidad[0] || p.rows.find(r => Number.isFinite(pkgItbis(r))) || p.rows[0];
   }
   function renderPick() {
-    if (pickModo === 'doc-inv') return renderPickInv();
+    if (pickModo === 'doc-inv' || pickModo === 'compra-inv') return renderPickInv();
     // Primero los productos que lo dicen en su nombre; después los que solo coinciden por la categoría
     // (así «vaso» muestra primero los vasos, y no las cajas de la categoría «porta-vasos»)
     const ws = palabras($('#pk-q').value), enNombre = productos.filter(p => tieneTodas(ws, p.nombre));
@@ -3273,7 +3692,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   // Productos tal como se guardan (sin los que no tienen nombre, con números). También sirve para saber si cambiaste alguno.
   const limpiarItems = arr => (arr || []).filter(it => String(it.descripcion || '').trim()).map(it => ({
     descripcion: String(it.descripcion).trim(), detalle: String(it.detalle || '').trim(), cantidad: Number(it.cantidad) || 0,
-    unidad: String(it.unidad || '').trim(), precio: Number(it.precio) || 0, producto_id: it.producto_id || null, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
+    unidad: String(it.unidad || '').trim(), precio: Number(it.precio) || 0, producto_id: it.producto_id || null, factor: Number(it.factor) || null, costo: Number.isFinite(Number(it.costo)) && it.costo !== null && it.costo !== '' ? Number(it.costo) : null }));
   const vacio = v => v === '' || v === undefined ? null : v;
   $('#f-doc').addEventListener('submit', async e => {
     e.preventDefault();
