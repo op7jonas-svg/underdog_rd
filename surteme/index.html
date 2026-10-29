@@ -447,7 +447,8 @@
           <label class="field" id="vr-inv-w" hidden><span>Del inventario (opcional)</span><select name="producto_id"></select></label>
           <label class="field" id="vr-cant-w" hidden><span>Cantidad</span><input name="cantidad" type="number" inputmode="decimal" step="any" min="0" value="1"></label>
           <label class="field" id="vr-nivel-w" hidden><span>¿En qué?</span><select name="nivel"></select></label>
-          <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" list="dl-vendido" autocomplete="off" placeholder="Ej. 2 cajas de bandejas"></label>
+          <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" autocomplete="off" placeholder="Escribe el producto y toca uno de la lista"></label>
+          <div class="list" id="vr-sug" hidden style="grid-column:1/-1;margin:-4px 0 4px"></div>
           <div class="field full"><span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">¿Cómo pagó?</span>
             <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none"></div></div>
           <p class="hint" style="margin:0 0 10px;grid-column:1/-1">Si es fiado, no lo anotes aquí: hazlo por <b>Facturas</b>. Es lo único que lleva la cuenta de lo que te deben.</p>
@@ -1119,7 +1120,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-28d"></script>
+<script src="config.js?v=2026-10-28e"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1153,7 +1154,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-28d';
+  const APP_VERSION = '2026-10-28e';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -3165,6 +3166,57 @@ grant select, insert, update, delete on compras to authenticated;`;
   $('#f-venta-rapida').elements.producto_id.addEventListener('change', () => { fillNivelVenta(); autollenarVenta(); });
   $('#f-venta-rapida').elements.nivel.addEventListener('change', autollenarVenta);
   $('#f-venta-rapida').elements.cantidad.addEventListener('input', autollenarVenta);
+
+  // ----- Al vender: los productos con su precio y lo que queda -----
+  // Se abre al escribir en «¿Qué vendiste?» y al tocar uno se llena el monto, lo que costó, el empaque
+  // y la descripción. El inventario lo baja la venta al guardarse, no esta lista.
+  // Si lo escrito no coincide con ningún producto, no sale nada: queda como texto libre, igual que antes.
+  function pintarSugerencias() {
+    const el = $('#vr-sug'); if (!el) return;
+    const q = norm($('#f-venta-rapida').elements.descripcion.value || '').trim();
+    if (!q) { el.hidden = true; return; }
+    const palabras = q.split(/\s+/).filter(Boolean);
+    // Coincide si el nombre trae la palabra tal cual. Si no, se prueba sin la última letra, para que
+    // «plastico» encuentre «plástica» y «vasos» encuentre «vaso». Las coincidencias exactas salen primero.
+    const trae = (t, w) => t.includes(w) || (w.length >= 4 && t.includes(w.slice(0, -1)));
+    const hallados = inventario
+      .map(p => {
+        const t = norm(p.nombre || '');
+        const punto = palabras.every(w => t.includes(w)) ? 2 : (palabras.every(w => trae(t, w)) ? 1 : 0);
+        return { p, punto };
+      })
+      .filter(x => x.punto)
+      .sort((a, b) => b.punto - a.punto)
+      .slice(0, 8)
+      .map(x => x.p);
+    if (!hallados.length) { el.hidden = true; return; }
+    el.innerHTML = hallados.map(p => {
+      const n0 = niveles(p)[0], pr = precioDe(p, 'empaque'), e = estadoInv(p);
+      return `<button type="button" class="row" data-vr="${p.id}"><div class="main"><div class="title">${esc(p.nombre)}</div>
+        <div class="sub">${esc('Quedan ' + stockTxt(p))}</div>${e ? `<span class="badge ${e[0]}">${e[1]}</span>` : ''}</div>
+        <div class="amount">${Number.isFinite(pr) && pr > 0 ? montoHtml(pr) + `<br><span class="sub" style="font-weight:500">por ${esc(n0.nombres[0])}</span>` : '—'}</div></button>`;
+    }).join('');
+    el.hidden = false;
+    $$('[data-vr]', el).forEach(b => b.addEventListener('pointerdown', ev => { ev.preventDefault(); elegirProductoVenta(b.dataset.vr); }));
+  }
+  function elegirProductoVenta(id) {
+    const f = $('#f-venta-rapida'), p = inventario.find(x => x.id === id); if (!p) return;
+    f.elements.producto_id.value = id;
+    if (!(num(f.elements.cantidad.value) > 0)) f.elements.cantidad.value = '1';
+    // se limpian los tres para que se llenen con los datos de ESTE producto (si no, quedaría el del anterior)
+    ['descripcion', 'monto', 'costo'].forEach(k => { f.elements[k].value = ''; vrAuto[k] = ''; });
+    fillNivelVenta();
+    autollenarVenta();
+    $('#vr-sug').hidden = true;
+  }
+  const inpVendido = $('#f-venta-rapida').elements.descripcion;
+  if (inpVendido) {
+    inpVendido.addEventListener('input', pintarSugerencias);
+    inpVendido.addEventListener('focus', pintarSugerencias);
+    // se esconde un poco después para que el toque en la lista alcance a registrarse
+    inpVendido.addEventListener('blur', () => setTimeout(() => { const el = $('#vr-sug'); if (el) el.hidden = true; }, 250));
+    inpVendido.addEventListener('keydown', e => { if (e.key === 'Escape') { const el = $('#vr-sug'); if (el) el.hidden = true; } });
+  }
 
   // ----- Mover el inventario -----
   // Deja el inventario como debe quedar según una venta, factura o compra (ref_id): mira lo que ya se movió por ella y mueve
