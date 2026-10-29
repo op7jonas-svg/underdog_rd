@@ -391,6 +391,7 @@
         <button role="tab" data-tab="inventario" aria-selected="false">Inventario</button>
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
         <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
+        <button role="tab" data-tab="respaldo" aria-selected="false">Respaldo</button>
       </nav>
       <div class="carga-error" id="carga-error" role="alert" hidden><span id="carga-error-txt">No se pudieron cargar tus datos. Revisa el internet.</span><button class="btn small" id="b-reintentar" type="button">Reintentar</button></div>
     </div>
@@ -649,6 +650,21 @@
           <div class="actions"><button class="btn primary" id="fu-save" hidden>Guardar como gasto de combustible</button></div>
           <p class="explain"><b>¿No sabes cuánto rinde tu vehículo?</b> Cada vez que eches combustible, anota en el gasto los galones y el kilometraje (el número del odómetro). Después de dos tanqueadas, la página lo calcula sola y te sale como botón aquí arriba.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- Respaldo -->
+    <section id="t-respaldo" hidden>
+      <div class="section-head">
+        <h2>Respaldo</h2>
+        <div class="spacer"></div>
+        <button class="btn primary" id="b-respaldo">Descargar todo</button>
+      </div>
+      <div class="card">
+        <p class="explain">Baja <b>un solo archivo</b> con todo lo que tienes guardado: clientes, facturas, abonos, cotizaciones, ventas, inventario y sus movimientos, suplidores, precios, compras y gastos. Se abre en Excel o en Google Sheets, una hoja por cosa.</p>
+        <p class="explain" id="rp-estado">Todavía no has hecho ninguna copia.</p>
+        <p class="explain"><b>Hazla una vez por semana</b>, el mismo día que cuadras la caja. Guárdala en Google Drive, mándatela por correo o pásala a una memoria. Si algún día el sistema falla o alguien borra algo, <b>este archivo es lo único que te devuelve el historial</b>.</p>
+        <p class="explain">El archivo se arma en el teléfono con lo que hay en la base en ese momento, así que necesita internet. Si una parte no se pudo bajar, la página te lo dice al terminar.</p>
       </div>
     </section>
   </main>
@@ -1078,7 +1094,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-28b"></script>
+<script src="config.js?v=2026-10-28c"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1089,7 +1105,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-28b';
+  const APP_VERSION = '2026-10-28c';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -1316,7 +1332,7 @@
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
     $$('nav.tabs button').forEach(x => { x.setAttribute('aria-selected', x.dataset.tab === tab); if (x.dataset.tab === tab && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
-    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'inventario', 'suplidores', 'gastos'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'inventario', 'suplidores', 'gastos', 'respaldo'].forEach(t => $('#t-' + t).hidden = t !== tab);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -4050,6 +4066,72 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       if (e.cancelable) e.preventDefault(); else { reabrir = true; setTimeout(() => { if (d.open) reabrir = false; }); }
     });
   });
+
+  // ---------- Respaldo: bajar todo en un solo archivo de Excel ----------
+  // No usa lo que está cargado en pantalla: vuelve a pedirle todo a la base, así el respaldo
+  // sale completo aunque una pestaña haya fallado o esté a medio cargar.
+  const RP_TABLAS = [
+    ['clientes', 'id'], ['facturas', 'id'], ['abonos', 'id'], ['documentos', 'id'],
+    ['ventas', 'id'], ['gastos', 'id'], ['inventario', 'id'], ['inventario_mov', 'id'],
+    ['proveedores', 'id'], ['precios', 'id'], ['compras', 'id'], ['ajustes', 'clave'],
+  ];
+  // El archivo es XML: hay que limpiar los caracteres que lo romperían
+  const rpXml = v => String(v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  function rpCelda(v) {
+    if (v === null || v === undefined) return '<Cell/>';
+    if (typeof v === 'object') { try { v = JSON.stringify(v); } catch (e) { v = ''; } }
+    const num = typeof v === 'number' && isFinite(v);
+    return '<Cell><Data ss:Type="' + (num ? 'Number' : 'String') + '">' + rpXml(v) + '</Data></Cell>';
+  }
+  // Una hoja por cosa. Las columnas salen de los propios datos, así que si mañana
+  // se agrega un campo nuevo aparece solo, sin tocar esto.
+  function rpHoja(nombre, filas) {
+    const nom = rpXml(nombre).slice(0, 31);
+    const cols = [...new Set(filas.flatMap(f => Object.keys(f || {})))];
+    if (!cols.length) return '<Worksheet ss:Name="' + nom + '"><Table><Row><Cell><Data ss:Type="String">Sin datos</Data></Cell></Row></Table></Worksheet>';
+    let out = '<Worksheet ss:Name="' + nom + '"><Table><Row>' +
+      cols.map(c => '<Cell ss:StyleID="h"><Data ss:Type="String">' + rpXml(c) + '</Data></Cell>').join('') + '</Row>';
+    for (const f of filas) out += '<Row>' + cols.map(c => rpCelda(f[c])).join('') + '</Row>';
+    return out + '</Table></Worksheet>';
+  }
+  const rpFecha = () => {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  };
+  function rpPintarUltima() {
+    let v = '';
+    try { v = localStorage.getItem('surteme_ultimo_respaldo') || ''; } catch (e) {}
+    const el = $('#rp-estado');
+    if (el) el.textContent = v ? 'Última copia: ' + v : 'Todavía no has hecho ninguna copia.';
+  }
+  async function respaldar() {
+    const faltan = [], partes = [
+      '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">',
+      '<Styles><Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Pattern="Solid" ss:Color="#0F766E"/></Style></Styles>',
+    ];
+    for (const [tabla, orden] of RP_TABLAS) {
+      const r = await todas(() => sb.from(tabla).select('*').order(orden));
+      if (r.error) { faltan.push(tabla); partes.push(rpHoja(tabla, [])); continue; }
+      partes.push(rpHoja(tabla, r.data || []));
+    }
+    partes.push('</Workbook>');
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n' + partes.join('');
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const a = document.createElement('a');
+    const href = URL.createObjectURL(blob);
+    a.href = href;
+    a.download = 'Surteme-respaldo-' + rpFecha() + '.xls';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => { try { URL.revokeObjectURL(href); } catch (e) {} }, 20000);
+    try { localStorage.setItem('surteme_ultimo_respaldo', new Date().toLocaleString('es-DO')); } catch (e) {}
+    rpPintarUltima();
+    if (faltan.length) toast('El archivo bajó, pero faltaron: ' + faltan.join(', ') + '. Vuelve a intentarlo.', true);
+    else toast('Respaldo descargado. Guárdalo donde no se pierda.');
+  }
+  $('#b-respaldo').addEventListener('click', e => conBoton(e.currentTarget, 'Preparando…', respaldar));
+  rpPintarUltima();
 })();
 </script>
 </body>
