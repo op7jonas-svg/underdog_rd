@@ -379,6 +379,7 @@
     <div class="wrap top-row">
       <div class="brand"><div class="logo">S</div>Surteme</div>
       <div class="spacer"></div>
+      <button class="btn small" id="b-opc" title="Opciones" aria-label="Opciones">⚙</button>
       <button class="btn small" id="b-logout" title="Salir">Salir</button>
     </div>
     <div class="wrap">
@@ -448,11 +449,8 @@
           <label class="field" id="vr-nivel-w" hidden><span>¿En qué?</span><select name="nivel"></select></label>
           <label class="field"><span>¿Qué vendiste?</span><input name="descripcion" list="dl-vendido" autocomplete="off" placeholder="Ej. 2 cajas de bandejas"></label>
           <div class="field full"><span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">¿Cómo pagó?</span>
-            <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none">
-              <button type="button" data-m="Efectivo" aria-pressed="true">Efectivo</button>
-              <button type="button" data-m="Transferencia" aria-pressed="false">Transferencia</button>
-              <button type="button" data-m="Tarjeta" aria-pressed="false">Tarjeta</button>
-            </div></div>
+            <div class="seg" id="vr-metodo" role="group" style="margin:0;max-width:none"></div></div>
+          <p class="hint" style="margin:0 0 10px;grid-column:1/-1">Si es fiado, no lo anotes aquí: hazlo por <b>Facturas</b>. Es lo único que lleva la cuenta de lo que te deben.</p>
           <label class="field"><span>Lo que te costó (opcional)</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Para ver tu ganancia"></label>
           <label class="field"><span>Cliente (opcional)</span><select name="cliente_id"></select></label>
         </div>
@@ -474,6 +472,15 @@
         <h2>Clientes</h2>
         <div class="spacer"></div>
         <button class="btn primary" id="b-new-client">+ Nuevo cliente</button>
+      </div>
+      <div class="card" id="cxc-card" hidden>
+        <div class="section-head" style="margin:0 0 10px">
+          <div><h3 style="font-size:1.05rem;margin:0">Te deben</h3><p class="hint" id="cxc-resumen" style="margin:3px 0 0"></p></div>
+          <div class="spacer"></div>
+          <button class="btn small" id="cxc-toggle" aria-expanded="false">Ver detalle</button>
+        </div>
+        <div id="cxc-edades" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
+        <div class="list" id="cxc-lista" hidden style="margin-top:10px"></div>
       </div>
       <div class="filters"><input class="search" id="s-clientes" type="search" placeholder="Buscar por nombre, teléfono o RNC…"></div>
       <label class="check" id="w-archivados" style="margin:0 0 12px" hidden><input type="checkbox" id="s-archivados"> <span id="t-archivados">Ver archivados</span></label>
@@ -670,6 +677,24 @@
   </main>
 </div>
 
+<!-- Ventana: opciones -->
+<dialog id="d-opc">
+  <div class="dlg-head"><h3>Opciones</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <form id="f-opc">
+      <p class="hint" style="margin:0 0 14px">Una por línea. Lo que escribas aquí sale en las listas de toda la app, y vale en los dos teléfonos.</p>
+      <label class="field full"><span>Categorías de gasto</span><textarea name="cats" rows="7"></textarea></label>
+      <label class="field full"><span>Métodos de pago</span><textarea name="metodos" rows="5"></textarea></label>
+      <div class="actions">
+        <button type="button" class="btn" id="opc-reset">Volver a las de siempre</button>
+        <span class="push"></span>
+        <button type="button" class="btn" data-close>Cancelar</button>
+        <button class="btn primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
 <!-- Ventana: cliente -->
 <dialog id="d-client">
   <div class="dlg-head"><h3 id="dc-title">Cliente</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
@@ -746,7 +771,7 @@
       <div class="grid">
         <label class="field"><span>¿Cuánto te pagaron? (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
         <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
-        <label class="field full"><span>¿Cómo pagó?</span><select name="metodo"><option>Efectivo</option><option>Transferencia</option><option>Cheque</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label class="field full"><span>¿Cómo pagó?</span><select name="metodo"></select></label>
         <label class="field full"><span>Comprobante (foto o PDF)</span><input name="archivo" type="file" accept="application/pdf,image/*">
           <div class="file-now" id="da-file"></div></label>
         <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
@@ -779,7 +804,7 @@
         <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required></label>
         <label class="field"><span>Fecha</span><input name="fecha" type="date" required></label>
         <label class="field full"><span>¿Qué vendiste?</span><input name="descripcion" list="dl-vendido" autocomplete="off"></label>
-        <label class="field"><span>¿Cómo pagó?</span><select name="metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label class="field"><span>¿Cómo pagó?</span><select name="metodo"></select></label>
         <label class="field"><span>Lo que te costó</span><input name="costo" type="number" inputmode="decimal" step="any" min="0" placeholder="Opcional"></label>
         <label class="field full"><span>Cliente</span><select name="cliente_id"></select></label>
       </div>
@@ -1094,7 +1119,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-28c"></script>
+<script src="config.js?v=2026-10-28d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1102,10 +1127,33 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const BUCKET = 'facturas';
 
+  // ---------- Opciones editables (categorías de gasto y métodos de pago) ----------
+  // Viven en la tabla «ajustes» (clave «opciones»), así valen en los dos teléfonos.
+  // Si no hay nada guardado, o lo guardado viene vacío o roto, se usan las listas de siempre:
+  // nunca se queda la app sin categorías ni sin formas de cobrar.
+  let OPC = {};
+  const OPC_METODOS_DEF = ['Efectivo', 'Transferencia', 'Tarjeta', 'Cheque', 'Otro'];
+  const metodosPago = () => {
+    const l = OPC && Array.isArray(OPC.metodos) ? OPC.metodos.filter(Boolean) : [];
+    return l.length ? l : OPC_METODOS_DEF;
+  };
+  // G_CATS está declarado más abajo: se lee al usarla, no ahora.
+  const catsGasto = () => {
+    const l = OPC && Array.isArray(OPC.cats) ? OPC.cats.filter(Boolean) : [];
+    return l.length ? l : G_CATS;
+  };
+  // Llena un <select name="metodo"> con la lista editable. Si el registro trae un método que
+  // ya no está en la lista, se agrega para no cambiarlo sin querer al editar.
+  function ponerMetodos(form, actual) {
+    const lista = metodosPago().slice();
+    if (actual && !lista.includes(actual)) lista.push(actual);
+    ponerOpciones(form.elements.metodo, lista.map(m => `<option>${esc(m)}</option>`).join(''));
+  }
+
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-28c';
+  const APP_VERSION = '2026-10-28d';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -1448,7 +1496,7 @@
     $('#ab-setup').hidden = !abTablaFalta;
     const err = c.error || f.error || (abFalta ? null : a.error);
     if (!err) listo.base = true;
-    renderClientes(); renderFacturas(); fillMonths();
+    renderClientes(); renderFacturas(); fillMonths(); renderCartera();
     if (openClientId && $('#d-client').open) renderClientInvoices(openClientId);
     return marcar('base', err);
   }
@@ -1563,6 +1611,40 @@
     }).join('');
     $$('.row', el).forEach(r => r.addEventListener('click', () => openClient(r.dataset.id)));
   }
+
+  // ---------- Cuentas por cobrar: quién debe, cuánto y hace cuántos días ----------
+  // Se calcula con lo que ya existe: saldo(factura).falta, que ya resta los abonos.
+  // Solo ve deudas de FACTURAS: una venta fiada por «Venta rápida» no lleva cuenta de lo que falta.
+  function cartera() {
+    const hoy = new Date(today() + 'T12:00:00');
+    return clientes.map(c => {
+      const debidas = facturas.filter(f => f.cliente_id === c.id).filter(f => saldo(f).falta > 0);
+      if (!debidas.length) return null;
+      const total = debidas.reduce((s, f) => s + saldo(f).falta, 0);
+      const vieja = debidas.map(f => f.fecha).filter(Boolean).sort()[0] || null;
+      const dias = vieja ? Math.max(0, Math.round((hoy - new Date(vieja + 'T12:00:00')) / 86400000)) : 0;
+      return { id: c.id, nombre: c.nombre, total, n: debidas.length, dias };
+    }).filter(Boolean).sort((a, b) => b.dias - a.dias || b.total - a.total);
+  }
+  function renderCartera() {
+    const card = $('#cxc-card'); if (!card) return;
+    const lista = cartera(), total = lista.reduce((s, x) => s + x.total, 0);
+    if (!total) { card.hidden = true; return; }
+    card.hidden = false;
+    const tramos = [[0, 30], [31, 60], [61, 90], [91, 1e9]], nombres = ['0-30 días', '31-60', '61-90', 'más de 90'];
+    const sumas = tramos.map(([a, b]) => lista.filter(x => x.dias >= a && x.dias <= b).reduce((s, x) => s + x.total, 0));
+    $('#cxc-resumen').innerHTML = `<b>${montoHtml(total)}</b> en ${lista.length} ${lista.length === 1 ? 'cliente' : 'clientes'} · lo más viejo lleva ${lista[0].dias} días`;
+    $('#cxc-edades').innerHTML = tramos.map((t, i) => `<div style="text-align:center;padding:8px 4px;border:1px solid var(--line);border-radius:10px;${sumas[i] ? '' : 'opacity:.45'}"><div style="font-size:.68rem;color:var(--muted);font-weight:800">${nombres[i]}</div><div style="font-weight:800;font-size:.92rem">${sumas[i] ? montoHtml(sumas[i]) : '—'}</div></div>`).join('');
+    $('#cxc-lista').innerHTML = lista.map(x => `<button class="row" data-id="${x.id}"><div class="avatar">${esc(initials(x.nombre))}</div><div class="main"><div class="title">${esc(x.nombre)}</div><div class="sub">${x.n} ${x.n === 1 ? 'factura' : 'facturas'} · la más vieja hace ${x.dias} días</div><span class="badge pendiente">${montoHtml(x.total)}</span></div></button>`).join('');
+    $$('#cxc-lista .row').forEach(r => r.addEventListener('click', () => openClient(r.dataset.id)));
+  }
+  const bCxc = $('#cxc-toggle');
+  if (bCxc) bCxc.addEventListener('click', () => {
+    const l = $('#cxc-lista');
+    l.hidden = !l.hidden;
+    bCxc.textContent = l.hidden ? 'Ver detalle' : 'Ocultar';
+    bCxc.setAttribute('aria-expanded', String(!l.hidden));
+  });
 
   let openClientId = null, clienteNuevo = null, cliAntes = {};
   const CAMPOS_CLI = ['nombre', 'rnc', 'telefono', 'correo', 'direccion', 'notas'];
@@ -1948,6 +2030,7 @@ grant select, insert, update, delete on abonos to authenticated;`;
     const f = facturas.find(x => x.id === openInvoiceId); if (!f) return;
     const a = abonos.find(x => x.id === id) || {};
     const form = $('#f-abono'); form.reset();
+    ponerMetodos(form, a.metodo);
     form.elements.monto.value = id ? a.monto : saldo(f).falta;
     form.elements.fecha.value = a.fecha || today();
     form.elements.metodo.value = a.metodo || 'Efectivo';
@@ -2440,7 +2523,7 @@ grant select, insert, update, delete on gastos to authenticated;`;
     return marcar('gastos', r.error && !falta ? r.error : null);
   }
 
-  const catsEnUso = () => [...new Set([...G_CATS, ...gastos.map(g => g.categoria).filter(Boolean)])];
+  const catsEnUso = () => [...new Set([...catsGasto(), ...gastos.map(g => g.categoria).filter(Boolean)])];
   function fillGastoFilters() {
     const mes = $('#g-mes'), cat = $('#g-cat'), cv = cat.value;
     const months = [...new Set([today().slice(0, 7), ...[...gastos, ...facturas, ...ventas].map(x => (x.fecha || '').slice(0, 7))].filter(Boolean))].sort().reverse();
@@ -2765,10 +2848,20 @@ grant select, insert, update, delete on ventas to authenticated;`;
   }
 
   // Registrar rápido
-  $$('#vr-metodo button').forEach(b => b.addEventListener('click', () => {
+  // Los botones de «¿Cómo pagó?» se dibujan desde la lista editable. Un solo oyente en el
+  // contenedor, así siguen funcionando cuando la lista cambia sin volver a engancharlos.
+  function pintarMetodos() {
+    const el = $('#vr-metodo'); if (!el) return;
+    const lista = metodosPago();
+    if (!lista.includes(vMetodo)) vMetodo = lista[0];
+    el.innerHTML = lista.map(m => `<button type="button" data-m="${esc(m)}" aria-pressed="${m === vMetodo ? 'true' : 'false'}">${esc(m)}</button>`).join('');
+  }
+  $('#vr-metodo').addEventListener('click', e => {
+    const b = e.target.closest('button[data-m]'); if (!b) return;
     vMetodo = b.dataset.m;
     $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x === b));
-  }));
+  });
+  pintarMetodos();
   $('#f-venta-rapida').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, btn = $('#vr-save'), costo = num(f.elements.costo.value);
@@ -2815,6 +2908,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const v = ventas.find(x => x.id === id); if (!v) return;
     openVentaId = id;
     const f = $('#f-venta'); f.reset();
+    ponerMetodos(f, v.metodo);
     f.elements.cliente_id.innerHTML = opcionesCliente('— Sin cliente —', v.cliente_id);
     ['monto', 'fecha', 'descripcion', 'costo', 'cliente_id'].forEach(k => f.elements[k].value = v[k] ?? '');
     f.elements.metodo.value = v.metodo || 'Efectivo';
@@ -3496,6 +3590,9 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     $('#b-empresa').hidden = docTablaFalta;
     documentos = d.error ? [] : d.data;
     empresa = ((a.data || []).find(x => x.clave === 'empresa') || {}).valor || {};
+    const opGuardadas = (a.data || []).find(x => x.clave === 'opciones');
+    OPC = (opGuardadas && opGuardadas.valor && typeof opGuardadas.valor === 'object' && !Array.isArray(opGuardadas.valor)) ? opGuardadas.valor : {};
+    try { pintarMetodos(); } catch (e) {}
     if (!err || falta) listo.docs = true;
     renderCotizaciones(); renderFacturas();
     return marcar('docs', err && !falta ? err : null);
@@ -4043,6 +4140,33 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     const { error } = await sb.from('ajustes').upsert({ clave: 'empresa', valor, actualizado: new Date().toISOString() });
     if (error) return toast(errText(error), true);
     empresa = valor; $('#d-empresa').close(); toast('Datos guardados');
+  });
+
+  // ---------- Ventana «Opciones» ----------
+  const OPC_AYUDA = l => (l || []).join('\n');
+  $('#b-opc').addEventListener('click', () => {
+    const f = $('#f-opc');
+    f.elements.cats.value = OPC_AYUDA(catsGasto());
+    f.elements.metodos.value = OPC_AYUDA(metodosPago());
+    $('#d-opc').showModal();
+  });
+  $('#opc-reset').addEventListener('click', () => {
+    const f = $('#f-opc');
+    f.elements.cats.value = OPC_AYUDA(G_CATS);
+    f.elements.metodos.value = OPC_AYUDA(OPC_METODOS_DEF);
+  });
+  $('#f-opc').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const leer = t => [...new Set(t.split('\n').map(x => x.trim()).filter(Boolean))];
+    const cats = leer(f.elements.cats.value), metodos = leer(f.elements.metodos.value);
+    if (!cats.length) return toast('Deja al menos una categoría de gasto.', true);
+    if (!metodos.length) return toast('Deja al menos un método de pago.', true);
+    const valor = { cats, metodos };
+    const { error } = await sb.from('ajustes').upsert({ clave: 'opciones', valor, actualizado: new Date().toISOString() });
+    if (error) return toast(errText(error), true);
+    OPC = valor; pintarMetodos();
+    $('#d-opc').close(); toast('Opciones guardadas');
   });
 
   $('#di-viewdoc').addEventListener('click', () => { const d = docDeFactura(openInvoiceId); if (d) { $('#d-invoice').close(); openView(d.id); } });
