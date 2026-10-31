@@ -140,6 +140,7 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .chips button { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 8px 14px; min-height: 40px; font: inherit; font-size: .9rem; cursor: pointer; }
   .chips button:hover { border-color: var(--accent); }
+  .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .results { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
   @media (max-width: 560px) { .results { grid-template-columns: 1fr 1fr; } }
   .stat { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; min-width: 0; }
@@ -390,6 +391,7 @@
         <button role="tab" data-tab="cotiz" aria-selected="false">Cotizar</button>
         <button role="tab" data-tab="facturas" aria-selected="false">Facturas</button>
         <button role="tab" data-tab="inventario" aria-selected="false">Inventario</button>
+        <button role="tab" data-tab="precios" aria-selected="false">Precios</button>
         <button role="tab" data-tab="suplidores" aria-selected="false">Suplidores</button>
         <button role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
         <button role="tab" data-tab="respaldo" aria-selected="false">Respaldo</button>
@@ -567,6 +569,23 @@
         <div class="totals" id="co-totals"></div>
         <div class="list" id="l-compras"></div>
       </div>
+    </section>
+
+    <!-- Precios: vista previa con % de ganancia (no guarda nada) -->
+    <section id="t-precios" hidden>
+      <div class="section-head">
+        <div><h2>Precios</h2><p class="hint">Elige el % de ganancia y toca un artículo. Sirve para ver a cuánto quedaría la unidad, el paquete y el fardo o la caja, y cuánto queda en almacén.</p></div>
+      </div>
+      <div class="card">
+        <div style="font-size:.88rem;font-weight:600;color:var(--muted)">¿Cuánto quieres ganar?</div>
+        <div class="chips" id="pr-chips"></div>
+        <div class="grid" style="margin-top:12px">
+          <label class="field" style="max-width:220px"><span>Otro % (a mano)</span><input id="pr-pct" type="number" inputmode="decimal" step="any" min="0" placeholder="30"></label>
+        </div>
+        <p class="hint" id="pr-resumen"></p>
+      </div>
+      <div class="filters" style="margin-top:14px"><input class="search" id="s-precios" type="search" placeholder="Buscar producto…"></div>
+      <div class="list" id="l-precios"></div>
     </section>
 
     <section id="t-suplidores" hidden>
@@ -1120,7 +1139,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-28e"></script>
+<script src="config.js?v=2026-10-30a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1154,7 +1173,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-28e';
+  const APP_VERSION = '2026-10-30a';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -1381,7 +1400,9 @@
   $$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
   function openTab(tab) {
     $$('nav.tabs button').forEach(x => { x.setAttribute('aria-selected', x.dataset.tab === tab); if (x.dataset.tab === tab && x.scrollIntoView) x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
-    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'inventario', 'suplidores', 'gastos', 'respaldo'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'inventario', 'precios', 'suplidores', 'gastos', 'respaldo'].forEach(t => $('#t-' + t).hidden = t !== tab);
+    // Precios se repinta al abrir (en diferido: sus ayudantes se declaran más abajo en el archivo)
+    if (tab === 'precios') setTimeout(renderPrecios, 0);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -3089,7 +3110,7 @@ grant select, insert, update, delete on compras to authenticated;`;
     inventario = r.error ? [] : r.data;
     if (!c.error || comprasFalta) compras = c.error ? [] : c.data;
     if (!r.error || falta) listo.inv = true;
-    renderInv(); renderCompras(); fillInvSelect(); fillVendido();
+    renderInv(); renderCompras(); fillInvSelect(); fillVendido(); renderPrecios();
     if ($('#d-inv').open && openInvId) mostrarStockAbierto();
     return marcar('inv', (r.error && !falta) ? r.error : (c.error && !comprasFalta) ? c.error : null);
   }
@@ -3127,6 +3148,64 @@ grant select, insert, update, delete on compras to authenticated;`;
   }
   $('#s-inv').addEventListener('input', renderInv);
   $('#inv-filtro').addEventListener('change', renderInv);
+
+  // ----- Precios: vista previa con % de ganancia (no guarda nada) -----
+  // Solo calcula costo del empaque × (1 + %/100). El % es sobre el costo, igual que
+  // «¿Qué % le quieres ganar?» en el diálogo del producto, para que los números cuadren.
+  const PR_PCTS = [10, 15, 20, 25, 30, 35, 40, 50];
+  let prPct = 30, prAbierto = null;
+  const prPctTxt = () => cantTxt(round2(prPct)) + '%';
+  const prPrecio = (p, k) => { const c = costoDe(p, k); return Number.isFinite(c) && c > 0 ? round2(c * (1 + prPct / 100)) : NaN; };
+  function pintarChipsPrecios() {
+    const el = $('#pr-chips'); if (!el) return;
+    el.innerHTML = PR_PCTS.map(n => `<button type="button" data-pct="${n}" aria-pressed="${n === prPct}">${n}%</button>`).join('');
+    $$('[data-pct]', el).forEach(b => b.addEventListener('click', () => {
+      prPct = Number(b.dataset.pct);
+      $('#pr-pct').value = '';
+      pintarChipsPrecios(); renderPrecios();
+    }));
+  }
+  // Los precios de cada empaque que tenga el producto, más lo que queda en almacén
+  function detallePrecios(p) {
+    const filas = niveles(p).map(n => {
+      const c = costoDe(p, n.k), pr = prPrecio(p, n.k);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600">${esc(cap(n.nombres[0]))}</div>
+          <div style="color:var(--muted);font-size:.85rem">${Number.isFinite(c) && c > 0 ? 'Te cuesta ' + montoHtml(c) : 'Falta cargar el costo'}</div>
+        </div>
+        <div style="font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap">${Number.isFinite(pr) ? montoHtml(pr) : '—'}</div>
+      </div>`;
+    }).join('');
+    const eq = equivTxt(p);
+    return `<div style="background:var(--surface-2);border-radius:12px;padding:4px 14px 10px">${filas}
+      <div style="color:var(--muted);font-size:.85rem;padding-top:8px">Quedan ${esc(stockTxt(p))}${eq ? ' · ' + esc(eq) : ''}</div></div>`;
+  }
+  function renderPrecios() {
+    const el = $('#l-precios'); if (!el) return;
+    const res = $('#pr-resumen');
+    if (res) res.innerHTML = `Precios con <b>${esc(prPctTxt())}</b> sobre el costo. Es solo una vista previa: <b>no cambia ni guarda</b> ningún precio.`;
+    if (invTablaFalta) { el.innerHTML = ''; return; }
+    if (!inventario.length) { el.innerHTML = '<div class="empty">Aún no hay productos: se cargan en <b>Inventario</b>.</div>'; return; }
+    const ws = palabras($('#s-precios').value);
+    const list = inventario.filter(p => tieneTodas(ws, p.nombre));
+    if (!list.length) { el.innerHTML = '<div class="empty">No hay productos con esa búsqueda.</div>'; return; }
+    el.innerHTML = list.map(p => {
+      const n0 = niveles(p)[0], pr = prPrecio(p, 'empaque'), abierto = p.id === prAbierto;
+      return `<button class="row" data-pr="${p.id}" aria-expanded="${abierto}"><div class="main"><div class="title">${esc(p.nombre)}</div>
+        <div class="sub">${esc('Quedan ' + stockTxt(p))}</div></div>
+        <div class="amount">${Number.isFinite(pr) ? montoHtml(pr) + `<br><span class="sub" style="font-weight:500">por ${esc(n0.nombres[0])}</span>` : '—'}</div></button>`
+        + (abierto ? detallePrecios(p) : '');
+    }).join('');
+    $$('[data-pr]', el).forEach(b => b.addEventListener('click', () => { prAbierto = prAbierto === b.dataset.pr ? null : b.dataset.pr; renderPrecios(); }));
+  }
+  $('#s-precios').addEventListener('input', renderPrecios);
+  $('#pr-pct').addEventListener('input', () => {
+    const t = $('#pr-pct').value, v = Number(t);
+    if (t !== '' && Number.isFinite(v) && v >= 0) { prPct = v; pintarChipsPrecios(); }
+    renderPrecios();
+  });
+  pintarChipsPrecios();
 
   // Sugerencias al escribir «¿Qué vendiste?»: lo que ya has vendido (lo más reciente primero) y los productos del inventario
   function fillVendido() {
