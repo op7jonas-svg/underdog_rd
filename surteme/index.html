@@ -3,26 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Surteme · Gestión</title>
+<title>Súrteme · Gestión</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#f6f8f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111615" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='14' fill='%230f766e'/%3E%3Cpath d='M42 22c-2-3-6-4-10-4-6 0-10 3-10 8 0 11 20 6 20 16 0 5-4 8-10 8-4 0-8-1-11-5' stroke='white' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#FFF8EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1330" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%232442D6'/%3E%3Cpath d='M17 33 L27 43 L47 20' fill='none' stroke='%23FFC72C' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Titan+One&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f8f7;
+    --bg: #FFF8EC;
     --surface: #ffffff;
-    --surface-2: #eef3f1;
-    --text: #15201d;
-    --muted: #5d6b67;
-    --line: #dfe7e4;
-    --accent: #0f766e;
-    --accent-hover: #0b5f58;
-    --accent-soft: #dcf2ee;
-    --accent-text: #0b5f58;
+    --surface-2: #F7EFDF;
+    --text: #14215E;
+    --muted: #5B6483;
+    --line: #E8DFCC;
+    --accent: #2442D6;
+    --accent-hover: #1B34AE;
+    --accent-soft: #E6E9FB;
+    --accent-text: #1B34AE;
     --on-accent: #ffffff;
     --ok: #2b8a3e;
     --ok-soft: #e3f4e6;
@@ -30,45 +30,45 @@
     --warn-soft: #fff1d6;
     --bad: #c92a2a;
     --bad-soft: #fde4e4;
-    --shadow: 0 1px 2px rgba(21,32,29,.05), 0 6px 20px rgba(21,32,29,.06);
+    --shadow: 0 1px 2px rgba(20,33,94,.06), 0 6px 20px rgba(20,33,94,.07);
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #111615;
-      --surface: #19201e;
-      --surface-2: #222b28;
-      --text: #ecf2f0;
-      --muted: #a1afab;
-      --line: #2f3a37;
-      --accent: #2dd4bf;
-      --accent-hover: #5eead4;
-      --accent-soft: #123b36;
-      --accent-text: #5eead4;
-      --on-accent: #062a26;
-      --ok: #69db7c;
-      --ok-soft: #173321;
-      --warn: #ffc65c;
-      --warn-soft: #3a2d10;
-      --bad: #ff8787;
-      --bad-soft: #3d1a1a;
+      --bg: #0C1330;
+      --surface: #14215E;
+      --surface-2: #1B2A6E;
+      --text: #FFF8EC;
+      --muted: #A7B0CF;
+      --line: #26346F;
+      --accent: #7C93FF;
+      --accent-hover: #9AACFF;
+      --accent-soft: #1E2C70;
+      --accent-text: #AFC0FF;
+      --on-accent: #0B1230;
+      --ok: #6EDD8B;
+      --ok-soft: #16331F;
+      --warn: #FFC72C;
+      --warn-soft: #3A2D08;
+      --bad: #FF8A8A;
+      --bad-soft: #3D1A22;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #111615; --surface: #19201e; --surface-2: #222b28; --text: #ecf2f0; --muted: #a1afab;
-    --line: #2f3a37; --accent: #2dd4bf; --accent-hover: #5eead4; --accent-soft: #123b36; --accent-text: #5eead4;
-    --on-accent: #062a26; --ok: #69db7c; --ok-soft: #173321; --warn: #ffc65c; --warn-soft: #3a2d10;
-    --bad: #ff8787; --bad-soft: #3d1a1a; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    --bg: #0C1330; --surface: #14215E; --surface-2: #1B2A6E; --text: #FFF8EC; --muted: #A7B0CF;
+    --line: #26346F; --accent: #7C93FF; --accent-hover: #9AACFF; --accent-soft: #1E2C70; --accent-text: #AFC0FF;
+    --on-accent: #0B1230; --ok: #6EDD8B; --ok-soft: #16331F; --warn: #FFC72C; --warn-soft: #3A2D08;
+    --bad: #FF8A8A; --bad-soft: #3D1A22; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
   }
 
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.5 Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     min-height: 100vh;
   }
   [hidden] { display: none !important; }
@@ -83,9 +83,15 @@
     border-bottom: 1px solid var(--line);
   }
   .top-row { display: flex; align-items: center; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; }
-  .logo { width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: var(--on-accent);
-    display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; }
+  .brand img { height: 32px; width: auto; display: block; }
+  .brand .lg-oscuro { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .brand .lg-claro { display: none; }
+    :root:not([data-theme="light"]) .brand .lg-oscuro { display: block; }
+  }
+  :root[data-theme="dark"] .brand .lg-claro { display: none; }
+  :root[data-theme="dark"] .brand .lg-oscuro { display: block; }
   .spacer { flex: 1; }
   nav.tabs { display: flex; gap: 4px; padding-bottom: 10px; overflow-x: auto; }
   nav.tabs button {
@@ -243,46 +249,74 @@
   }
 
   /* Diseño del documento (siempre en papel blanco, igual en modo oscuro) */
-  .doc { width: 816px; min-height: 1056px; background: #fff; color: #123365; position: relative; overflow: hidden;
-    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 70px 40px 120px; box-sizing: border-box; }
+  .doc { width: 816px; min-height: 1056px; background: #fff; color: #2A3350; position: relative; overflow: hidden;
+    font-family: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; box-sizing: border-box;
+    padding: 0 52px 150px; }
   .doc * { box-sizing: border-box; }
-  .doc .corner { position: absolute; width: 230px; height: 90px; }
-  .doc .corner svg { display: block; width: 230px; height: 90px; }
-  .doc .corner.tl { top: 0; left: 0; }
-  .doc .corner.br { bottom: 0; right: 0; }
-  .doc-head { display: flex; align-items: stretch; gap: 28px; margin-bottom: 34px; }
-  .doc-logo { flex: 0 0 300px; display: flex; align-items: center; justify-content: center; }
-  .doc-logo img { width: 100%; height: auto; display: block; }
-  .doc-logo .alt { font-size: 52px; font-weight: 900; color: #123365; }
-  .doc-sep { width: 3px; background: #123365; border-radius: 2px; }
-  .doc-meta { flex: 1; min-width: 0; }
-  .doc-meta h1 { margin: 0; font-size: 46px; line-height: 1.05; font-weight: 900; letter-spacing: .5px; color: #123365; }
-  .doc-ul { width: 64px; height: 5px; background: #fe6c0c; border-radius: 3px; margin: 10px 0 16px; }
-  .doc-meta table { border-collapse: collapse; font-size: 15.5px; }
-  .doc-meta td { padding: 3px 0; vertical-align: top; color: #1d2b44; }
-  .doc-meta td.l { font-weight: 800; color: #123365; white-space: nowrap; padding-right: 10px; }
-  .doc-meta td.c { padding-right: 14px; color: #123365; }
-  .doc-items { width: 100%; border-collapse: separate; border-spacing: 0; border: 1.5px solid #c7d7ee; border-radius: 14px; overflow: hidden; font-size: 15px; }
-  .doc-items th { background: #123365; color: #fff; font-weight: 800; padding: 16px 10px; font-size: 16px; text-align: center; }
-  .doc-items th + th, .doc-items td + td { border-left: 1.5px solid #c7d7ee; }
-  .doc-items thead th + th { border-left-color: #2c4c86; }
-  .doc-items td { padding: 14px 12px; border-top: 1.5px solid #c7d7ee; text-align: center; color: #1d2b44; vertical-align: middle; }
-  .doc-items td.n { font-weight: 800; color: #123365; width: 60px; }
-  .doc-items td.d { text-align: left; }
-  .doc-items td.d b { display: block; font-size: 16.5px; color: #123365; font-weight: 800; }
-  .doc-items td.d span { display: block; font-size: 14px; color: #4a5a76; margin-top: 2px; }
-  .doc-items td.q { width: 130px; }
-  .doc-items td.p, .doc-items td.t { width: 150px; white-space: nowrap; }
-  .doc-sum { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 22px; }
-  .doc-sum .line { display: flex; gap: 24px; font-size: 16px; color: #123365; padding-right: 18px; }
-  .doc-sum .line b { min-width: 150px; text-align: right; }
-  .doc-total { display: flex; border-radius: 12px; overflow: hidden; font-weight: 900; }
-  .doc-total span { background: #123365; color: #fff; padding: 14px 24px; font-size: 20px; letter-spacing: .3px; }
-  .doc-total b { background: #fe6c0c; color: #fff; padding: 12px 22px; font-size: 26px; white-space: nowrap; }
-  .doc-notes { margin-top: 26px; font-size: 14.5px; color: #1d2b44; white-space: pre-wrap; }
-  .doc-notes b { color: #123365; }
-  .doc-foot { margin-top: 26px; text-align: center; font-size: 13.5px; color: #4a5a76; }
-  .doc-foot .thanks { font-weight: 800; color: #123365; font-size: 15px; margin-bottom: 4px; }
+  .doc-top { height: 14px; background: #2442D6; margin: 0 -52px 30px; }
+  .doc-top::after { content: ""; display: block; height: 5px; width: 38%; background: #FFC72C; margin-top: 9px; }
+  .doc-head { width: 100%; border-collapse: collapse; }
+  .doc-head > tbody > tr > td { vertical-align: top; padding: 0; }
+  .doc-logo { width: 300px; }
+  .doc-logo img { width: 292px; height: auto; display: block; }
+  .doc-logo .alt { font-family: "Titan One", system-ui, sans-serif; font-size: 40px; color: #2442D6; }
+  .doc-meta { text-align: right; }
+  .doc-meta h1 { font-family: "Titan One", system-ui, sans-serif; font-weight: 400; font-size: 36px; line-height: .98;
+    letter-spacing: .4px; color: #2442D6; margin: 0 0 8px; }
+  .doc-num { display: inline-block; background: #FFC72C; color: #14215E; border-radius: 9px; font-size: 12.5px;
+    font-weight: 800; padding: 5px 10px; margin-bottom: 10px; }
+  .doc-meta table { border-collapse: collapse; margin-left: auto; font-size: 12.5px; }
+  .doc-meta td { padding: 2px 0; vertical-align: top; }
+  .doc-meta td.k { color: #6B7280; text-align: right; padding-right: 12px; text-transform: uppercase; font-size: 9.5px;
+    letter-spacing: .12em; font-weight: 700; padding-top: 4px; }
+  .doc-meta td.v { color: #14215E; font-weight: 700; text-align: right; white-space: nowrap; }
+  .doc-client { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 24px; }
+  .doc-client td { background: #FFF8EC; border: 1px solid #F3E9D6; padding: 14px 18px; vertical-align: bottom; }
+  .doc-client td:first-child { border-right: 0; border-radius: 14px 0 0 14px; }
+  .doc-client td:last-child { border-left: 0; border-radius: 0 14px 14px 0; text-align: right; width: 190px; }
+  .doc-client .lbl { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: #2442D6; font-weight: 800; margin-bottom: 5px; }
+  .doc-client .name { font-size: 18px; font-weight: 800; color: #14215E; line-height: 1.2; }
+  .doc-client .sub { font-size: 11.5px; color: #6B7280; margin-top: 3px; font-weight: 600; }
+  .doc-client .cond { font-size: 11.5px; color: #6B7280; font-weight: 600; line-height: 1.5; white-space: nowrap; }
+  .doc-client .cond b { color: #14215E; font-weight: 800; }
+  .doc-items { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 22px; font-size: 13px; }
+  .doc-items thead th { background: #2442D6; color: #fff; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    font-weight: 800; padding: 11px 14px; text-align: right; }
+  .doc-items thead th:first-child { border-radius: 11px 0 0 11px; width: 38px; text-align: center; }
+  .doc-items thead th:nth-child(2) { text-align: left; }
+  .doc-items thead th:last-child { border-radius: 0 11px 11px 0; width: 122px; }
+  .doc-items tbody td { padding: 11px 14px; border-bottom: 1px solid #EBE3D3; text-align: right; vertical-align: top;
+    font-weight: 600; color: #2A3350; white-space: nowrap; }
+  .doc-items tbody tr:nth-child(even) td { background: #FFFCF5; }
+  .doc-items td.n { text-align: center; color: #2442D6; font-weight: 800; font-size: 12px; width: 38px; }
+  .doc-items td.d { text-align: left; white-space: normal; }
+  .doc-items td.d b { display: block; font-size: 13.5px; color: #14215E; font-weight: 800; line-height: 1.25; }
+  .doc-items td.d span { display: block; font-size: 11px; color: #6B7280; font-weight: 600; margin-top: 2px; }
+  .doc-items td.q { width: 100px; }
+  .doc-items td.q span { display: block; font-size: 10px; color: #6B7280; font-weight: 600; margin-top: 2px; }
+  .doc-items td.p { width: 120px; }
+  .doc-items td.t { width: 122px; color: #14215E; font-weight: 800; }
+  .doc-sums { width: 100%; border-collapse: collapse; margin-top: 18px; }
+  .doc-sums td { padding: 0; vertical-align: top; }
+  .doc-sums td.sp { width: 42%; }
+  .doc-sums .line { font-size: 12.5px; color: #6B7280; font-weight: 700; padding: 3px 4px; }
+  .doc-sums .line b { float: right; color: #14215E; font-weight: 800; }
+  .doc-total { margin-top: 6px; background: #2442D6; border-radius: 12px; padding: 12px 16px; }
+  .doc-total table { width: 100%; border-collapse: collapse; }
+  .doc-total td { color: #fff; vertical-align: middle; padding: 0; }
+  .doc-total td.lab { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; white-space: nowrap; padding-right: 16px; }
+  .doc-total .lab svg { width: 20px; height: 16px; vertical-align: -2px; margin-right: 7px; }
+  .doc-total td.val { font-size: 22px; font-weight: 800; white-space: nowrap; text-align: right; }
+  .doc-notes { margin-top: 18px; font-size: 11.5px; line-height: 1.55; color: #2A3350; font-weight: 600; white-space: pre-wrap; }
+  .doc-notes b { color: #2442D6; font-weight: 800; }
+  .doc-foot { position: absolute; left: 52px; right: 52px; bottom: 38px; border-top: 1px solid #EBE3D3; padding-top: 14px; }
+  .doc-foot table { width: 100%; border-collapse: collapse; }
+  .doc-foot td { vertical-align: bottom; padding: 0; }
+  .doc-foot .thanks { font-family: "Titan One", system-ui, sans-serif; font-size: 14px; color: #2442D6; letter-spacing: .2px; }
+  .doc-foot .contact { font-size: 10.5px; color: #6B7280; font-weight: 600; line-height: 1.6; text-align: right; }
+  .doc-foot .contact b { color: #14215E; font-weight: 800; }
+  .doc-mark { position: absolute; right: 18px; bottom: 96px; width: 130px; opacity: .07; }
+  .doc-mark svg { display: block; width: 100%; height: auto; }
 
   /* Ventas del día */
   .today-card { background: var(--accent-soft); border-color: transparent; margin-bottom: 14px; }
@@ -327,7 +361,7 @@
   .center-screen { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
   .login { width: min(400px, 100%); }
   .login .brand { justify-content: center; font-size: 1.5rem; margin-bottom: 6px; }
-  .login .logo { width: 44px; height: 44px; font-size: 1.4rem; border-radius: 12px; }
+  .login .brand img { height: 46px; }
   .login p.lead { text-align: center; color: var(--muted); margin: 0 0 18px; }
   .login .field + .field { margin-top: 12px; }
   .login .btn { width: 100%; margin-top: 16px; }
@@ -350,7 +384,7 @@
 <!-- Pantalla: falta conectar Supabase -->
 <section id="v-setup" class="center-screen" hidden>
   <div class="card login">
-    <div class="brand"><div class="logo">S</div>Surteme</div>
+    <div class="brand"><img class="lg-claro" src="logo.svg" alt="Súrteme"><img class="lg-oscuro" src="logo-negativo.svg" alt="" aria-hidden="true"></div>
     <p class="lead">Falta conectar la base de datos. Pega aquí los dos datos de Supabase (solo hay que hacerlo una vez en este aparato).</p>
     <form id="f-setup">
       <label class="field"><span>Project URL</span><input name="url" placeholder="https://xxxx.supabase.co" required></label>
@@ -363,7 +397,7 @@
 <!-- Pantalla: entrar -->
 <section id="v-login" class="center-screen" hidden>
   <div class="card login">
-    <div class="brand"><div class="logo">S</div>Surteme</div>
+    <div class="brand"><img class="lg-claro" src="logo.svg" alt="Súrteme"><img class="lg-oscuro" src="logo-negativo.svg" alt="" aria-hidden="true"></div>
     <p class="lead">Suministros y desechables</p>
     <form id="f-login">
       <label class="field"><span>Correo</span><input name="email" type="email" autocomplete="username" required></label>
@@ -378,7 +412,7 @@
 <div id="v-app" hidden>
   <header class="top">
     <div class="wrap top-row">
-      <div class="brand"><div class="logo">S</div>Surteme</div>
+      <div class="brand"><img class="lg-claro" src="logo.svg" alt="Súrteme"><img class="lg-oscuro" src="logo-negativo.svg" alt="" aria-hidden="true"></div>
       <div class="spacer"></div>
       <button class="btn small" id="b-opc" title="Opciones" aria-label="Opciones">⚙</button>
       <button class="btn small" id="b-logout" title="Salir">Salir</button>
@@ -1139,7 +1173,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-10-30a"></script>
+<script src="config.js?v=2026-11-02a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1173,7 +1207,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-10-30a';
+  const APP_VERSION = '2026-11-02a';
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -4069,37 +4103,40 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   });
 
   // ----- El documento con el diseño de Surteme -----
-  const CORNER = `<div class="corner tl"><svg viewBox="0 0 230 90" width="230" height="90" xmlns="http://www.w3.org/2000/svg"><polygon points="0,0 230,0 0,70" fill="#fe6c0c"/><polygon points="0,0 190,0 0,52" fill="#123365"/></svg></div>`;
-  const CORNER_BR = `<div class="corner br"><svg viewBox="0 0 230 90" width="230" height="90" xmlns="http://www.w3.org/2000/svg"><polygon points="230,90 0,90 230,20" fill="#fe6c0c"/><polygon points="230,90 40,90 230,38" fill="#123365"/></svg></div>`;
+  const CHECK = '<svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg"><path d="M9 43 L36 71 L91 9" fill="none" stroke="#FFC72C" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function docHTML(d) {
     const cot = d.tipo === 'cotizacion';
-    const rows = [[cot ? 'No. de cotización' : 'No. de factura', d.numero], ['Fecha', fechaLarga(d.fecha)], ['Cliente', d.cliente_nombre || '—'],
-      ['RNC', d.cliente_rnc || '—']];
-    if (!cot && d.ncf) rows.push(['NCF', d.ncf]);
-    rows.push(['Condiciones de pago', d.condiciones || '—']);
-    if (cot) rows.push(['Validez de la oferta', d.validez || '—']);
+    const meta = [['Fecha', fechaLarga(d.fecha)]];
+    if (cot) meta.push(['Validez', d.validez || '—']);
+    if (!cot && d.ncf) meta.push(['NCF', d.ncf]);
     const items = (d.items || []).map((it, i) => {
       const cant = Number(it.cantidad) || 0, cantTxt = cant.toLocaleString('es-DO', { maximumFractionDigits: 2 });
-      const q = it.unidad ? (cant === 1 ? esc(it.unidad) : `${esc(cantTxt)}<br><span style="font-size:13.5px;color:#4a5a76">(${esc(it.unidad)})</span>`) : esc(cantTxt);
       return `<tr><td class="n">${i + 1}</td><td class="d"><b>${esc(it.descripcion)}</b>${it.detalle ? `<span>${esc(it.detalle)}</span>` : ''}</td>
-        <td class="q">${q}</td><td class="p">${rd(it.precio)}</td><td class="t">${rd(lineaTotal(it))}</td></tr>`;
+        <td class="q">${esc(cantTxt)}${it.unidad ? `<span>${esc(it.unidad)}</span>` : ''}</td><td class="p">${rd(it.precio)}</td><td class="t">${rd(lineaTotal(it))}</td></tr>`;
     }).join('');
     const pie = [empresa.telefono && 'Tel. ' + empresa.telefono, empresa.rnc && 'RNC ' + empresa.rnc, empresa.direccion, empresa.correo].filter(Boolean);
-    return `<div class="doc">${CORNER}
-      <div class="doc-head">
-        <div class="doc-logo"><img src="logo.png" alt="Surteme" onerror="this.outerHTML='<div class=&quot;alt&quot;>SURTEME</div>'"></div>
-        <div class="doc-sep"></div>
-        <div class="doc-meta"><h1>${cot ? 'COTIZACIÓN' : 'FACTURA'}</h1><div class="doc-ul"></div>
-          <table>${rows.map(([l, v]) => `<tr><td class="l">${esc(l)}</td><td class="c">:</td><td>${esc(v)}</td></tr>`).join('')}</table></div>
-      </div>
-      <table class="doc-items"><thead><tr><th>Ítem</th><th>Descripción</th><th>Cantidad</th><th>Precio Unitario</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
-      <div class="doc-sum">
-        ${d.itbis ? `<div class="line"><span>Subtotal</span><b>${rd(d.subtotal)}</b></div><div class="line"><span>ITBIS (18%)</span><b>${rd(d.itbis_monto)}</b></div>` : ''}
-        <div class="doc-total"><span>TOTAL GENERAL</span><b>${rd(d.total)}</b></div>
-      </div>
+    return `<div class="doc"><div class="doc-top"></div>
+      <table class="doc-head"><tr>
+        <td class="doc-logo"><img src="logo.svg" alt="Súrteme" onerror="this.outerHTML='<div class=&quot;alt&quot;>Súrteme</div>'"></td>
+        <td class="doc-meta"><h1>${cot ? 'COTIZACIÓN' : 'FACTURA'}</h1><div class="doc-num">No. ${esc(d.numero || '—')}</div>
+          <table>${meta.map(([l, v]) => `<tr><td class="k">${esc(l)}</td><td class="v">${esc(v)}</td></tr>`).join('')}</table></td>
+      </tr></table>
+      <table class="doc-client"><tr>
+        <td><div class="lbl">${cot ? 'Cotizado para' : 'Facturado a'}</div><div class="name">${esc(d.cliente_nombre || '—')}</div>
+          ${d.cliente_rnc ? `<div class="sub">RNC ${esc(d.cliente_rnc)}</div>` : ''}</td>
+        <td><div class="cond">Condiciones de pago<br><b>${esc(d.condiciones || '—')}</b></div></td>
+      </tr></table>
+      <table class="doc-items"><thead><tr><th>#</th><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr></thead><tbody>${items}</tbody></table>
+      <table class="doc-sums"><tr><td class="sp"></td><td>
+        ${d.itbis ? `<div class="line">Subtotal <b>${rd(d.subtotal)}</b></div><div class="line">ITBIS (18%) <b>${rd(d.itbis_monto)}</b></div>` : ''}
+        <div class="doc-total"><table><tr><td class="lab">${CHECK}TOTAL GENERAL</td><td class="val">${rd(d.total)}</td></tr></table></div>
+      </td></tr></table>
       ${d.notas ? `<div class="doc-notes"><b>Notas:</b> ${esc(d.notas)}</div>` : ''}
-      <div class="doc-foot">${empresa.sin_gracias !== true ? `<div class="thanks">${esc(empresa.gracias || GRACIAS)}</div>` : ''}${esc(pie.join('  ·  '))}</div>
-      ${CORNER_BR}
+      <div class="doc-foot"><table><tr>
+        <td>${empresa.sin_gracias !== true ? `<div class="thanks">${esc(empresa.gracias || GRACIAS)}</div>` : ''}</td>
+        <td class="contact">${esc(pie.join(' · '))}</td>
+      </tr></table></div>
+      <div class="doc-mark">${CHECK}</div>
     </div>`;
   }
 
