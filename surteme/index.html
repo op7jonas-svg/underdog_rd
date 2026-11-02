@@ -15,7 +15,7 @@
   :root {
     --bg: #FFF8EC;
     --surface: #ffffff;
-    --surface-2: #F7EFDF;
+    --surface-2: #FBF5E9;
     --text: #14215E;
     --muted: #5B6483;
     --line: #E8DFCC;
@@ -318,6 +318,14 @@
   .doc-mark { position: absolute; right: 18px; bottom: 96px; width: 130px; opacity: .07; }
   .doc-mark svg { display: block; width: 100%; height: auto; }
 
+  /* Aviso de borrador */
+  .borrador { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px;
+    background: var(--accent-soft); color: var(--accent-text); border-radius: 12px; padding: 10px 12px;
+    font-size: .9rem; font-weight: 600; line-height: 1.35; }
+  .borrador > div:first-child { flex: 1; min-width: 170px; }
+  .borrador .acc { display: flex; gap: 6px; flex-shrink: 0; }
+  .borrador b { font-weight: 800; }
+
   /* Ventas del día */
   .today-card { background: var(--accent-soft); border-color: transparent; margin-bottom: 14px; }
   .today-card .k { font-weight: 700; color: var(--accent-text); font-size: .92rem; }
@@ -478,6 +486,7 @@
 
       <form class="card" id="f-venta-rapida">
         <h3 style="font-size:1.05rem;margin-bottom:10px">Registrar una venta</h3>
+        <div class="borrador" id="vr-borrador" hidden></div>
         <div class="grid">
           <label class="field"><span>Monto (RD$) *</span><input name="monto" type="number" inputmode="decimal" step="any" min="0" required placeholder="0.00"></label>
           <label class="field" id="vr-inv-w" hidden><span>Del inventario (opcional)</span><select name="producto_id"></select></label>
@@ -532,6 +541,7 @@
         <button class="btn" id="b-empresa">Datos de mi empresa</button>
         <button class="btn primary" id="b-new-cot">+ Nueva cotización</button>
       </div>
+      <div class="borrador" id="cot-borrador" hidden></div>
       <div class="card" id="doc-setup" hidden style="margin-bottom:14px">
         <h3 style="font-size:1.1rem">Falta un paso en Supabase</h3>
         <p class="hint">Para guardar cotizaciones y facturas con el diseño de Surteme hay que preparar dos "cajones" nuevos. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
@@ -553,6 +563,7 @@
         <button class="btn" id="b-new-invoice">Subir factura</button>
         <button class="btn primary" id="b-crear-factura">+ Crear factura</button>
       </div>
+      <div class="borrador" id="fac-borrador" hidden></div>
       <div class="card" id="ab-setup" hidden style="margin-bottom:14px">
         <h3 style="font-size:1.1rem">Falta un paso para los abonos</h3>
         <p class="hint">Para anotar abonos (pagos parciales) hay que preparar un "cajón" nuevo. Copia este texto, pégalo en Supabase → <b>SQL Editor</b> y pulsa <b>Run</b>. Luego recarga la página.</p>
@@ -1173,7 +1184,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-02a"></script>
+<script src="config.js?v=2026-11-02b"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1207,7 +1218,36 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-02a';
+  const APP_VERSION = '2026-11-02b';
+
+  // ---------- Borradores ----------
+  // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
+  // recarga la página al volver de otra app, no se pierde. Caduca a las 24 h y se borra al guardar.
+  const BORRADOR_TTL = 24 * 60 * 60 * 1000;
+  const LS_BORRADOR_VENTA = 'surteme_borrador_venta', LS_BORRADOR_DOC = 'surteme_borrador_doc';
+  function leerBorrador(clave) {
+    try {
+      const crudo = localStorage.getItem(clave); if (!crudo) return null;
+      const x = JSON.parse(crudo);
+      if (!x || !x.t || Date.now() - x.t > BORRADOR_TTL) { localStorage.removeItem(clave); return null; }
+      return x;
+    } catch (e) { return null; }
+  }
+  function escribirBorrador(clave, valor) {
+    try {
+      if (valor) localStorage.setItem(clave, JSON.stringify(Object.assign({ t: Date.now() }, valor)));
+      else localStorage.removeItem(clave);
+    } catch (e) {}
+  }
+  // Con algo a medias la app no se recarga sola para actualizarse: se actualiza cuando termines.
+  function hayBorrador() { return !!(leerBorrador(LS_BORRADOR_VENTA) || leerBorrador(LS_BORRADOR_DOC)); }
+  function cuandoBorrador(t) {
+    const d = new Date(t), hoy = new Date();
+    const dia = d.toDateString() === hoy.toDateString() ? 'hoy '
+      : new Date(hoy - 864e5).toDateString() === d.toDateString() ? 'ayer '
+      : d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short' });
+    return dia + ' ' + d.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
+  }
   let ultimaRevision = 0;
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
@@ -1225,7 +1265,8 @@
   function ocupado() {
     const a = document.activeElement;
     return [...document.querySelectorAll('dialog')].some(d => d.open) || !!(a && a.matches && a.matches('input, textarea, select')) ||
-      [...document.querySelectorAll('#f-venta-rapida input:not([name=cantidad]), #f-venta-rapida [name=producto_id], #c-costo, #c-precio, #c-margen, #fu-km')].some(i => i.value);
+      [...document.querySelectorAll('#f-venta-rapida input:not([name=cantidad]), #f-venta-rapida [name=producto_id], #c-costo, #c-precio, #c-margen, #fu-km')].some(i => i.value) ||
+      hayBorrador();
   }
   revisarVersion();
 
@@ -1437,6 +1478,9 @@
     ['ventas', 'calc', 'clientes', 'cotiz', 'facturas', 'inventario', 'precios', 'suplidores', 'gastos', 'respaldo'].forEach(t => $('#t-' + t).hidden = t !== tab);
     // Precios se repinta al abrir (en diferido: sus ayudantes se declaran más abajo en el archivo)
     if (tab === 'precios') setTimeout(renderPrecios, 0);
+    // Los avisos de borrador se pintan al abrir la pestaña, aunque los datos todavía no hayan cargado
+    if (tab === 'ventas') setTimeout(aplicarBorradorVenta, 0);
+    if (tab === 'cotiz' || tab === 'facturas') setTimeout(pintarBorradoresDoc, 0);
     try { localStorage.setItem('surteme_tab', tab); } catch (e) {}
   }
 
@@ -1834,6 +1878,7 @@
     if (!facturas.length) el.innerHTML = '<div class="empty">Aún no hay facturas. Pulsa <b>+ Crear factura</b> para hacer una con el diseño de Surteme, o <b>Subir factura</b> si ya la tienes en papel o PDF.</div>';
     else if (!list.length) el.innerHTML = '<div class="empty">Ninguna factura coincide con el filtro.</div>';
     else { el.innerHTML = list.map(f => invoiceRow(f)).join(''); bindInvoiceRows(el); }
+    pintarBorradoresDoc();
   }
 
   let openInvoiceId = null, facturaNueva = null, invAntes = {};
@@ -2858,6 +2903,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     const sel = $('#f-venta-rapida').elements.cliente_id, cv = sel.value;
     ponerOpciones(sel, opcionesCliente('— Sin cliente —'));
     sel.value = activos().some(c => c.id === cv) ? cv : '';
+    aplicarBorradorVenta();
   }
 
   let vMes = today().slice(0, 7);
@@ -2952,6 +2998,7 @@ grant select, insert, update, delete on ventas to authenticated;`;
     ventaFirma = null;
     ['monto', 'descripcion', 'costo'].forEach(k => f.elements[k].value = '');
     f.elements.cliente_id.value = ''; f.elements.producto_id.value = ''; f.elements.cantidad.value = '1'; vrAuto = {}; fillNivelVenta();
+    borrarBorradorVenta();
     vMetodo = 'Efectivo';
     $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === 'Efectivo'));
     toast('Venta registrada: ' + fmt(data.monto) + (negativos.length ? '. Ojo: el inventario de ' + negativos.join(', ') + ' quedó en negativo.' : ''), !!negativos.length);
@@ -3258,6 +3305,7 @@ grant select, insert, update, delete on compras to authenticated;`;
     ponerOpciones(sel, '<option value="">— Ninguno —</option>' + inventario.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join(''));
     sel.value = inventario.some(p => p.id === v) ? v : '';
     fillNivelVenta();
+    aplicarBorradorVenta();
   }
   function fillNivelVenta() {
     const f = $('#f-venta-rapida'), p = inventario.find(x => x.id === f.elements.producto_id.value), sel = f.elements.nivel, v = sel.value;
@@ -3279,6 +3327,62 @@ grant select, insert, update, delete on compras to authenticated;`;
   $('#f-venta-rapida').elements.producto_id.addEventListener('change', () => { fillNivelVenta(); autollenarVenta(); });
   $('#f-venta-rapida').elements.nivel.addEventListener('change', autollenarVenta);
   $('#f-venta-rapida').elements.cantidad.addEventListener('input', autollenarVenta);
+
+  // ----- Borrador de la venta rápida -----
+  let bvPendiente = leerBorrador(LS_BORRADOR_VENTA), bvTextoPuesto = false, bvAplicado = false, tBV = 0;
+  function guardarBorradorVenta() {
+    const f = $('#f-venta-rapida'); if (!f) return;
+    const d = { monto: f.elements.monto.value, descripcion: f.elements.descripcion.value, costo: f.elements.costo.value,
+      cantidad: f.elements.cantidad.value, cliente_id: f.elements.cliente_id.value,
+      producto_id: f.elements.producto_id.value, nivel: f.elements.nivel.value, metodo: vMetodo };
+    const algo = ['monto', 'descripcion', 'costo'].some(k => d[k]) || d.cliente_id || d.producto_id;
+    escribirBorrador(LS_BORRADOR_VENTA, algo ? d : null);
+    bvPendiente = algo ? leerBorrador(LS_BORRADOR_VENTA) : null;
+    if (algo) mostrarBorradorVenta(); else { const el = $('#vr-borrador'); if (el) el.hidden = true; }
+  }
+  function mostrarBorradorVenta() {
+    const el = $('#vr-borrador'); if (!el) return;
+    if (!bvPendiente) { el.hidden = true; return; }
+    el.innerHTML = `<div>Borrador de ${cuandoBorrador(bvPendiente.t)} · Sigue donde lo dejaste.</div>
+      <div class="acc"><button type="button" class="btn small" id="vr-bd-x">Descartar</button></div>`;
+    el.hidden = false;
+    $('#vr-bd-x').addEventListener('click', () => {
+      const f = $('#f-venta-rapida');
+      escribirBorrador(LS_BORRADOR_VENTA, null); bvPendiente = null; bvAplicado = true;
+      ['monto', 'descripcion', 'costo'].forEach(k => f.elements[k].value = '');
+      f.elements.cliente_id.value = ''; f.elements.producto_id.value = ''; f.elements.cantidad.value = '1';
+      vrAuto = {}; fillNivelVenta(); el.hidden = true; toast('Borrador descartado');
+    });
+  }
+  function aplicarBorradorVenta() {
+    if (!bvPendiente || bvAplicado) return;
+    const f = $('#f-venta-rapida'); if (!f) return;
+    if (!bvTextoPuesto) {
+      ['monto', 'descripcion', 'costo', 'cantidad'].forEach(k => {
+        const v = bvPendiente[k]; if (v !== undefined && v !== null && v !== '') f.elements[k].value = v;
+      });
+      if (bvPendiente.metodo) {
+        vMetodo = bvPendiente.metodo;
+        $$('#vr-metodo button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === vMetodo));
+      }
+      bvTextoPuesto = true;
+    }
+    mostrarBorradorVenta();
+    // Los desplegables se llenan cuando llegan los datos: hasta que no estén, no se puede poner el cliente ni el producto
+    if (!listo.base || !(listo.inv || invTablaFalta)) return;
+    const poner = (sel, v) => { if (v && [...sel.options].some(o => o.value === v)) sel.value = v; };
+    poner(f.elements.cliente_id, bvPendiente.cliente_id);
+    poner(f.elements.producto_id, bvPendiente.producto_id);
+    if (f.elements.producto_id.value) { fillNivelVenta(); poner(f.elements.nivel, bvPendiente.nivel); }
+    vrAuto = {};
+    bvAplicado = true;
+  }
+  function borrarBorradorVenta() {
+    escribirBorrador(LS_BORRADOR_VENTA, null); bvPendiente = null; bvAplicado = true;
+    const el = $('#vr-borrador'); if (el) el.hidden = true;
+  }
+  ['input', 'change'].forEach(ev => $('#f-venta-rapida').addEventListener(ev, () => { clearTimeout(tBV); tBV = setTimeout(guardarBorradorVenta, 500); }));
+  $('#vr-metodo').addEventListener('click', () => { clearTimeout(tBV); tBV = setTimeout(guardarBorradorVenta, 500); });
 
   // ----- Al vender: los productos con su precio y lo que queda -----
   // Se abre al escribir en «¿Qué vendiste?» y al tocar uno se llena el monto, lo que costó, el empaque
@@ -3781,6 +3885,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
         <div class="amount">${montoHtml(Number(d.total))}<br><span class="badge ${badge}">${COT_ESTADO[d.estado] || d.estado}</span></div></button>`;
     }).join('');
     $$('[data-doc]', el).forEach(r => r.addEventListener('click', () => openView(r.dataset.doc)));
+    pintarBorradoresDoc();
   }
 
   // Número siguiente: 001-2026, 002-2026…
@@ -3810,6 +3915,13 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     if (faltaCargar('base', 'docs')) return;
     if (docTablaFalta) { openTab('cotiz'); toast('Primero termina el paso de Supabase que sale en Cotizaciones.', true); return; }
     if (!activos().length && !(base && base.cliente_id)) { toast('Primero agrega un cliente en la pestaña Clientes.', true); return; }
+    // Si hay otra a medias, se avisa: empezar una nueva descarta el borrador
+    const bd = leerBorrador(LS_BORRADOR_DOC);
+    if (bd && bd.doc && bd.doc.tipo === tipo) {
+      if (!confirm(`Tienes una ${TIPO[tipo].toLowerCase()} a medias. ¿Empezar una nueva? El borrador anterior se descarta.`)) return;
+      escribirBorrador(LS_BORRADOR_DOC, null);
+      pintarBorradoresDoc();
+    }
     const d = Object.assign({ tipo, fecha: today(), condiciones: empresa.condiciones || 'Contado', validez: empresa.validez || '15 días',
       notas: tipo === 'cotizacion' ? (empresa.notas_cot || '') : '', items: [], itbis: false }, base || {});
     d.tipo = tipo; d.id = null; d.numero = nextNumero(tipo, d.fecha);
@@ -3864,7 +3976,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       const it = edItems[+b.dataset.del], nombre = (it.descripcion || '').trim();
       // Si el producto ya tiene algo escrito, pregunta antes de quitarlo
       if ((nombre || (it.precio !== null && it.precio !== '' && it.precio !== undefined)) && !confirm(`¿Quitar ${nombre ? '«' + nombre + '»' : 'el producto ' + (+b.dataset.del + 1)} de la lista?`)) return;
-      edItems.splice(+b.dataset.del, 1); sucias.add($('#d-doc')); renderItems();
+      edItems.splice(+b.dataset.del, 1); sucias.add($('#d-doc')); renderItems(); guardarBorradorDoc();
     }));
     updateSums();
   }
@@ -3892,7 +4004,57 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
       (t.hayCosto ? `<div style="color:var(--muted)"><span>Tu ganancia estimada</span><b style="color:${t.ganancia < 0 ? 'var(--bad)' : 'var(--ok)'}">${montoHtml(t.ganancia)}</b></div>` : '');
   }
   $('#f-doc').elements.itbis.addEventListener('input', updateSums);
-  $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); sucias.add($('#d-doc')); renderItems(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
+  // ----- Borrador de la cotización / factura -----
+  let tBD = 0;
+  function guardarBorradorDoc() {
+    if (!edDoc) return;
+    // Se copia lo que hay AHORA en la ventana: edDoc es lo que se abrió, no lo que llevas escrito
+    const doc = Object.assign({}, edDoc), f = $('#f-doc');
+    if (f && $('#d-doc').open) {
+      doc.numero = f.elements.numero.value.trim() || doc.numero;
+      doc.fecha = f.elements.fecha.value || doc.fecha;
+      doc.condiciones = f.elements.condiciones.value.trim();
+      doc.validez = f.elements.validez.value.trim();
+      doc.ncf = f.elements.ncf.value.trim();
+      doc.notas = f.elements.notas.value;
+      doc.itbis = f.elements.itbis.checked;
+      const sel = f.elements.cliente_id;
+      if (sel.value && [...sel.options].some(o => o.value === sel.value)) {
+        const c = clientes.find(x => x.id === sel.value);
+        doc.cliente_id = sel.value;
+        doc.cliente_nombre = c ? c.nombre : doc.cliente_nombre;
+        doc.cliente_rnc = c ? c.rnc : doc.cliente_rnc;
+      }
+    }
+    escribirBorrador(LS_BORRADOR_DOC, { doc, items: edItems.map(x => Object.assign({}, x)) });
+    pintarBorradoresDoc();
+  }
+  function limpiarBorradorDoc() { escribirBorrador(LS_BORRADOR_DOC, null); pintarBorradoresDoc(); }
+  function pintarBorradoresDoc() {
+    const b = leerBorrador(LS_BORRADOR_DOC);
+    [['cot', 'cotizacion'], ['fac', 'factura']].forEach(([pref, tipo]) => {
+      const el = $('#' + pref + '-borrador'); if (!el) return;
+      if (!b || !b.doc || b.doc.tipo !== tipo) { el.hidden = true; el.innerHTML = ''; return; }
+      const n = (b.items || []).filter(x => (x.descripcion || '').trim()).length;
+      el.innerHTML = `<div><b>${tipo === 'cotizacion' ? 'Cotización' : 'Factura'} a medias</b> · ${esc(b.doc.cliente_nombre || 'sin cliente')} · ${n} ${n === 1 ? 'producto' : 'productos'} · ${cuandoBorrador(b.t)}</div>
+        <div class="acc"><button type="button" class="btn small primary" data-bd="seguir">Continuar</button><button type="button" class="btn small" data-bd="tirar">Descartar</button></div>`;
+      el.hidden = false;
+      el.querySelector('[data-bd="seguir"]').addEventListener('click', continuarBorradorDoc);
+      el.querySelector('[data-bd="tirar"]').addEventListener('click', () => { limpiarBorradorDoc(); toast('Borrador descartado'); });
+    });
+  }
+  function continuarBorradorDoc() {
+    const b = leerBorrador(LS_BORRADOR_DOC); if (!b || !b.doc) return;
+    const d = Object.assign({}, b.doc, { items: b.items || [] });
+    // Si ese documento ya no existe (lo borraron en el otro teléfono), se abre como nuevo para que al guardar no falle
+    if (d.id && listo.docs && !documentos.some(x => x.id === d.id)) {
+      d.id = null; d.idNuevo = null; d.factura_id = null; delete d.estado;
+      d.numero = nextNumero(d.tipo, d.fecha || today());
+    }
+    openEditor(d);
+  }
+
+  $('#dd-add').addEventListener('click', () => { edItems.push(blankItem()); sucias.add($('#d-doc')); renderItems(); guardarBorradorDoc(); const ins = $$('#dd-items input[data-k=descripcion]'); ins[ins.length - 1].focus(); });
 
   // Elegir de la lista de precios de los suplidores
   let pickModo = 'doc-sup';  // doc-sup: producto de la cotización desde Suplidores · doc-inv: desde el inventario · inv-sup: producto nuevo del inventario desde Suplidores
@@ -4093,6 +4255,7 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
         const o = await sb.from('documentos').update({ estado: 'aceptada' }).eq('id', edDoc.origen_id);
         if (o.error) { malo = true; avisos.push('No se pudo marcar la cotización como «Aceptada» (revisa tu internet), pero ya no se puede volver a convertir.'); }
       }
+      limpiarBorradorDoc();
       $('#d-doc').close();
       const msg = TIPO[data.tipo] + ' guardada' + (vuelve ? `. Vuelve a «Pendiente»: faltan ${fmt(vuelve)}` : '');
       toast(avisos.length ? msg + '. ' + avisos.join(' ') : msg, malo, avisos.length ? 8000 : 0);
@@ -4346,9 +4509,18 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
   $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
   $$('dialog').forEach(d => {
     let abajo = null, reabrir = false;
-    const salir = () => !sucias.has(d) || confirm('¿Salir sin guardar? Se perderá lo que escribiste.');
-    if (!LECTURA.includes(d.id)) ['input', 'change'].forEach(ev => d.addEventListener(ev, e => { if (e.target.id !== 'dd-margen') sucias.add(d); }));
-    d.addEventListener('close', () => { if (reabrir) { reabrir = false; d.showModal(); } else sucias.delete(d); });
+    const salir = () => !sucias.has(d) || confirm(d.id === 'd-doc'
+      ? '¿Cerrar sin guardar? Lo escrito queda en el borrador, no se pierde.' : '¿Salir sin guardar? Se perderá lo que escribiste.');
+    if (!LECTURA.includes(d.id)) ['input', 'change'].forEach(ev => d.addEventListener(ev, e => {
+      if (e.target.id === 'dd-margen') return;
+      sucias.add(d);
+      if (d.id === 'd-doc') { clearTimeout(tBD); tBD = setTimeout(guardarBorradorDoc, 400); }
+    }));
+    d.addEventListener('close', () => {
+      if (reabrir) { reabrir = false; d.showModal(); return; }
+      sucias.delete(d);
+      if (d.id === 'd-doc') pintarBorradoresDoc();
+    });
     // Solo cuenta como «tocar fuera» si el dedo también bajó fuera (así, seleccionar texto arrastrando no la cierra)
     d.addEventListener('pointerdown', e => { abajo = e.target; });
     d.addEventListener('click', e => { const fuera = e.target === d && (!abajo || abajo === d); abajo = null; if (fuera && salir()) d.close(); });
