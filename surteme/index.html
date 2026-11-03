@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Súrteme · Gestión</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#FFF8EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0C1330" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" sizes="32x32" href="icono-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="icono-48.png">
@@ -13,6 +13,14 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-title" content="Súrteme">
 <meta name="application-name" content="Súrteme">
+<script>
+  // Apariencia: clara por defecto (el blanco de la marca). Se puede cambiar en Opciones y se guarda solo en este teléfono.
+  try {
+    var temaGuardado = localStorage.getItem('surteme_tema');
+    if (temaGuardado === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', temaGuardado === 'oscuro' ? 'dark' : 'light');
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Titan+One&display=swap" rel="stylesheet">
@@ -754,6 +762,15 @@
   <div class="dlg-head"><h3>Opciones</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
   <div class="dlg-body">
     <form id="f-opc">
+      <div class="field full" style="margin-bottom:16px">
+        <span style="display:block;font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:5px">Apariencia</span>
+        <div class="seg" id="opc-tema" role="group">
+          <button type="button" data-tema="claro" aria-pressed="true">Claro</button>
+          <button type="button" data-tema="oscuro" aria-pressed="false">Oscuro</button>
+          <button type="button" data-tema="auto" aria-pressed="false">Como el teléfono</button>
+        </div>
+        <p class="hint" style="margin:6px 0 0">Es solo de este teléfono: no cambia el de tu esposa.</p>
+      </div>
       <p class="hint" style="margin:0 0 14px">Una por línea. Lo que escribas aquí sale en las listas de toda la app, y vale en los dos teléfonos.</p>
       <label class="field full"><span>Categorías de gasto</span><textarea name="cats" rows="7"></textarea></label>
       <label class="field full"><span>Métodos de pago</span><textarea name="metodos" rows="5"></textarea></label>
@@ -1191,7 +1208,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-02e"></script>
+<script src="config.js?v=2026-11-02f"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1225,7 +1242,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-02e';
+  const APP_VERSION = '2026-11-02f';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -4494,6 +4511,27 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
 
   // ---------- Ventana «Opciones» ----------
   const OPC_AYUDA = l => (l || []).join('\n');
+  // ---------- Apariencia ----------
+  const temaGuardado = () => { try { return localStorage.getItem('surteme_tema') || 'claro'; } catch (e) { return 'claro'; } };
+  function pintarBarra(t) {
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.remove());
+    const m = document.createElement('meta'); m.name = 'theme-color';
+    m.content = t === 'oscuro' ? '#0C1330' : '#FFFFFF';
+    document.head.appendChild(m);
+  }
+  function pintarTemaBotones() {
+    const t = temaGuardado();
+    $$('#opc-tema button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tema === t)));
+  }
+  function aplicarTema(t) {
+    try { localStorage.setItem('surteme_tema', t); } catch (e) {}
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t === 'oscuro' ? 'dark' : 'light');
+    pintarBarra(t); pintarTemaBotones();
+  }
+  $$('#opc-tema button').forEach(b => b.addEventListener('click', () => aplicarTema(b.dataset.tema)));
+  pintarBarra(temaGuardado()); pintarTemaBotones();
+
   $('#b-opc').addEventListener('click', () => {
     const f = $('#f-opc');
     f.elements.cats.value = OPC_AYUDA(catsGasto());
