@@ -18,12 +18,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Titan+One&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #FFF8EC;
+    --bg: #FFFFFF;
     --surface: #ffffff;
-    --surface-2: #FBF5E9;
+    --surface-2: #F5F6FA;
     --text: #14215E;
     --muted: #5B6483;
-    --line: #E8DFCC;
+    --line: #E7E9F1;
     --accent: #2442D6;
     --accent-hover: #1B34AE;
     --accent-soft: #E6E9FB;
@@ -89,7 +89,7 @@
   }
   .top-row { display: flex; align-items: center; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; }
-  .brand img { height: 32px; width: auto; display: block; }
+  .brand img { height: 42px; width: auto; display: block; }
   .brand .lg-oscuro { display: none; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .brand .lg-claro { display: none; }
@@ -376,7 +376,7 @@
   .center-screen { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
   .login { width: min(400px, 100%); }
   .login .brand { justify-content: center; font-size: 1.5rem; margin-bottom: 6px; }
-  .login .brand img { height: 46px; }
+  .login .brand img { height: 54px; }
   .login p.lead { text-align: center; color: var(--muted); margin: 0 0 18px; }
   .login .field + .field { margin-top: 12px; }
   .login .btn { width: 100%; margin-top: 16px; }
@@ -1191,7 +1191,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-02d"></script>
+<script src="config.js?v=2026-11-02e"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1225,7 +1225,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-02d';
+  const APP_VERSION = '2026-11-02e';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
