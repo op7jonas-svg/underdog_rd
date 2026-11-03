@@ -1208,7 +1208,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-02g"></script>
+<script src="config.js?v=2026-11-02h"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1242,7 +1242,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-02g';
+  const APP_VERSION = '2026-11-02h';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -1273,6 +1273,17 @@
     return dia + ' ' + d.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
   }
   let ultimaRevision = 0;
+  // Dirección para recargar con el HTML fresco: se le quita cualquier ?v= viejo (y cualquier otro parámetro que
+  // ya no sirva). Así la barra queda limpia y el marcador del teléfono no hay que cambiarlo nunca más.
+  function sinCache(href) {
+    const u = new URL(href);
+    u.searchParams.delete('v');
+    return u.toString();
+  }
+  function recorder(destino) {
+    try { location.replace(destino); }
+    catch (e) { location.href = destino; }  // navegadores que no dejan reemplazar el historial
+  }
   function revisarVersion() {
     if (Date.now() - ultimaRevision < 5000) return;  // al volver llegan dos avisos juntos (pantalla y foco): basta una vez
     ultimaRevision = Date.now();
@@ -1281,7 +1292,8 @@
       // Nunca recarga con algo a medio escribir: lo intenta otra vez la próxima vez que vuelvas a la app
       if (v && v !== APP_VERSION && !sessionStorage.getItem('surteme_upd_' + v) && !ocupado()) {
         sessionStorage.setItem('surteme_upd_' + v, '1');
-        location.replace(location.pathname + '?v=' + encodeURIComponent(v));
+        // Nunca con ?v= en la barra: el marcador tiene que seguir sirviendo para siempre
+        recorder(sinCache(location.href));
       }
     }).catch(() => {});
   }
