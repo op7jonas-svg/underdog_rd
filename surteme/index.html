@@ -1228,7 +1228,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-03b"></script>
+<script src="config.js?v=2026-11-03c"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1262,7 +1262,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-03b';
+  const APP_VERSION = '2026-11-03c';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -3396,16 +3396,24 @@ grant select, insert, update, delete on compras to authenticated;`;
     pintarListaPrecios();
   });
 
+  // Cómo se dice la presentación en la calle: «caja 10 × 100», «paquete × 50», «unidad»
+  function presTxt(p, n) {
+    const e = p.empaque, paq = nPos(p.paquetes), uni = nPos(p.unidades);
+    if (e === 'fardo' || e === 'caja') return cap(n.nombres[0]) + (paq && uni ? ` ${cantTxt(paq)} × ${cantTxt(uni)}` : uni ? ` × ${cantTxt(uni)}` : '');
+    if (e === 'paquete') return 'Paquete' + (uni ? ` × ${cantTxt(uni)}` : '');
+    return cap(n.nombres[0]);
+  }
   function listaPreciosHTML(items) {
     const hoy = new Date().toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' });
     const filas = items.map((p, i) => {
       const n0 = niveles(p)[0], pr = prPrecio(p, 'empaque');
       const otros = niveles(p).slice(1).map(n => {
         const x = prPrecio(p, n.k);
-        return Number.isFinite(x) ? `<span>${cap(n.nombres[0])} · ${rd(x)}</span>` : '';
+        const cuantos = n.factor > 1 ? ` × ${cantTxt(n.factor)}` : '';
+        return Number.isFinite(x) ? `<span>${cap(n.nombres[0])}${cuantos} · ${rd(x)}</span>` : '';
       }).join('');
       return `<tr><td class="n">${i + 1}</td><td class="d"><b>${esc(p.nombre)}</b>${otros}</td>
-        <td class="q">${esc(n0.nombres[0])}</td><td class="p">${Number.isFinite(pr) ? rd(pr) : '—'}</td></tr>`;
+        <td class="q" style="white-space:normal;font-size:12px;line-height:1.3">${esc(presTxt(p, n0))}</td><td class="p">${Number.isFinite(pr) ? rd(pr) : '—'}</td></tr>`;
     }).join('');
     const pie = [empresa.telefono && 'Tel. ' + empresa.telefono, empresa.rnc && 'RNC ' + empresa.rnc, empresa.direccion, empresa.correo].filter(Boolean);
     return `<div class="doc"><div class="doc-top"></div>
