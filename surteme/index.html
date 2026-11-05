@@ -641,6 +641,9 @@
         <div class="chips" id="pr-chips"></div>
         <div class="grid" style="margin-top:12px">
           <label class="field" style="max-width:220px"><span>Otro % (a mano)</span><input id="pr-pct" type="number" inputmode="decimal" step="any" min="0" placeholder="30"></label>
+          <div class="field" style="display:flex;align-items:flex-end">
+            <button type="button" class="btn" id="b-lista-prec">Lista de precios para el cliente (PDF)</button>
+          </div>
         </div>
         <p class="hint" id="pr-resumen"></p>
       </div>
@@ -1160,6 +1163,23 @@
   </div>
 </dialog>
 
+<!-- Ventana: lista de precios para el cliente -->
+<dialog id="d-lista-prec" class="wide">
+  <div class="dlg-head"><h3 id="lp-title">Lista de precios</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
+  <div class="dlg-body">
+    <p class="hint" style="margin:0 0 10px">Solo salen los precios de venta: <b>nunca</b> lo que te cuesta ni tu porcentaje.</p>
+    <input class="search" id="lp-q" type="search" placeholder="Buscar producto…" style="margin-bottom:10px">
+    <label class="check" style="margin:0 0 8px"><input type="checkbox" id="lp-todos" checked> Seleccionar todos</label>
+    <div class="list" id="lp-list" style="max-height:44vh;overflow:auto"></div>
+    <div class="actions">
+      <span class="hint" id="lp-cuenta" style="align-self:center;margin:0"></span>
+      <span class="push"></span>
+      <button type="button" class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="lp-go">Generar PDF</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- Ventana: ver / compartir documento -->
 <dialog id="d-view" class="wide">
   <div class="dlg-head"><h3 id="dv2-title">Documento</h3><button class="x" data-close aria-label="Cerrar">×</button></div>
@@ -1208,7 +1228,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-02h"></script>
+<script src="config.js?v=2026-11-03a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1242,7 +1262,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-02h';
+  const APP_VERSION = '2026-11-03a';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -3335,6 +3355,118 @@ grant select, insert, update, delete on compras to authenticated;`;
     renderPrecios();
   });
   pintarChipsPrecios();
+
+  // ----- Lista de precios para el cliente (PDF) -----
+  // Se arma con el % que esté puesto arriba. El cliente ve el precio final, no el costo ni el margen.
+  let lpSel = new Set();
+  const lpFiltrados = () => { const q = norm($('#lp-q').value); return inventario.filter(p => !q || norm(p.nombre).includes(q)); };
+  function lpCuenta() {
+    const n = lpSel.size;
+    $('#lp-cuenta').textContent = n + (n === 1 ? ' producto elegido' : ' productos elegidos');
+  }
+  function pintarListaPrecios() {
+    const el = $('#lp-list'), list = lpFiltrados();
+    $('#lp-title').textContent = 'Lista de precios · ' + prPctTxt();
+    el.innerHTML = list.map(p => {
+      const n0 = niveles(p)[0], pr = prPrecio(p, 'empaque');
+      return `<label class="check" style="display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line)">
+        <input type="checkbox" data-lp-id="${p.id}" ${lpSel.has(p.id) ? 'checked' : ''}>
+        <span style="flex:1;min-width:0"><b>${esc(p.nombre)}</b><br><span class="hint" style="margin:0">por ${esc(n0.nombres[0])}</span></span>
+        <b style="white-space:nowrap">${Number.isFinite(pr) ? montoHtml(pr) : '—'}</b></label>`;
+    }).join('') || '<div class="empty">No hay productos con esa búsqueda.</div>';
+    $$('[data-lp-id]', el).forEach(c => c.addEventListener('change', () => {
+      c.checked ? lpSel.add(c.dataset.lpId) : lpSel.delete(c.dataset.lpId);
+      $('#lp-todos').checked = inventario.length > 0 && lpSel.size === inventario.length;
+      lpCuenta();
+    }));
+    lpCuenta();
+  }
+  function abrirListaPrecios() {
+    if (invTablaFalta) return toast('Primero termina el paso de Supabase que sale en Inventario.', true);
+    if (!inventario.length) return toast('Aún no hay productos en Inventario.', true);
+    lpSel = new Set(inventario.map(p => p.id));
+    $('#lp-q').value = ''; $('#lp-todos').checked = true;
+    pintarListaPrecios();
+    $('#d-lista-prec').showModal();
+  }
+  $('#b-lista-prec').addEventListener('click', abrirListaPrecios);
+  $('#lp-q').addEventListener('input', pintarListaPrecios);
+  $('#lp-todos').addEventListener('change', e => {
+    lpSel = e.target.checked ? new Set(inventario.map(p => p.id)) : new Set();
+    pintarListaPrecios();
+  });
+
+  function listaPreciosHTML(items) {
+    const hoy = new Date().toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' });
+    const filas = items.map((p, i) => {
+      const n0 = niveles(p)[0], pr = prPrecio(p, 'empaque');
+      const otros = niveles(p).slice(1).map(n => {
+        const x = prPrecio(p, n.k);
+        return Number.isFinite(x) ? `<span>${cap(n.nombres[0])} · ${rd(x)}</span>` : '';
+      }).join('');
+      return `<tr><td class="n">${i + 1}</td><td class="d"><b>${esc(p.nombre)}</b>${otros}</td>
+        <td class="q">${esc(n0.nombres[0])}</td><td class="p">${Number.isFinite(pr) ? rd(pr) : '—'}</td></tr>`;
+    }).join('');
+    const pie = [empresa.telefono && 'Tel. ' + empresa.telefono, empresa.rnc && 'RNC ' + empresa.rnc, empresa.direccion, empresa.correo].filter(Boolean);
+    return `<div class="doc"><div class="doc-top"></div>
+      <table class="doc-head"><tr>
+        <td class="doc-logo"><img src="logo-doc.png" alt="Súrteme" onerror="this.outerHTML='<div class=&quot;alt&quot;>Súrteme</div>'"></td>
+        <td class="doc-meta"><h1>LISTA DE PRECIOS</h1><div class="doc-num">${esc(hoy)}</div>
+          <table><tr><td class="k">Precios</td><td class="v">sujetos a cambio</td></tr></table></td>
+      </tr></table>
+      <table class="doc-items"><thead><tr><th>#</th><th>Producto</th><th>Presentación</th><th>Precio</th></tr></thead><tbody>${filas}</tbody></table>
+      <div class="doc-notes">Precios en pesos dominicanos, sujetos a cambio sin previo aviso. Confirma disponibilidad al hacer tu pedido.</div>
+      <div class="doc-foot"><table><tr>
+        <td><div class="thanks">¡A la orden!</div></td>
+        <td class="contact">${esc(pie.join(' · '))}</td>
+      </tr></table></div>
+      <div class="doc-mark">${CHECK}</div>
+    </div>`;
+  }
+
+  async function generarListaPrecios() {
+    const items = inventario.filter(p => lpSel.has(p.id)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    if (!items.length) return toast('Elige al menos un producto.', true);
+    const btn = $('#lp-go'); if (btn.disabled) return;
+    btn.disabled = true; btn.textContent = 'Generando…';
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      const box = $('#doc-capture');
+      box.innerHTML = listaPreciosHTML(items);
+      const img = $('img', box);
+      if (img) {
+        try { if (img.decode) await img.decode(); } catch (e) {}
+        if (!img.complete || !img.naturalWidth) await new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 2500); });
+      }
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const el = $('.doc', box);
+      const scale = Math.min(2, Math.sqrt(16e6 / (816 * Math.max(1056, el.offsetHeight))));
+      const canvas = await window.html2canvas(el, { scale, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      box.innerHTML = '';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      const pdf = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+      const pw = 612, ph = 792, pagePx = Math.floor(canvas.width * ph / pw), fullH = canvas.height * pw / canvas.width;
+      const jpeg = c => c.toDataURL('image/jpeg', 0.92);
+      if (fullH <= ph * 1.45) {
+        const k = Math.min(1, ph / fullH);
+        pdf.addImage(jpeg(canvas), 'JPEG', (pw - pw * k) / 2, 0, pw * k, fullH * k);
+      } else for (let y = 0, page = 0; y < canvas.height; y += pagePx, page++) {
+        const h = Math.min(pagePx, canvas.height - y);
+        const part = document.createElement('canvas'); part.width = canvas.width; part.height = h;
+        const ctx = part.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, h); ctx.drawImage(canvas, 0, -y);
+        if (page) pdf.addPage();
+        pdf.addImage(jpeg(part), 'JPEG', 0, 0, pw, h * pw / canvas.width);
+      }
+      pdf.save('Surteme-Lista-Precios-' + today() + '.pdf');
+      $('#d-lista-prec').close();
+      toast('Lista lista: ' + items.length + (items.length === 1 ? ' producto' : ' productos'));
+    } catch (e) {
+      toast('No se pudo generar la lista. Revisa el internet e intenta otra vez.', true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Generar PDF';
+    }
+  }
+  $('#lp-go').addEventListener('click', generarListaPrecios);
 
   // Sugerencias al escribir «¿Qué vendiste?»: lo que ya has vendido (lo más reciente primero) y los productos del inventario
   function fillVendido() {
