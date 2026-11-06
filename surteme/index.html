@@ -1228,7 +1228,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-03c"></script>
+<script src="config.js?v=2026-11-03d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1262,7 +1262,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-03c';
+  const APP_VERSION = '2026-11-03d';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -3303,8 +3303,20 @@ grant select, insert, update, delete on compras to authenticated;`;
   // «¿Qué % le quieres ganar?» en el diálogo del producto, para que los números cuadren.
   const PR_PCTS = [10, 15, 20, 25, 30, 35, 40, 50];
   let prPct = 30, prAbierto = null;
+  // % propio de un producto (si no tiene, se usa el general). Se guarda en «ajustes» y vale en los dos teléfonos.
+  let MARGENES = {};
   const prPctTxt = () => cantTxt(round2(prPct)) + '%';
-  const prPrecio = (p, k) => { const c = costoDe(p, k); return Number.isFinite(c) && c > 0 ? round2(c * (1 + prPct / 100)) : NaN; };
+  const pctDe = p => { const v = Number(MARGENES[p.id]); return Number.isFinite(v) && v >= 0 ? v : prPct; };
+  const tienePropio = p => Object.prototype.hasOwnProperty.call(MARGENES, p.id);
+  const prPrecio = (p, k) => { const c = costoDe(p, k); return Number.isFinite(c) && c > 0 ? round2(c * (1 + pctDe(p) / 100)) : NaN; };
+  let tMargen = 0;
+  function guardarMargen() {
+    clearTimeout(tMargen);
+    tMargen = setTimeout(async () => {
+      const { error } = await sb.from('ajustes').upsert({ clave: 'margenes', valor: MARGENES, actualizado: new Date().toISOString() });
+      if (error) toast('No se pudo guardar el % del producto. Revisa el internet.', true);
+    }, 500);
+  }
   function pintarChipsPrecios() {
     const el = $('#pr-chips'); if (!el) return;
     el.innerHTML = PR_PCTS.map(n => `<button type="button" data-pct="${n}" aria-pressed="${n === prPct}">${n}%</button>`).join('');
@@ -3327,13 +3339,19 @@ grant select, insert, update, delete on compras to authenticated;`;
       </div>`;
     }).join('');
     const eq = equivTxt(p);
-    return `<div style="background:var(--surface-2);border-radius:12px;padding:4px 14px 10px">${filas}
+    const propio = tienePropio(p);
+    const campo = `<div style="display:flex;align-items:center;gap:8px;padding:10px 0 8px;border-top:1px solid var(--line)">
+      <span style="flex:1;font-size:.9rem;color:var(--muted);font-weight:600">Tu % en este producto</span>
+      ${propio ? `<button type="button" class="btn small" data-margen-quitar="${p.id}" style="min-height:32px;padding:4px 8px;font-size:.8rem">Usar el general</button>` : ''}
+      <input type="number" inputmode="decimal" step="any" min="0" data-margen="${p.id}" value="${cantTxt(round2(pctDe(p)))}" aria-label="Porcentaje de ganancia de este producto" style="width:82px;min-height:36px;padding:6px 8px;text-align:right">
+      <span style="font-weight:700">%</span></div>`;
+    return `<div style="background:var(--surface-2);border-radius:12px;padding:4px 14px 10px">${campo}${filas}
       <div style="color:var(--muted);font-size:.85rem;padding-top:8px">Quedan ${esc(stockTxt(p))}${eq ? ' · ' + esc(eq) : ''}</div></div>`;
   }
   function renderPrecios() {
     const el = $('#l-precios'); if (!el) return;
     const res = $('#pr-resumen');
-    if (res) res.innerHTML = `Precios con <b>${esc(prPctTxt())}</b> sobre el costo. Es solo una vista previa: <b>no cambia ni guarda</b> ningún precio.`;
+    if (res) res.innerHTML = `Precios con <b>${esc(prPctTxt())}</b> sobre el costo. Toca un producto para ponerle <b>su propio %</b> (se guarda). Sigue siendo una vista previa: <b>no cambia</b> ningún precio.`;
     if (invTablaFalta) { el.innerHTML = ''; return; }
     if (!inventario.length) { el.innerHTML = '<div class="empty">Aún no hay productos: se cargan en <b>Inventario</b>.</div>'; return; }
     const ws = palabras($('#s-precios').value);
@@ -3347,6 +3365,19 @@ grant select, insert, update, delete on compras to authenticated;`;
         + (abierto ? detallePrecios(p) : '');
     }).join('');
     $$('[data-pr]', el).forEach(b => b.addEventListener('click', () => { prAbierto = prAbierto === b.dataset.pr ? null : b.dataset.pr; renderPrecios(); }));
+    $$('[data-margen]', el).forEach(inp => {
+      const p = inventario.find(x => x.id === inp.dataset.margen); if (!p) return;
+      inp.addEventListener('change', () => {
+        const t = inp.value.trim(), v = Number(t);
+        if (t === '') { delete MARGENES[p.id]; }
+        else if (!Number.isFinite(v) || v < 0) { toast('Escribe un porcentaje válido.', true); return; }
+        else MARGENES[p.id] = v;
+        guardarMargen(); renderPrecios();
+      });
+    });
+    $$('[data-margen-quitar]', el).forEach(b => b.addEventListener('click', e => {
+      e.stopPropagation(); delete MARGENES[b.dataset.margenQuitar]; guardarMargen(); renderPrecios();
+    }));
   }
   $('#s-precios').addEventListener('input', renderPrecios);
   $('#pr-pct').addEventListener('input', () => {
@@ -3366,7 +3397,7 @@ grant select, insert, update, delete on compras to authenticated;`;
   }
   function pintarListaPrecios() {
     const el = $('#lp-list'), list = lpFiltrados();
-    $('#lp-title').textContent = 'Lista de precios · ' + prPctTxt();
+    $('#lp-title').textContent = 'Lista de precios para el cliente';
     el.innerHTML = list.map(p => {
       const n0 = niveles(p)[0], pr = prPrecio(p, 'empaque');
       return `<label class="check" style="display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line)">
@@ -4051,6 +4082,9 @@ grant select, insert, update, delete on documentos, ajustes to authenticated;`;
     $('#b-empresa').hidden = docTablaFalta;
     documentos = d.error ? [] : d.data;
     empresa = ((a.data || []).find(x => x.clave === 'empresa') || {}).valor || {};
+    const margGuardados = (a.data || []).find(x => x.clave === 'margenes');
+    MARGENES = (margGuardados && margGuardados.valor && typeof margGuardados.valor === 'object' && !Array.isArray(margGuardados.valor)) ? margGuardados.valor : {};
+    try { renderPrecios(); } catch (e) {}
     const opGuardadas = (a.data || []).find(x => x.clave === 'opciones');
     OPC = (opGuardadas && opGuardadas.valor && typeof opGuardadas.valor === 'object' && !Array.isArray(opGuardadas.valor)) ? opGuardadas.valor : {};
     try { pintarMetodos(); } catch (e) {}
