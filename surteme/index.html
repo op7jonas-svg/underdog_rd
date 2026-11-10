@@ -241,6 +241,13 @@
   /* Cotizaciones y facturas */
   .item-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface-2); }
   .item-card + .item-card { margin-top: 10px; }
+  .item-card.dudoso { border-color: #E8B44A; }
+  .item-warn { margin: -2px 0 8px; font-size: .82rem; font-weight: 600; color: var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 6px 8px; line-height: 1.35; }
+  .ocr-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 12px; background: var(--surface-2); }
+  .ocr-box.leyendo { border-color: var(--accent); }
+  .ocr-box .hint { flex: 1 1 190px; margin: 0; }
+  .ocr-box .msg-ok { color: var(--ok); font-weight: 600; }
+  .ocr-box .msg-mal { color: var(--bad); font-weight: 600; }
   .item-card .grid { gap: 8px; }
   .item-card input { min-height: 40px; padding: 8px 10px; background: var(--surface); }
   .item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; }
@@ -1039,6 +1046,10 @@
       <div class="grid" style="margin-top:12px">
         <label class="field full"><span>Factura del suplidor (foto o PDF)</span><input name="archivo" type="file" accept="application/pdf,image/*">
           <div class="file-now" id="co-file"></div></label>
+        <div class="ocr-box" id="co-ocr-box">
+          <button type="button" class="btn" id="co-ocr" disabled>Leer la factura</button>
+          <span class="hint" id="co-ocr-msg">Elige la foto o el PDF y pulsa «Leer la factura»: llena los datos para que los revises. No guarda nada solo.</span>
+        </div>
         <label class="field full"><span>Notas</span><textarea name="notas"></textarea></label>
       </div>
       <div class="actions">
@@ -1228,7 +1239,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-03d"></script>
+<script src="config.js?v=2026-11-09a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1262,7 +1273,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-03d';
+  const APP_VERSION = '2026-11-09a';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -3904,6 +3915,7 @@ grant select, insert, update, delete on compras to authenticated;`;
     const c = id ? compras.find(x => x.id === id) : null; if (id && !c) return;
     openCompraId = c ? c.id : null; compraNueva = c ? null : nuevoId();
     const f = $('#f-compra'); f.reset();
+    resetOcrCompra();
     fillProvCompra(c ? c.proveedor_id : undefined);
     f.elements.proveedor_nombre.value = c && !c.proveedor_id ? c.proveedor_nombre || '' : '';
     f.elements.fecha.value = c ? c.fecha : today();
@@ -3930,8 +3942,9 @@ grant select, insert, update, delete on compras to authenticated;`;
     const el = $('#co-items');
     el.innerHTML = coItems.map((it, i) => {
       const p = inventario.find(x => x.id === it.producto_id), ns = p ? niveles(p) : [{ k: it.nivel, nombres: ['empaque', 'empaques'], factor: it.factor || 1 }];
-      return `<div class="item-card" data-i="${i}">
+      return `<div class="item-card${it._duda ? ' dudoso' : ''}" data-i="${i}">
         <div class="item-head">${esc(it.descripcion || (p && p.nombre) || 'Producto')}<button type="button" class="x" data-del="${i}" aria-label="Quitar">×</button></div>
+        ${it._duda ? `<div class="item-warn"><b>Revisa:</b> ${esc(it._duda)}</div>` : ''}
         <div class="grid">
           <label class="field"><span>Cantidad</span><input data-k="cantidad" type="number" inputmode="decimal" step="any" min="0" value="${esc(it.cantidad ?? '')}"></label>
           <label class="field"><span>En</span><select data-k="nivel">${ns.map(n => `<option value="${n.k}"${n.k === it.nivel ? ' selected' : ''}>${esc(cap(n.nombres[1]))}</option>`).join('')}</select></label>
@@ -3963,6 +3976,244 @@ grant select, insert, update, delete on compras to authenticated;`;
     $$('#co-items [data-i]').forEach(card => { $('.tot', card).innerHTML = montoHtml(lineaCompra(coItems[+card.dataset.i])); });
     $('#co-sums').innerHTML = `<div class="t"><span>Total de la compra</span><span>${montoHtml(round2(coItems.reduce((s, it) => s + lineaCompra(it), 0)))}</span></div>`;
   }
+
+  // ---------- Leer la factura del suplidor desde una foto (borrador para revisar, nunca guarda solo) ----------
+  // La foto va a la función «leer-factura» de Supabase: ella llama a Google y devuelve los datos.
+  // Aquí se emparejan los renglones con el inventario y se llenan los campos; el dueño revisa y guarda él.
+  const OCR_LADO = 1600, OCR_MAX_PDF = 4.5e6;
+  const SIN_OCR = new Set(['del', 'los', 'las', 'con', 'para', 'por', 'una', 'uno', 'que', 'sin', 'sus', 'este', 'esta', 'the']);
+  let ocrUltima = null;
+  const rdTexto = n => 'RD$ ' + (Number(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const normOcr = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  function palabrasOcr(s) {
+    return new Set(normOcr(s).split(' ').filter(w => w && (w.length > 1 || /\d/.test(w)) && !SIN_OCR.has(w)));
+  }
+  // Peso de cada palabra: las que aparecen en muchos productos («desechable», «plastico») pesan poco;
+  // las que distinguen («contenedor», «16», «tapa») pesan más.
+  function pesosOcr() {
+    const df = new Map();
+    inventario.forEach(p => palabrasOcr(p.nombre).forEach(w => df.set(w, (df.get(w) || 0) + 1)));
+    const N = Math.max(1, inventario.length);
+    return w => Math.log(1 + N / (1 + (df.get(w) || 0)));
+  }
+  // Cuánto de lo que dice el renglón está en el nombre del producto (0 a 1)
+  function parecidoOcr(A, B, peso) {
+    if (!A.size || !B.size) return 0;
+    let com = 0, tot = 0;
+    A.forEach(w => { const p = peso(w); tot += p; if (B.has(w)) com += p; });
+    const base = tot ? com / tot : 0;
+    // Si TODAS las palabras del producto están en el renglón, es un emparejamiento fuerte
+    // (la factura suele añadir «plástico», «desechable» y cosas así)
+    let todas = B.size >= 2;
+    B.forEach(w => { if (!A.has(w)) todas = false; });
+    return todas ? Math.max(base, 0.9) : base;
+  }
+  // Lo que este suplidor ya tiene en Precios, los códigos que ya aprendió de compras anteriores
+  // y, de respaldo, todo el inventario
+  function candidatosOcr(provId) {
+    const out = [], vistos = new Set();
+    const uno = () => 1;
+    // Nombres del inventario ya normalizados: comparar 194 productos por cada precio sería lento en el teléfono
+    const inv = inventario.map(p => ({ p, n: normOcr(p.nombre), tok: palabrasOcr(p.nombre) }));
+    const porNombre = new Map(inv.map(x => [x.n, x.p]));
+    // Códigos que quedaron guardados en compras anteriores: la próxima vez emparejan solos
+    const refs = new Map();
+    compras.forEach(c => (c.items || []).forEach(it => {
+      if (!it || !it.codigo || !it.producto_id) return;
+      const k = normOcr(it.codigo);
+      if (!k || refs.has(k)) return;
+      const p = inventario.find(x => x.id === it.producto_id);
+      if (p) refs.set(k, p);
+    }));
+    refs.forEach((p, k) => {
+      if (vistos.has(p.id)) return;
+      vistos.add(p.id);
+      out.push({ p, ref: k, tokTexto: palabrasOcr(p.nombre), tokNombre: palabrasOcr(p.nombre) });
+    });
+    precios.forEach(r => {
+      if (provId && r.proveedor_id !== provId) return;
+      let p = porNombre.get(normOcr(r.producto));
+      if (!p) {
+        const tokR = palabrasOcr(r.producto);
+        let mejor = 0;
+        for (const x of inv) { const s = parecidoOcr(tokR, x.tok, uno); if (s > mejor) { mejor = s; p = x.p; } }
+        if (mejor < 0.8) p = null;
+      }
+      if (!p || vistos.has(p.id)) return;
+      vistos.add(p.id);
+      const texto = [r.producto, r.descripcion, r.referencia].filter(Boolean).join(' ');
+      out.push({ p, ref: r.referencia || '', tokTexto: palabrasOcr(texto), tokNombre: palabrasOcr(p.nombre) });
+    });
+    inventario.forEach(p => {
+      if (vistos.has(p.id)) return;
+      vistos.add(p.id);
+      out.push({ p, ref: '', tokTexto: palabrasOcr(p.nombre), tokNombre: palabrasOcr(p.nombre) });
+    });
+    return out;
+  }
+  function puntajeOcr(ln, c, tokLinea, peso) {
+    const cod = normOcr(ln.codigo), ref = normOcr(c.ref);
+    if (cod && ref && cod === ref) return 1;                          // el código del suplidor es la vía segura
+    if (cod && ref && (ref.indexOf(cod) >= 0 || cod.indexOf(ref) >= 0)) return 0.92;
+    return Math.max(parecidoOcr(tokLinea, c.tokNombre, peso), parecidoOcr(tokLinea, c.tokTexto, peso));
+  }
+  // Qué nivel del producto (fardo, caja, paquete, unidad) corresponde al renglón de la factura
+  function nivelOcr(p, presentacion, unidades) {
+    const ns = niveles(p), u = Number(unidades) || 0;
+    if (u > 0) { const n = ns.find(x => Math.abs(x.factor - u) < 0.01); if (n) return { k: n.k, aviso: '' }; }
+    const t = normOcr(presentacion);
+    let k = null;
+    if (/fardo/.test(t)) k = 'empaque';
+    else if (/caja/.test(t)) k = p.empaque === 'caja' ? 'empaque' : (ns.some(n => n.k === 'paquete') ? 'paquete' : 'empaque');
+    else if (/paquete|paq/.test(t)) k = ns.some(n => n.k === 'paquete') ? 'paquete' : null;
+    else if (/unidad|unid/.test(t)) k = ns.some(n => n.k === 'unidad') ? 'unidad' : null;
+    k = k || ns[0].k;
+    const n = nivelDe(p, k);
+    const aviso = (u > 0 && Math.abs(n.factor - u) > 0.01)
+      ? `La factura dice ${cantTxt(u)} unidades por ${presentacion || 'presentación'} y tu producto tiene ${cantTxt(n.factor)} por ${n.nombres[0]}. Revisa la cantidad.`
+      : '';
+    return { k, aviso };
+  }
+  function aplicarLecturaOcr(datos) {
+    const f = $('#f-compra'), msg = $('#co-ocr-msg'), dudas = [];
+    ocrUltima = datos;
+
+    // Suplidor: por nombre exacto o por contención («PLASTIFAR, S.R.L.» → «Plastifar»)
+    const nomProv = normOcr(datos.proveedor);
+    let prov = proveedores.find(x => normOcr(x.nombre) === nomProv);
+    if (!prov && nomProv) prov = proveedores.find(x => normOcr(x.nombre) && (nomProv.indexOf(normOcr(x.nombre)) >= 0 || normOcr(x.nombre).indexOf(nomProv) >= 0));
+    if (prov) fillProvCompra(prov.id);
+    else if (datos.proveedor) {
+      fillProvCompra('');
+      f.elements.proveedor_nombre.value = datos.proveedor;
+      dudas.push(`No reconocí el suplidor «${datos.proveedor}»: elige uno en la lista o déjalo escrito.`);
+    } else {
+      fillProvCompra('');
+      dudas.push('No pude leer el suplidor: elige uno en la lista.');
+    }
+
+    let fecha = datos.fecha || '';
+    const dm = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(fecha);       // 04/11/2026, como se escribe aquí
+    if (dm) fecha = `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) f.elements.fecha.value = fecha;
+    else if (datos.fecha) dudas.push('No pude leer bien la fecha: ponla tú.');
+    if (datos.numero) f.elements.numero.value = String(datos.numero).trim();
+
+    // El NCF no tiene columna en compras: queda anotado para no perderlo
+    if (datos.ncf && normOcr(f.elements.notas.value).indexOf(normOcr(datos.ncf)) < 0) {
+      f.elements.notas.value = [f.elements.notas.value.trim(), 'NCF ' + datos.ncf].filter(Boolean).join(' · ');
+    }
+
+    // ¿Ya está registrada esa misma factura?
+    if (datos.numero && prov && compras.some(c => c.proveedor_id === prov.id && normOcr(c.numero) === normOcr(datos.numero))) {
+      dudas.push(`Ya tienes una compra de ${prov.nombre} con el número ${datos.numero}. Mira si es la misma factura.`);
+    }
+
+    const lineas = (datos.items || []).filter(ln => ln && ln.descripcion);
+    if (lineas.length && coItems.length) {
+      if (confirm(`Ya hay ${coItems.length} renglón(es) escritos. ¿Los reemplazo por los ${lineas.length} que leí de la foto?`)) coItems = [];
+    }
+    const cands = candidatosOcr(prov && prov.id), peso = pesosOcr(), sinProducto = [];
+    lineas.forEach(ln => {
+      const cant = Number(ln.cantidad) || 0;
+      if (!cant) { sinProducto.push(ln); return; }
+      const tok = palabrasOcr(ln.descripcion);
+      let mejor = null, pt = 0;
+      cands.forEach(c => { const s = puntajeOcr(ln, c, tok, peso); if (s > pt) { pt = s; mejor = c; } });
+      if (!mejor || pt < 0.45) { sinProducto.push(ln); return; }
+      const niv = nivelOcr(mejor.p, ln.presentacion, ln.unidades_por_presentacion);
+      const n = nivelDe(mejor.p, niv.k);
+      const it = { producto_id: mejor.p.id, descripcion: mejor.p.nombre, nivel: n.k, factor: n.factor,
+                   cantidad: cant, costo: Number(ln.precio_unitario) > 0 ? round2(Number(ln.precio_unitario)) : null,
+                   codigo: ln.codigo ? String(ln.codigo).trim() : null };
+      const avisos = [];
+      if (pt < 0.7) avisos.push(`Lo emparejé con «${mejor.p.nombre}» (${Math.round(pt * 100)}% de parecido). Confirma que sea ese.`);
+      if (niv.aviso) avisos.push(niv.aviso);
+      if (!(Number(ln.precio_unitario) > 0)) avisos.push('No leí el precio: escríbelo tú.');
+      if (avisos.length) it._duda = avisos.join(' ');
+      coItems.push(it);
+    });
+
+    renderCoItems(); sumasCompra();
+    const suma = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0));
+    const subtotalFact = Number(datos.subtotal) || (Number(datos.total) && Number(datos.itbis) ? round2(Number(datos.total) - Number(datos.itbis)) : Number(datos.total)) || 0;
+    const partes = [`Leí ${lineas.length} renglón(es) de la factura.`];
+    const conDuda = coItems.filter(it => it._duda).length;
+    if (conDuda) partes.push(`${conDuda} renglón(es) marcado(s) para revisar antes de guardar.`);
+    if (sinProducto.length) partes.push(`${sinProducto.length} sin producto en tu inventario: ${sinProducto.slice(0, 3).map(x => x.descripcion).join(', ')}${sinProducto.length > 3 ? '…' : ''}. Agrégalos con «+ Del inventario» o «+ Producto nuevo».`);
+    if (subtotalFact) partes.push(`Mercancía según la factura: ${rdTexto(subtotalFact)}${Number(datos.itbis) ? ` (ITBIS ${rdTexto(datos.itbis)}; total ${rdTexto(datos.total)})` : ''}.`);
+    if (subtotalFact && Math.abs(suma - subtotalFact) > Math.max(1, subtotalFact * 0.01)) partes.push(`Lo emparejado suma ${rdTexto(suma)}: falta algún renglón o cambia el empaque.`);
+    dudas.forEach(d => partes.push(d));
+    (datos.dudas || []).forEach(d => partes.push(d));
+    msg.textContent = partes.join(' ');
+    msg.className = 'hint ' + (sinProducto.length || dudas.length || conDuda ? 'msg-mal' : 'msg-ok');
+    if (sinProducto.length || dudas.length || conDuda) toast('Revisa la factura leída: hay datos por confirmar.', true, 7000);
+    sucias.add(f);   // si cierra la ventana sin guardar, la app avisa
+  }
+  // La foto se reduce a 1600 px y se manda como JPEG: pesa menos y se lee igual
+  const archivoBase64 = file => new Promise((ok, mal) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1] || '');
+    r.onerror = () => mal(new Error('No se pudo leer el archivo.'));
+    r.readAsDataURL(file);
+  });
+  const imagenDeArchivo = file => new Promise((ok, mal) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('Esa foto no se pudo abrir.')); };
+    img.src = url;
+  });
+  async function prepararOcr(file) {
+    if (/^application\/pdf$/i.test(file.type)) {
+      if (file.size > OCR_MAX_PDF) throw new Error('El PDF pasa de 4.5 MB. Tómale una foto a la factura o mándalo en dos partes.');
+      return { imagen: await archivoBase64(file), tipo: 'application/pdf' };
+    }
+    if (!/^image\//i.test(file.type)) throw new Error('Ese archivo no es una foto ni un PDF.');
+    const img = await imagenDeArchivo(file);
+    const ancho = img.naturalWidth || img.width, alto = img.naturalHeight || img.height;
+    const esc = Math.min(1, OCR_LADO / Math.max(ancho, alto));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(ancho * esc)); cv.height = Math.max(1, Math.round(alto * esc));
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    return { imagen: cv.toDataURL('image/jpeg', 0.85).split(',')[1], tipo: 'image/jpeg' };
+  }
+  function resetOcrCompra() {
+    ocrUltima = null;
+    $('#co-ocr').disabled = true;
+    const m = $('#co-ocr-msg');
+    m.textContent = 'Elige la foto o el PDF y pulsa «Leer la factura»: llena los datos para que los revises. No guarda nada solo.';
+    m.className = 'hint';
+  }
+  $('#f-compra').elements.archivo.addEventListener('change', () => {
+    const file = $('#f-compra').elements.archivo.files[0];
+    $('#co-ocr').disabled = !file;
+    const m = $('#co-ocr-msg');
+    m.className = 'hint';
+    m.textContent = file ? `Listo: ${file.name}. Pulsa «Leer la factura».` : 'Elige la foto o el PDF y pulsa «Leer la factura»: llena los datos para que los revises. No guarda nada solo.';
+  });
+  $('#co-ocr').addEventListener('click', () => conBoton($('#co-ocr'), 'Leyendo…', async () => {
+    const file = $('#f-compra').elements.archivo.files[0], m = $('#co-ocr-msg');
+    if (!file) return toast('Primero elige la foto o el PDF de la factura.', true);
+    $('#co-ocr-box').classList.add('leyendo');
+    m.className = 'hint'; m.textContent = 'Leyendo la factura… puede tardar unos segundos.';
+    try {
+      const { imagen, tipo } = await prepararOcr(file);
+      const { data, error } = await sb.functions.invoke('leer-factura', { body: { imagen, tipo } });
+      if (error) throw new Error(/failed to send|failed to fetch|load failed|network/i.test(error.message || '')
+        ? 'No pude contactar el lector. Revisa el internet; si sigue, la función «leer-factura» no está publicada.'
+        : (error.message || 'El lector no respondió.'));
+      if (!data || data.error) throw new Error((data && data.error) || 'El lector no devolvió datos.');
+      if (!data.datos || !(data.datos.items || []).length) throw new Error('No reconocí renglones en esa foto. Que se vea la hoja completa y con buena luz.');
+      aplicarLecturaOcr(data.datos);
+      toast('Factura leída. Revisa los datos antes de guardar.');
+    } catch (e) {
+      m.className = 'hint msg-mal';
+      m.textContent = (e && e.message) || 'No se pudo leer la factura.';
+      toast(m.textContent, true, 8000);
+    } finally {
+      $('#co-ocr-box').classList.remove('leyendo');
+    }
+  }));
   $('#co-pick').addEventListener('click', () => {
     if (!inventario.length) return toast('Aún no hay productos en el inventario. Usa «+ Producto nuevo».', true);
     abrirPick('compra-inv');
@@ -3972,7 +4223,8 @@ grant select, insert, update, delete on compras to authenticated;`;
     e.preventDefault();
     const f = e.target, btn = $('#co-save'), file = f.elements.archivo.files[0];
     const items = coItems.filter(it => it.producto_id && Number(it.cantidad) > 0).map(it => ({ producto_id: it.producto_id, descripcion: it.descripcion, nivel: it.nivel,
-      factor: Number(it.factor) || 1, cantidad: Number(it.cantidad), costo: it.costo === null || it.costo === '' || it.costo === undefined ? null : Number(it.costo) }));
+      factor: Number(it.factor) || 1, cantidad: Number(it.cantidad), costo: it.costo === null || it.costo === '' || it.costo === undefined ? null : Number(it.costo),
+      codigo: it.codigo || null }));
     if (!items.length) return toast('Agrega al menos un producto con su cantidad.', true);
     const provId = f.elements.proveedor_id.value || null;
     const data = { fecha: f.elements.fecha.value || today(), proveedor_id: provId, proveedor_nombre: provId ? provName(provId) : f.elements.proveedor_nombre.value.trim() || null,
