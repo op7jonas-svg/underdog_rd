@@ -1,0 +1,15 @@
+{
+  "name": "Cierre de mes",
+  "short_name": "Cierre",
+  "description": "Calculadora de gastos y ganancias del mes.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#0f7b5f",
+  "icons": [
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

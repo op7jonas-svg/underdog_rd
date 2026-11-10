@@ -10,3 +10,8 @@ Resumen: **M2** sube la TV → botón rojo del control LG la enciende. Al termin
 
 - **Página:** https://op7jonas-svg.github.io/underdog_rd/surteme/
 - **Cómo dejarla lista:** ver `surteme/GUIA.md`
+
+# Cierre de mes (calculadora de gastos y ganancias)
+
+- **Página:** https://op7jonas-svg.github.io/underdog_rd/cierre/
+- No tiene que ver con Surteme. Todo se guarda solo en el teléfono (con botón para bajar una copia).
