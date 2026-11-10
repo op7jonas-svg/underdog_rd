@@ -1,0 +1,15 @@
+project_id = "underdog_rd"
+
+[functions.leer-factura]
+verify_jwt = true
+
+# Para desplegar (desde la raíz del repo, con el CLI de Supabase):
+#   supabase functions deploy leer-factura --project-ref kxkfoqnwtflsugqbbzwv
+#
+# Antes hay que guardar la llave de Google como secreto (nunca en el repo):
+#   supabase secrets set GEMINI_API_KEY=... --project-ref kxkfoqnwtflsugqbbzwv
+#
+# Probar la función ya publicada:
+#   curl -sS -X POST "https://kxkfoqnwtflsugqbbzwv.supabase.co/functions/v1/leer-factura" \
+#     -H "Authorization: Bearer <token de un usuario>" -H "Content-Type: application/json" \
+#     -d '{"imagen":"<base64>","tipo":"image/jpeg"}'
