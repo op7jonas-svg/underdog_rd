@@ -14,3 +14,9 @@ El usuario no sabe programar: explicar todo en español y de forma sencilla.
 - El usuario conectó el conector de **Supabase** en claude.ai: crear/revisar tablas directamente con las herramientas `mcp__Supabase__*` (proyecto `kxkfoqnwtflsugqbbzwv`) en vez de pedirle que pegue SQL.
 - Revisar primero con `list_tables`. Crear con `apply_migration` y **sin** sentencias `drop ...` (piden una confirmación que no llega y la llamada se queda esperando); usar `create ... if not exists`.
 - Cada tabla nueva: RLS activado, política `for all to authenticated using (true) with check (true)` y `grant select, insert, update, delete ... to authenticated`. Guardar el SQL también en `surteme/setup.sql`.
+
+## Calculadora de cierre de mes (`cierre/`)
+- App aparte (no es parte de Surteme). Dirección: https://op7jonas-svg.github.io/underdog_rd/cierre/
+- Al terminar un cambio, enviar el enlace con la versión al final: `https://op7jonas-svg.github.io/underdog_rd/cierre/?v=<versión>` (la de `VERSION` en `cierre/index.html`; subirla en cada cambio).
+- Publicar igual que Surteme: en `main` y en `gh-pages`.
+- No usa Supabase: los datos se guardan en el teléfono (`localStorage`, clave `cierre_mes_v1`).

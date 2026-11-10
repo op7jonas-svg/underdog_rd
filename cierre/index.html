@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cierre de mes</title>
+<meta name="description" content="Calculadora de gastos y ganancias del mes.">
+<meta name="theme-color" content="#0f7b5f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cierre">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root {
+    --bg: #f3f6f4;
+    --card: #ffffff;
+    --ink: #14201b;
+    --muted: #5b6b64;
+    --line: #dfe7e3;
+    --field: #f7faf8;
+    --brand: #0f7b5f;
+    --brand-dark: #0b5e48;
+    --brand-ink: #ffffff;
+    --brand-soft: #e3f3ec;
+    --ok: #0f7b5f;
+    --bad: #c0392b;
+    --bad-soft: #fdecea;
+    --warn-soft: #fff6dd;
+    --warn-ink: #6b4e00;
+    --bar: #9fd6c2;
+    --shadow: 0 1px 2px rgba(16, 40, 30, .05), 0 6px 18px rgba(16, 40, 30, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1412;
+      --card: #17201d;
+      --ink: #e8efeb;
+      --muted: #97a8a1;
+      --line: #2a3632;
+      --field: #101816;
+      --brand: #0d5c47;
+      --brand-dark: #0a4a39;
+      --brand-ink: #ffffff;
+      --brand-soft: #16332a;
+      --ok: #45c79f;
+      --bad: #ff7f72;
+      --bad-soft: #3b1e1b;
+      --warn-soft: #3a3017;
+      --warn-ink: #f3d68a;
+      --bar: #2f7d63;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  /* Encabezado */
+  .top {
+    background: var(--brand);
+    color: var(--brand-ink);
+    padding: calc(14px + env(safe-area-inset-top)) 0 18px;
+  }
+  .top h1 { margin: 0 0 12px; font-size: 1.05rem; font-weight: 600; letter-spacing: .01em; opacity: .9; }
+  .mes { display: flex; align-items: center; gap: 10px; }
+  .mes button.flecha {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 0; background: rgba(255, 255, 255, .16); color: inherit;
+    font-size: 1.6rem; line-height: 1; display: grid; place-items: center;
+  }
+  .mes button.flecha:active { background: rgba(255, 255, 255, .28); }
+  .mes-nombre { flex: 1; text-align: center; font-size: 1.45rem; font-weight: 700; }
+  .ir-hoy {
+    display: block; margin: 10px auto 0; border: 0; background: none; color: inherit;
+    text-decoration: underline; opacity: .85; font-size: .9rem; padding: 4px 8px;
+  }
+
+  main { padding-top: 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .card-head { display: flex; align-items: baseline; gap: 12px; }
+  .card-head h2 { flex: 1; min-width: 0; }
+  .card > .hint { margin-bottom: 12px; }
+  h2 { margin: 0; font-size: 1.1rem; }
+  .paso {
+    display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--brand-soft); color: var(--ok); font-size: .85rem; font-weight: 700;
+    margin-right: 6px; vertical-align: 1px;
+  }
+  .hint { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+  .subtotal { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 1px; }
+
+  /* Líneas: concepto + monto */
+  .fila { display: grid; grid-template-columns: minmax(0, 1fr) 112px 32px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  input[type=text] {
+    width: 100%; min-width: 0;
+    font: inherit; font-size: 16px;
+    color: var(--ink);
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 11px 12px;
+    outline: none;
+  }
+  input[type=text]:focus { border-color: var(--ok); box-shadow: 0 0 0 3px var(--brand-soft); }
+  input.monto { text-align: right; font-variant-numeric: tabular-nums; }
+  input::placeholder { color: var(--muted); opacity: .7; }
+  .quitar {
+    width: 32px; height: 44px; border: 0; border-radius: 10px;
+    background: none; color: var(--muted); font-size: 1.5rem; line-height: 1;
+  }
+  .quitar:active { background: var(--bad-soft); color: var(--bad); }
+  .vacio { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
+  .agregar {
+    width: 100%; margin-top: 2px; padding: 11px;
+    border: 1.5px dashed var(--line); border-radius: 10px;
+    background: none; color: var(--ok); font-weight: 600;
+  }
+  .agregar:active { background: var(--brand-soft); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .chips button {
+    border: 1px solid var(--line); background: var(--field);
+    border-radius: 999px; padding: 6px 11px; font-size: .88rem;
+  }
+  .chips button.usado { background: var(--brand-soft); border-color: transparent; color: var(--ok); }
+  .chips button:active { transform: scale(.97); }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 10px; padding: 11px 14px; font-weight: 600;
+  }
+  .btn.primario { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+  .btn.peligro { color: var(--bad); }
+  .btn.ancho { width: 100%; margin-top: 10px; }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .acciones .btn { flex: 1 1 140px; }
+
+  /* Resultado */
+  .cuenta { font-variant-numeric: tabular-nums; }
+  .linea { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .linea span { color: var(--muted); }
+  .linea b { white-space: nowrap; }
+  .linea.sub span, .linea.sub b { color: var(--ink); font-weight: 700; }
+  .final {
+    margin-top: 14px; border-radius: 14px; padding: 16px;
+    background: var(--brand-soft); color: var(--ok); text-align: center;
+  }
+  .final.neg { background: var(--bad-soft); color: var(--bad); }
+  .final .k { font-weight: 600; font-size: .95rem; }
+  .final .v { font-size: 2.2rem; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; word-break: break-word; }
+  .datos { list-style: none; margin: 14px 0 0; padding: 0; }
+  .datos li { padding: 9px 0 9px 26px; position: relative; border-bottom: 1px solid var(--line); font-size: .95rem; }
+  .datos li:last-child { border-bottom: 0; }
+  .datos li::before { content: "•"; position: absolute; left: 8px; color: var(--ok); font-weight: 700; }
+  .datos li.ojo { background: var(--warn-soft); color: var(--warn-ink); border-radius: 10px; border: 0; margin: 4px 0; padding-left: 30px; }
+  .datos li.ojo::before { content: "!"; color: var(--warn-ink); left: 12px; }
+  .datos b { white-space: nowrap; }
+  .barras { margin-top: 14px; }
+  .barras h3 { font-size: .95rem; margin: 0 0 8px; }
+  .barra-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; margin-bottom: 9px; font-size: .92rem; }
+  .barra-fila span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .barra-fila span:nth-child(2) { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .barra-fila .pista { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: var(--field); border: 1px solid var(--line); overflow: hidden; }
+  .barra-fila .pista i { display: block; height: 100%; background: var(--bar); border-radius: 99px; }
+  .formula { margin: 14px 0 0; color: var(--muted); font-size: .85rem; }
+
+  /* Mis meses */
+  .ano { display: flex; justify-content: space-between; gap: 10px; margin: 14px 0 6px; font-size: .9rem; color: var(--muted); font-weight: 600; }
+  .ano:first-child { margin-top: 0; }
+  .mes-fila {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: none; border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px;
+  }
+  .mes-fila.abierto { border-color: var(--ok); background: var(--brand-soft); }
+  .mes-fila .nombre { flex: 1; min-width: 0; }
+  .mes-fila small { display: block; color: var(--muted); font-size: .82rem; }
+  .mes-fila .gan { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ok); }
+  .mes-fila .gan.neg { color: var(--bad); }
+
+  .nota { color: var(--muted); font-size: .9rem; margin: 0 0 10px; }
+  .aviso { background: var(--warn-soft); color: var(--warn-ink); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: .92rem; }
+  .pie { text-align: center; color: var(--muted); font-size: .8rem; margin: 6px 0 20px; }
+
+  /* Barra fija de abajo con la ganancia */
+  .barra-fija {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    background: var(--card); border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, .06);
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  }
+  .barra-fija button {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; border: 0; background: none; padding: 4px 16px; text-align: left;
+    max-width: 640px; margin: 0 auto;
+  }
+  .barra-fija .k { color: var(--muted); font-size: .9rem; }
+  .barra-fija .v { font-size: 1.35rem; font-weight: 800; color: var(--ok); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .barra-fija .v.neg { color: var(--bad); }
+  .barra-fija .ver { color: var(--ok); font-size: .82rem; font-weight: 600; display: block; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 10;
+    background: #14201b; color: #fff; padding: 10px 16px; border-radius: 12px;
+    font-size: .92rem; max-width: calc(100% - 32px); box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+  }
+  @media (prefers-color-scheme: dark) { .toast { background: #e8efeb; color: #14201b; } }
+
+  @media (max-width: 370px) {
+    .fila { grid-template-columns: minmax(0, 1fr) 100px 28px; gap: 6px; }
+    .quitar { width: 28px; }
+    .final .v { font-size: 1.9rem; }
+    .mes-nombre { font-size: 1.25rem; }
+    .mes button.flecha { width: 40px; height: 40px; }
+    .card { padding: 14px; }
+    .barra-fija .ver { display: none; }
+  }
+
+  /* Al imprimir o guardar en PDF */
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .top { background: none; color: #000; padding: 0 0 8px; }
+    .top h1 { opacity: 1; }
+    .flecha, .ir-hoy, .chips, .agregar, .quitar, .acciones, .barra-fija, .toast,
+    #copiar, #card-meses, #card-copia, .aviso, .pie, .hint, .vacio { display: none !important; }
+    .card { box-shadow: none; break-inside: avoid; border-color: #ccc; }
+    input[type=text] { border: 0; background: none; padding: 4px 0; }
+    .final { background: none !important; border: 2px solid currentColor; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Cierre de mes</h1>
+    <div class="mes">
+      <button class="flecha" id="b-ant" type="button" aria-label="Mes anterior">‹</button>
+      <div class="mes-nombre" id="mes-nombre" aria-live="polite"></div>
+      <button class="flecha" id="b-sig" type="button" aria-label="Mes siguiente">›</button>
+    </div>
+    <button class="ir-hoy" id="b-hoy" type="button" hidden>Ir al mes de hoy</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="aviso" id="aviso-guardar" hidden>Este navegador no deja guardar. Lo que escribas se borra al cerrar la página. Si estás en una ventana privada, ábrela en una normal.</div>
+
+  <section class="card">
+    <div class="card-head"><h2><span class="paso">1</span>Lo que entró</h2><div class="subtotal" id="t-ingresos"></div></div>
+    <p class="hint">Todo lo que vendiste o cobraste este mes.</p>
+    <div id="r-ingresos"></div>
+    <button class="agregar" type="button" data-agregar="ingresos">+ Agregar otro ingreso</button>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2><span class="paso">2</span>La mercancía</h2><div class="subtotal" id="t-costos"></div></div>
+    <p class="hint">Lo que pagaste por los productos que vendiste. Si solo vendes servicios, déjalo en blanco.</p>
+    <div id="r-costos"></div>
+    <button class="agregar" type="button" data-agregar="costos">+ Agregar otra compra</button>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2><span class="paso">3</span>Gastos del mes</h2><div class="subtotal" id="t-gastos"></div></div>
+    <p class="hint">Lo que pagaste para mantener el negocio: alquiler, luz, sueldos… Toca uno para agregarlo.</p>
+    <div class="chips" id="chips"></div>
+    <div id="r-gastos"></div>
+    <button class="agregar" type="button" data-agregar="gastos">+ Agregar otro gasto</button>
+    <button class="btn ancho" id="copiar" type="button" hidden></button>
+  </section>
+
+  <section class="card" id="resultado">
+    <div class="card-head" style="margin-bottom:8px"><h2>Resultado del mes</h2></div>
+    <div class="cuenta">
+      <div class="linea"><span>Lo que entró</span><b id="o-ing"></b></div>
+      <div class="linea"><span>Menos la mercancía</span><b id="o-cos"></b></div>
+      <div class="linea sub"><span>Ganancia antes de gastos</span><b id="o-bru"></b></div>
+      <div class="linea"><span>Menos los gastos</span><b id="o-gas"></b></div>
+    </div>
+    <div class="final" id="o-final"><div class="k" id="o-final-k">Ganancia del mes</div><div class="v" id="o-final-v"></div></div>
+    <ul class="datos" id="o-datos"></ul>
+    <div class="barras" id="o-barras"></div>
+    <p class="formula">Ganancia del mes = lo que entró − la mercancía − los gastos.</p>
+    <div class="acciones">
+      <button class="btn primario" id="b-compartir" type="button">Compartir resumen</button>
+      <button class="btn" id="b-imprimir" type="button">Imprimir o PDF</button>
+    </div>
+  </section>
+
+  <section class="card" id="card-meses">
+    <div class="card-head"><h2>Mis meses</h2></div>
+    <p class="hint">Toca un mes para verlo o cambiarlo.</p>
+    <div id="meses"></div>
+  </section>
+
+  <section class="card" id="card-copia">
+    <div class="card-head" style="margin-bottom:10px"><h2>Guardar y borrar</h2></div>
+    <p class="nota">Todo se guarda <b>solo en este teléfono</b>, mientras escribes. No hace falta pulsar «Guardar».</p>
+    <p class="nota">Si cambias de teléfono o borras el navegador, se pierde. Para no perderlo, baja una copia de vez en cuando y guárdala en Google Drive o mándatela por correo.</p>
+    <p class="nota" id="copia-estado"></p>
+    <div class="acciones" style="margin-top:4px">
+      <button class="btn" id="b-bajar" type="button">Bajar copia</button>
+      <button class="btn" id="b-cargar" type="button">Cargar copia</button>
+    </div>
+    <input type="file" id="f-cargar" accept=".json,application/json" hidden>
+    <button class="btn peligro ancho" id="b-borrar" type="button">Borrar este mes</button>
+  </section>
+
+  <p class="pie">Versión <span id="version"></span></p>
+</main>
+
+<div class="barra-fija" id="barra-fija">
+  <button type="button" id="b-ver">
+    <span><span class="k" id="bf-k">Ganancia del mes</span><span class="ver">Ver la cuenta completa ↓</span></span>
+    <span class="v" id="bf-v"></span>
+  </button>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  'use strict';
+  const VERSION = '2026-11-10a';
+  const LS = 'cierre_mes_v1', LS_COPIA = 'cierre_mes_copia';
+  const SECS = ['ingresos', 'costos', 'gastos'];
+  const POR_DEFECTO = { ingresos: ['Ventas'], costos: ['Compras de mercancía'], gastos: [] };
+  const VACIO = {
+    ingresos: 'Agrega lo que entró este mes.',
+    costos: 'Sin mercancía. Si compraste productos para vender, agrégalos.',
+    gastos: 'Todavía no hay gastos. Toca uno de arriba o «Agregar otro gasto».',
+  };
+  const CHIPS = ['Alquiler', 'Luz', 'Agua', 'Internet', 'Teléfono', 'Sueldos', 'Combustible', 'Transporte',
+    'Publicidad', 'Impuestos', 'Banco y comisiones', 'Mantenimiento', 'Comida', 'Otros'];
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const money = new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' });
+  const fmt = n => money.format(Number.isFinite(n) ? n : 0);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const norm = s => String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const round2 = n => Math.round(Number((n * 100).toPrecision(12))) / 100;
+
+  // Lee un monto como lo escriba la persona: «1500», «1,500.50», «1500,50», «RD$ 2,000» o «1500+300» (se suman)
+  function num(v) {
+    return String(v ?? '').split('+').reduce((total, parte) => {
+      let s = parte.replace(/rd\$|\$|\s/gi, '');
+      if (!s) return total;
+      if (s.includes(',') && s.includes('.')) s = s.replace(/,/g, '');
+      else if (s.includes(',')) s = /^-?\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.replace(',', '.');
+      const n = parseFloat(s);
+      return total + (Number.isFinite(n) ? n : 0);
+    }, 0);
+  }
+  const suma = filas => round2(filas.reduce((s, r) => s + num(r.m), 0));
+
+  // ---------- Meses ----------
+  function mesDeHoy() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function moverMes(m, delta) {
+    let [y, mm] = m.split('-').map(Number);
+    mm += delta;
+    while (mm < 1) { mm += 12; y--; }
+    while (mm > 12) { mm -= 12; y++; }
+    return y + '-' + String(mm).padStart(2, '0');
+  }
+  function nombreMes(m, conAno = true) {
+    const [y, mm] = m.split('-').map(Number);
+    const t = new Date(y, mm - 1, 15).toLocaleDateString('es-DO', { month: 'long' }) + (conAno ? ' ' + y : '');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  // «octubre» si es del mismo año; «diciembre 2025» si es de otro
+  const mesCorto = (m, frente) => nombreMes(m, false).toLowerCase() + (m.slice(0, 4) !== frente.slice(0, 4) ? ' ' + m.slice(0, 4) : '');
+
+  // ---------- Guardar en el teléfono ----------
+  let puedeGuardar = true;
+  function cargar() {
+    try {
+      const x = JSON.parse(localStorage.getItem(LS) || 'null');
+      if (x && x.meses && typeof x.meses === 'object') return { v: 1, meses: limpiarMeses(x.meses) };
+    } catch (e) {}
+    return { v: 1, meses: {} };
+  }
+  function limpiarMeses(meses) {
+    const out = {};
+    Object.keys(meses).forEach(k => {
+      if (!/^\d{4}-\d{2}$/.test(k) || !meses[k] || typeof meses[k] !== 'object') return;
+      const d = {};
+      SECS.forEach(s => {
+        d[s] = Array.isArray(meses[k][s]) ? meses[k][s].filter(r => r && typeof r === 'object')
+          .map(r => ({ c: String(r.c ?? '').slice(0, 200), m: String(r.m ?? '').slice(0, 60) })) : [];
+      });
+      out[k] = d;
+    });
+    return out;
+  }
+  function guardar() {
+    try { localStorage.setItem(LS, JSON.stringify(db)); puedeGuardar = true; }
+    catch (e) { puedeGuardar = false; }
+    $('#aviso-guardar').hidden = puedeGuardar;
+  }
+  try { localStorage.setItem(LS + '_prueba', '1'); localStorage.removeItem(LS + '_prueba'); }
+  catch (e) { puedeGuardar = false; }
+  // Pide al navegador que no borre los datos por su cuenta (cuando se queda sin espacio)
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+
+  let db = cargar();
+  let mes = mesDeHoy();
+  let actual = null;  // el mes que se ve: el guardado, o uno nuevo vacío si todavía no tiene nada
+
+  const plantilla = () => ({
+    ingresos: POR_DEFECTO.ingresos.map(c => ({ c, m: '' })),
+    costos: POR_DEFECTO.costos.map(c => ({ c, m: '' })),
+    gastos: [],
+  });
+  // ¿El mes tiene algo escrito? (un monto, o un concepto que no sea el que viene puesto)
+  const tieneAlgo = d => SECS.some(s => d[s].some(r => num(r.m) !== 0 || (r.c.trim() && !POR_DEFECTO[s].includes(r.c.trim()))));
+  const cuentas = d => {
+    const I = suma(d.ingresos), C = suma(d.costos), G = suma(d.gastos);
+    return { I, C, G, B: round2(I - C), N: round2(I - C - G) };
+  };
+  const mesesGuardados = () => Object.keys(db.meses).filter(k => tieneAlgo(db.meses[k])).sort();
+
+  function abrir(m) {
+    mes = m;
+    actual = db.meses[m] || plantilla();
+    $('#mes-nombre').textContent = nombreMes(m);
+    $('#b-hoy').hidden = m === mesDeHoy();
+    document.title = 'Cierre de ' + nombreMes(m).toLowerCase();
+    SECS.forEach(renderSeccion);
+    alCambiar(false);
+  }
+
+  // Después de cada cambio: guarda y rehace las cuentas (sin volver a dibujar los campos, para no perder el cursor)
+  function alCambiar(guardarAhora = true) {
+    if (guardarAhora) {
+      if (tieneAlgo(actual)) db.meses[mes] = actual; else delete db.meses[mes];
+      guardar();
+    }
+    calcular(); renderChips(); renderCopiar(); renderMeses();
+  }
+
+  // ---------- Líneas ----------
+  function renderSeccion(s) {
+    const el = $('#r-' + s);
+    el.innerHTML = actual[s].length ? actual[s].map((r, i) => `<div class="fila" data-i="${i}">
+        <input type="text" class="concepto" value="${esc(r.c)}" placeholder="${s === 'gastos' ? 'Ej. Alquiler' : '¿Qué fue?'}" aria-label="Concepto" autocomplete="off" enterkeyhint="next">
+        <input type="text" class="monto" value="${esc(r.m)}" placeholder="0.00" inputmode="decimal" aria-label="Monto${r.c ? ' de ' + esc(r.c) : ''}" autocomplete="off" enterkeyhint="done">
+        <button class="quitar" type="button" aria-label="Quitar${r.c ? ' ' + esc(r.c) : ' esta línea'}">×</button>
+      </div>`).join('') : `<p class="vacio">${VACIO[s]}</p>`;
+  }
+  function agregar(s, concepto = '', monto = '') {
+    actual[s].push({ c: concepto, m: monto });
+    renderSeccion(s);
+    alCambiar();
+    const filas = $$('#r-' + s + ' .fila'), ultima = filas[filas.length - 1];
+    const campo = concepto ? $('.monto', ultima) : $('.concepto', ultima);
+    campo.focus();
+    campo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  SECS.forEach(s => {
+    const el = $('#r-' + s);
+    el.addEventListener('input', e => {
+      const fila = e.target.closest('.fila'); if (!fila) return;
+      const r = actual[s][+fila.dataset.i];
+      if (e.target.classList.contains('concepto')) r.c = e.target.value; else r.m = e.target.value;
+      alCambiar();
+    });
+    el.addEventListener('click', e => {
+      const b = e.target.closest('.quitar'); if (!b) return;
+      const i = +b.closest('.fila').dataset.i, r = actual[s][i];
+      if (num(r.m) !== 0 && !confirm(`¿Quitar «${r.c.trim() || 'esta línea'}» (${fmt(num(r.m))})?`)) return;
+      actual[s].splice(i, 1);
+      renderSeccion(s);
+      alCambiar();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (e.target.classList.contains('concepto')) $('.monto', e.target.closest('.fila')).focus();
+      else e.target.blur();
+    });
+    // «1500+300» se convierte en «1800» al salir del campo
+    el.addEventListener('focusout', e => {
+      if (!e.target.classList.contains('monto') || !e.target.value.includes('+')) return;
+      const r = actual[s][+e.target.closest('.fila').dataset.i];
+      const n = num(e.target.value);
+      r.m = n ? String(round2(n)) : '';
+      e.target.value = r.m;
+      alCambiar();
+    });
+  });
+  $$('[data-agregar]').forEach(b => b.addEventListener('click', () => agregar(b.dataset.agregar)));
+
+  // Botones rápidos de gastos
+  function renderChips() {
+    const usados = new Set(actual.gastos.filter(r => num(r.m) !== 0).map(r => norm(r.c)));
+    const html = CHIPS.map(c => `<button type="button" data-chip="${esc(c)}" class="${usados.has(norm(c)) ? 'usado' : ''}">${usados.has(norm(c)) ? '✓ ' : '+ '}${esc(c)}</button>`).join('');
+    if ($('#chips').innerHTML !== html) $('#chips').innerHTML = html;
+  }
+  $('#chips').addEventListener('click', e => {
+    const b = e.target.closest('[data-chip]'); if (!b) return;
+    const c = b.dataset.chip;
+    // Si ya hay una línea con ese nombre y sin monto, se va a esa en vez de repetirla
+    const i = actual.gastos.findIndex(r => norm(r.c) === norm(c) && num(r.m) === 0);
+    if (i >= 0) {
+      const campo = $(`#r-gastos .fila[data-i="${i}"] .monto`);
+      campo.focus(); campo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+    agregar('gastos', c);
+  });
+
+  // Copiar los gastos del último mes que tenga (casi siempre se repiten: alquiler, luz, sueldos…)
+  function mesAnteriorConGastos() {
+    return Object.keys(db.meses).filter(k => k < mes && db.meses[k].gastos.some(r => r.c.trim())).sort().pop();
+  }
+  function gastosQueFaltan(desde) {
+    const ya = new Set(actual.gastos.map(r => norm(r.c)));
+    return db.meses[desde].gastos.filter(r => r.c.trim() && !ya.has(norm(r.c)));
+  }
+  function renderCopiar() {
+    const b = $('#copiar'), desde = mesAnteriorConGastos();
+    const faltan = desde ? gastosQueFaltan(desde) : [];
+    b.hidden = !faltan.length;
+    if (faltan.length) {
+      b.textContent = `Copiar los gastos de ${mesCorto(desde, mes)} (${faltan.length})`;
+      b.dataset.desde = desde;
+    }
+  }
+  $('#copiar').addEventListener('click', () => {
+    const desde = $('#copiar').dataset.desde; if (!desde || !db.meses[desde]) return;
+    const faltan = gastosQueFaltan(desde);
+    // Las líneas vacías que estaban se quitan para que no queden huecos
+    actual.gastos = actual.gastos.filter(r => r.c.trim() || num(r.m) !== 0).concat(faltan.map(r => ({ c: r.c, m: r.m })));
+    renderSeccion('gastos');
+    alCambiar();
+    aviso(`Se copiaron ${faltan.length} ${faltan.length === 1 ? 'gasto' : 'gastos'} de ${mesCorto(desde, mes)}. Cambia los montos que no sean iguales.`, 4500);
+  });
+
+  // ---------- Cuentas ----------
+  function calcular() {
+    const { I, C, G, B, N } = cuentas(actual);
+    $('#t-ingresos').textContent = fmt(I);
+    $('#t-costos').textContent = fmt(C);
+    $('#t-gastos').textContent = fmt(G);
+    $('#o-ing').textContent = fmt(I);
+    $('#o-cos').textContent = '− ' + fmt(C);
+    $('#o-bru').textContent = fmt(B);
+    $('#o-gas').textContent = '− ' + fmt(G);
+
+    const perdida = N < 0;
+    $('#o-final').classList.toggle('neg', perdida);
+    $('#o-final-k').textContent = perdida ? 'Pérdida del mes' : 'Ganancia del mes';
+    $('#o-final-v').textContent = fmt(Math.abs(N));
+    $('#bf-k').textContent = (perdida ? 'Pérdida de ' : 'Ganancia de ') + nombreMes(mes, false).toLowerCase();
+    $('#bf-v').textContent = fmt(Math.abs(N));
+    $('#bf-v').classList.toggle('neg', perdida);
+
+    // Explicaciones sencillas
+    const datos = [];
+    if (!I && !C && !G) {
+      datos.push(['', 'Escribe lo que entró, lo que te costó la mercancía y tus gastos. La cuenta se hace sola.']);
+    } else {
+      if (!I) datos.push(['ojo', 'Todavía no has puesto lo que entró este mes.']);
+      if (I > 0) {
+        const de100 = N / I * 100;
+        datos.push(['', de100 >= 0
+          ? `De cada <b>RD$100</b> que entraron, te quedaron <b>${fmt(de100)}</b> de ganancia.`
+          : `De cada <b>RD$100</b> que entraron, perdiste <b>${fmt(-de100)}</b>.`]);
+      }
+      if (I > 0 && C > 0 && B <= 0) {
+        datos.push(['ojo', 'La mercancía te costó más de lo que entró. Revisa tus precios de venta.']);
+      } else if (I > 0 && B > 0 && G > 0) {
+        // Punto de equilibrio: lo mínimo que hay que vender para cubrir los gastos, con el mismo margen de este mes
+        const minimo = G / (B / I);
+        datos.push(['', `Para no perder dinero, tienes que vender por lo menos <b>${fmt(minimo)}</b> al mes.` +
+          (I >= minimo ? ` Este mes vendiste <b>${fmt(I - minimo)}</b> más que eso.` : ` Este mes te faltaron <b>${fmt(minimo - I)}</b>.`)]);
+      }
+      const ant = moverMes(mes, -1);
+      if (db.meses[ant] && tieneAlgo(db.meses[ant])) {
+        const Na = cuentas(db.meses[ant]).N, dif = round2(N - Na);
+        datos.push(['', `En ${mesCorto(ant, mes)} ${Na >= 0 ? 'ganaste' : 'perdiste'} <b>${fmt(Math.abs(Na))}</b>. ` +
+          (dif === 0 ? 'Este mes vas igual.' : `Este mes vas <b>${fmt(Math.abs(dif))}</b> ${dif > 0 ? 'mejor' : 'peor'}.`)]);
+      }
+    }
+    // Gastos agrupados por nombre (si «Luz» está dos veces, se suma)
+    const grupos = {};
+    actual.gastos.forEach(r => {
+      const v = num(r.m); if (!v) return;
+      const k = norm(r.c) || '(sin nombre)';
+      grupos[k] = grupos[k] || { c: r.c.trim() || 'Sin nombre', v: 0 };
+      grupos[k].v += v;
+    });
+    const lista = Object.values(grupos).sort((a, b) => b.v - a.v);
+    if (G > 0 && lista.length > 1) {
+      const top = lista[0];
+      datos.push(['', `Tu gasto más grande fue <b>${esc(top.c)}</b>: ${fmt(top.v)} (${Math.round(top.v / G * 100)}% de los gastos).`]);
+    }
+    $('#o-datos').innerHTML = datos.map(([cls, t]) => `<li${cls ? ` class="${cls}"` : ''}>${t}</li>`).join('');
+    $('#o-barras').innerHTML = G > 0 && lista.length > 1
+      ? '<h3>¿En qué se fueron los gastos?</h3>' + lista.map(g => `<div class="barra-fila"><span>${esc(g.c)}</span><span>${fmt(g.v)}</span>
+          <div class="pista"><i style="width:${Math.max(2, g.v / G * 100).toFixed(1)}%"></i></div></div>`).join('')
+      : '';
+  }
+
+  // ---------- Mis meses ----------
+  function renderMeses() {
+    const keys = mesesGuardados().reverse();
+    const el = $('#meses');
+    if (!keys.length) { el.innerHTML = '<p class="vacio">Aquí van a salir los meses que vayas cerrando.</p>'; return; }
+    const porAno = {};
+    keys.forEach(k => (porAno[k.slice(0, 4)] = porAno[k.slice(0, 4)] || []).push(k));
+    el.innerHTML = Object.keys(porAno).sort().reverse().map(y => {
+      const totalAno = round2(porAno[y].reduce((s, k) => s + cuentas(db.meses[k]).N, 0));
+      return `<div class="ano"><span>${y}</span><span>${totalAno < 0 ? 'Pérdida' : 'Ganancia'} del año: ${fmt(Math.abs(totalAno))}</span></div>` +
+        porAno[y].map(k => {
+          const c = cuentas(db.meses[k]);
+          return `<button type="button" class="mes-fila${k === mes ? ' abierto' : ''}" data-mes="${k}">
+            <span class="nombre"><b>${esc(nombreMes(k, false))}</b><small>Entró ${fmt(c.I)} · Salió ${fmt(c.C + c.G)}</small></span>
+            <span class="gan${c.N < 0 ? ' neg' : ''}">${c.N < 0 ? '−' : ''}${fmt(Math.abs(c.N))}</span></button>`;
+        }).join('');
+    }).join('');
+  }
+  $('#meses').addEventListener('click', e => {
+    const b = e.target.closest('[data-mes]'); if (!b) return;
+    abrir(b.dataset.mes);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ---------- Cambiar de mes ----------
+  $('#b-ant').addEventListener('click', () => abrir(moverMes(mes, -1)));
+  $('#b-sig').addEventListener('click', () => abrir(moverMes(mes, 1)));
+  $('#b-hoy').addEventListener('click', () => abrir(mesDeHoy()));
+
+  // ---------- Compartir e imprimir ----------
+  function resumenTexto() {
+    const { I, C, G, N } = cuentas(actual);
+    const lineas = [`Cierre de ${nombreMes(mes).toLowerCase()}`, '', `Entró: ${fmt(I)}`];
+    if (C) lineas.push(`Mercancía: ${fmt(C)}`);
+    lineas.push(`Gastos: ${fmt(G)}`);
+    actual.gastos.filter(r => num(r.m)).forEach(r => lineas.push(`  • ${r.c.trim() || 'Sin nombre'}: ${fmt(num(r.m))}`));
+    lineas.push('', `${N < 0 ? 'Pérdida' : 'Ganancia'} del mes: ${fmt(Math.abs(N))}`);
+    if (I > 0) lineas.push(`(De cada RD$100 que entraron, ${N >= 0 ? 'quedaron ' + fmt(N / I * 100) + ' de ganancia' : 'se perdieron ' + fmt(-N / I * 100)})`);
+    return lineas.join('\n');
+  }
+  $('#b-compartir').addEventListener('click', async () => {
+    const texto = resumenTexto();
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Cierre de ' + nombreMes(mes).toLowerCase(), text: texto }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(texto); aviso('Resumen copiado. Pégalo en WhatsApp o donde quieras.'); }
+    catch (e) { window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank'); }
+  });
+  $('#b-imprimir').addEventListener('click', () => window.print());
+
+  // ---------- Copia de seguridad ----------
+  const hoyTexto = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  function renderCopiaEstado() {
+    let t = null;
+    try { t = Number(localStorage.getItem(LS_COPIA)) || null; } catch (e) {}
+    $('#copia-estado').textContent = t
+      ? 'Última copia: ' + new Date(t).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }) + '.'
+      : 'Todavía no has bajado ninguna copia.';
+  }
+  $('#b-bajar').addEventListener('click', () => {
+    if (!mesesGuardados().length) return aviso('Todavía no hay nada que guardar.');
+    const blob = new Blob([JSON.stringify(db, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `cierre-de-mes-copia-${hoyTexto()}.json`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    try { localStorage.setItem(LS_COPIA, String(Date.now())); } catch (e) {}
+    renderCopiaEstado();
+  });
+  $('#b-cargar').addEventListener('click', () => $('#f-cargar').click());
+  $('#f-cargar').addEventListener('change', async e => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    try {
+      const x = JSON.parse(await file.text());
+      const meses = x && x.meses && typeof x.meses === 'object' ? limpiarMeses(x.meses) : null;
+      const n = meses ? Object.keys(meses).filter(k => tieneAlgo(meses[k])).length : 0;
+      if (!n) return aviso('Ese archivo no es una copia de esta calculadora.', 4500);
+      if (!confirm(`La copia trae ${n} ${n === 1 ? 'mes' : 'meses'}. Si ya tienes alguno de esos meses aquí, se cambia por el de la copia. Los demás se quedan igual. ¿Seguir?`)) return;
+      Object.assign(db.meses, meses);
+      guardar();
+      abrir(mes);
+      aviso(`Listo: se cargaron ${n} ${n === 1 ? 'mes' : 'meses'}.`);
+    } catch (er) { aviso('No se pudo leer ese archivo.', 4500); }
+  });
+  $('#b-borrar').addEventListener('click', () => {
+    if (!tieneAlgo(actual)) return aviso('Este mes está vacío.');
+    if (!confirm(`¿Borrar todo lo de ${nombreMes(mes).toLowerCase()}? No se puede deshacer.`)) return;
+    delete db.meses[mes];
+    guardar();
+    abrir(mes);
+    aviso('Mes borrado.');
+  });
+
+  // ---------- Barra fija de abajo ----------
+  // Se esconde cuando ya se ve el resultado completo, y mientras escribes (para no tapar el teclado)
+  let resultadoVisible = false, escribiendo = false;
+  const ponerBarra = () => { $('#barra-fija').hidden = resultadoVisible || escribiendo; };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => { resultadoVisible = e.isIntersecting; ponerBarra(); }, { threshold: 0.15 }).observe($('#resultado'));
+  }
+  document.addEventListener('focusin', e => { if (e.target.matches('input[type=text]')) { escribiendo = true; ponerBarra(); } });
+  document.addEventListener('focusout', () => setTimeout(() => {
+    escribiendo = !!(document.activeElement && document.activeElement.matches('input[type=text]'));
+    ponerBarra();
+  }, 50));
+  $('#b-ver').addEventListener('click', () => $('#resultado').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+
+  // ---------- Avisos ----------
+  let avisoTimer;
+  function aviso(texto, ms = 2600) {
+    const t = $('#toast');
+    t.textContent = texto; t.hidden = false;
+    clearTimeout(avisoTimer); avisoTimer = setTimeout(() => t.hidden = true, ms);
+  }
+
+  // Si se abrió en otra pestaña y se cambió algo allá, al volver se ve lo último
+  window.addEventListener('storage', e => { if (e.key === LS) { db = cargar(); abrir(mes); } });
+
+  $('#version').textContent = VERSION;
+  $('#aviso-guardar').hidden = puedeGuardar;
+  renderCopiaEstado();
+  abrir(mes);
+})();
+</script>
+</body>
+</html>
