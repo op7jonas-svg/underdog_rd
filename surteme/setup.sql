@@ -249,6 +249,9 @@ create table if not exists compras (
   numero text,
   items jsonb not null default '[]',
   total numeric not null default 0,
+  itbis_pct numeric,
+  itbis_monto numeric not null default 0,
+  itbis_incluido boolean not null default false,
   pagada boolean not null default false,
   archivo text,
   notas text
@@ -262,3 +265,9 @@ do $$ begin
   end if;
 end $$;
 grant select, insert, update, delete on compras to authenticated;
+
+-- ITBIS en las compras (2026-11-09): para bases creadas antes de esta fecha.
+-- El ITBIS de la compra se guarda aparte; el total de la compra ya lo incluye.
+alter table compras add column if not exists itbis_pct numeric;
+alter table compras add column if not exists itbis_monto numeric not null default 0;
+alter table compras add column if not exists itbis_incluido boolean not null default false;

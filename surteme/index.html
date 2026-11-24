@@ -248,6 +248,9 @@
   .ocr-box .hint { flex: 1 1 190px; margin: 0; }
   .ocr-box .msg-ok { color: var(--ok); font-weight: 600; }
   .ocr-box .msg-mal { color: var(--bad); font-weight: 600; }
+  .itbis-box { margin: 12px 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+  .itbis-box .grid { gap: 8px; margin-top: 8px; }
+  .itbis-box .check { margin: 0; }
   .item-card .grid { gap: 8px; }
   .item-card input { min-height: 40px; padding: 8px 10px; background: var(--surface); }
   .item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; }
@@ -1041,6 +1044,16 @@
         <button type="button" class="btn" id="co-nuevo">+ Producto nuevo</button>
       </div>
       <div class="doc-sums" id="co-sums"></div>
+      <div class="itbis-box" id="co-itbis-box">
+        <label class="check"><input type="checkbox" id="co-itbis-on"> <span>Esta factura trae ITBIS</span></label>
+        <div id="co-itbis-det" hidden>
+          <div class="grid">
+            <label class="field"><span>ITBIS (%)</span><input id="co-itbis-pct" type="number" inputmode="decimal" step="any" min="0" value="18"></label>
+            <label class="check"><input type="checkbox" id="co-itbis-inc"> <span>Los precios de arriba ya lo incluyen</span></label>
+          </div>
+          <p class="hint" id="co-itbis-hint" style="margin:8px 0 0"></p>
+        </div>
+      </div>
       <label class="check"><input type="checkbox" name="pagada"> Ya la pagué</label>
       <label class="check" style="margin-top:8px"><input type="checkbox" name="act_costo" checked> Actualizar el costo de estos productos en el inventario</label>
       <div class="grid" style="margin-top:12px">
@@ -1239,7 +1252,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="config.js?v=2026-11-09a"></script>
+<script src="config.js?v=2026-11-24a"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (() => {
@@ -1273,7 +1286,7 @@
   // ---------- Actualización automática ----------
   // Si hay una versión más nueva publicada, recarga la página para no quedarse con una copia vieja.
   // Se revisa al abrir y cada vez que vuelves a la app (ver «Al volver a la app»).
-  const APP_VERSION = '2026-11-09a';
+  const APP_VERSION = '2026-11-24a';
 
   // ---------- Borradores ----------
   // Lo que se está escribiendo (una venta, una cotización) se guarda en el teléfono: si el navegador
@@ -3175,6 +3188,9 @@ create table if not exists compras (
   numero text,
   items jsonb not null default '[]',
   total numeric not null default 0,
+  itbis_pct numeric,
+  itbis_monto numeric not null default 0,
+  itbis_incluido boolean not null default false,
   pagada boolean not null default false,
   archivo text,
   notas text
@@ -3894,7 +3910,7 @@ grant select, insert, update, delete on compras to authenticated;`;
     if (comprasFalta) { el.innerHTML = '<div class="empty">Falta el paso de Supabase que sale arriba.</div>'; return; }
     if (!compras.length) { el.innerHTML = '<div class="empty">Aún no hay compras. Pulsa <b>+ Registrar compra</b> cuando llegue mercancía.</div>'; return; }
     el.innerHTML = compras.map(c => {
-      const n = (c.items || []).length, sub = [fdate(c.fecha), `${n} producto${n === 1 ? '' : 's'}`, c.numero && '#' + c.numero, c.archivo && '📎'].filter(Boolean).join(' · ');
+      const n = (c.items || []).length, sub = [fdate(c.fecha), `${n} producto${n === 1 ? '' : 's'}`, Number(c.itbis_monto) > 0 && 'ITBIS ' + money.format(Number(c.itbis_monto)), c.numero && '#' + c.numero, c.archivo && '📎'].filter(Boolean).join(' · ');
       return `<button class="row" data-compra="${c.id}"><div class="main"><div class="title">${esc(c.proveedor_nombre || 'Sin suplidor')}</div>
         <div class="sub">${esc(sub)}</div><span class="badge ${c.pagada ? 'pagada' : 'pendiente'}">${c.pagada ? 'Pagada' : 'Debo'}</span></div>
         <div class="amount">${montoHtml(Number(c.total))}</div></button>`;
@@ -3916,6 +3932,16 @@ grant select, insert, update, delete on compras to authenticated;`;
     openCompraId = c ? c.id : null; compraNueva = c ? null : nuevoId();
     const f = $('#f-compra'); f.reset();
     resetOcrCompra();
+    $('#co-itbis-on').checked = false;
+    $('#co-itbis-pct').value = 18;
+    $('#co-itbis-inc').checked = false;
+    $('#co-itbis-det').hidden = true;
+    if (c && (Number(c.itbis_monto) > 0 || Number(c.itbis_pct) > 0)) {
+      $('#co-itbis-on').checked = true;
+      $('#co-itbis-pct').value = Number(c.itbis_pct) > 0 ? Number(c.itbis_pct) : 18;
+      $('#co-itbis-inc').checked = !!c.itbis_incluido;
+      $('#co-itbis-det').hidden = false;
+    }
     fillProvCompra(c ? c.proveedor_id : undefined);
     f.elements.proveedor_nombre.value = c && !c.proveedor_id ? c.proveedor_nombre || '' : '';
     f.elements.fecha.value = c ? c.fecha : today();
@@ -3972,10 +3998,39 @@ grant select, insert, update, delete on compras to authenticated;`;
     sumasCompra();
   }
   const lineaCompra = it => round2((Number(it.cantidad) || 0) * (Number(it.costo) || 0));
+  // ITBIS de la compra. Para Surteme el ITBIS es un costo (no se compensa), así que el costo de cada
+  // producto queda con ITBIS: si los precios escritos ya lo traen se separa; si no, se les suma.
+  function datosItbisCompra(sub) {
+    const onEl = $('#co-itbis-on');
+    if (!onEl) return { on: false, pct: 0, inc: false, itbis: 0, total: round2(sub) };
+    const on = !!onEl.checked;
+    const pct = Math.max(0, Number($('#co-itbis-pct').value) || 0);
+    const inc = !!$('#co-itbis-inc').checked;
+    if (!on || !(pct > 0)) return { on, pct: 0, inc: false, itbis: 0, total: round2(sub) };
+    if (inc) return { on, pct, inc, itbis: round2(sub - sub / (1 + pct / 100)), total: round2(sub) };
+    const itbis = round2(sub * pct / 100);
+    return { on, pct, inc, itbis, total: round2(sub + itbis) };
+  }
   function sumasCompra() {
     $$('#co-items [data-i]').forEach(card => { $('.tot', card).innerHTML = montoHtml(lineaCompra(coItems[+card.dataset.i])); });
-    $('#co-sums').innerHTML = `<div class="t"><span>Total de la compra</span><span>${montoHtml(round2(coItems.reduce((s, it) => s + lineaCompra(it), 0)))}</span></div>`;
+    const sub = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0)), t = datosItbisCompra(sub);
+    const neto = t.inc ? round2(sub - t.itbis) : sub;
+    $('#co-sums').innerHTML = (t.itbis > 0
+      ? `<div><span>Subtotal</span><span>${montoHtml(neto)}</span></div>
+         <div><span>ITBIS ${cantTxt(round2(t.pct))}%${t.inc ? ' incluido' : ''}</span><span>${montoHtml(t.itbis)}</span></div>`
+      : '') +
+      `<div class="t"><span>Total de la compra</span><span>${montoHtml(t.total)}</span></div>`;
+    const h = $('#co-itbis-hint');
+    if (h) h.textContent = !t.on ? '' : t.inc
+      ? 'El ITBIS ya está dentro de los precios. Se separa para tu registro; el costo no cambia.'
+      : 'El costo de cada producto se guardará con el ITBIS incluido (para ti es un costo).';
   }
+  $('#co-itbis-on').addEventListener('change', () => {
+    $('#co-itbis-det').hidden = !$('#co-itbis-on').checked;
+    sumasCompra();
+  });
+  $('#co-itbis-pct').addEventListener('input', sumasCompra);
+  $('#co-itbis-inc').addEventListener('change', sumasCompra);
 
   // ---------- Leer la factura del suplidor desde una foto (borrador para revisar, nunca guarda solo) ----------
   // La foto va a la función «leer-factura» de Supabase: ella llama a Google y devuelve los datos.
@@ -4134,6 +4189,25 @@ grant select, insert, update, delete on compras to authenticated;`;
       coItems.push(it);
     });
 
+    // ITBIS de la factura: el lector ya lo trae. Se marca solo y se compara lo sumado con el total
+    // para saber si los precios de los renglones ya lo incluyen.
+    const itbisFact = Number(datos.itbis) || 0;
+    const totalFact = Number(datos.total) || 0;
+    const subFact = Number(datos.subtotal) || (totalFact && itbisFact ? round2(totalFact - itbisFact) : totalFact) || 0;
+    const conItbis = itbisFact > 0 || (totalFact > 0 && subFact > 0 && totalFact > subFact + 0.5);
+    $('#co-itbis-on').checked = conItbis;
+    $('#co-itbis-det').hidden = !conItbis;
+    if (conItbis) {
+      const base = subFact || round2(totalFact - itbisFact) || 0;
+      const pct = base > 0 && itbisFact > 0 ? round2(itbisFact / base * 100) : 18;
+      $('#co-itbis-pct').value = pct > 0 ? pct : 18;
+      const sumaLectura = round2(lineas.reduce((s, ln) => s + (Number(ln.cantidad) || 0) * (Number(ln.precio_unitario) || 0), 0));
+      $('#co-itbis-inc').checked = totalFact > 0 && Math.abs(sumaLectura - totalFact) <= Math.max(1, totalFact * 0.005);
+    } else {
+      $('#co-itbis-pct').value = 18;
+      $('#co-itbis-inc').checked = false;
+    }
+
     renderCoItems(); sumasCompra();
     const suma = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0));
     const subtotalFact = Number(datos.subtotal) || (Number(datos.total) && Number(datos.itbis) ? round2(Number(datos.total) - Number(datos.itbis)) : Number(datos.total)) || 0;
@@ -4227,8 +4301,12 @@ grant select, insert, update, delete on compras to authenticated;`;
       codigo: it.codigo || null }));
     if (!items.length) return toast('Agrega al menos un producto con su cantidad.', true);
     const provId = f.elements.proveedor_id.value || null;
+    const subTotal = round2(items.reduce((s, it) => s + lineaCompra(it), 0));
+    const ti = datosItbisCompra(subTotal);
+    const factorItbis = ti.on && !ti.inc ? 1 + ti.pct / 100 : 1;   // el costo del producto queda con ITBIS
     const data = { fecha: f.elements.fecha.value || today(), proveedor_id: provId, proveedor_nombre: provId ? provName(provId) : f.elements.proveedor_nombre.value.trim() || null,
-      numero: f.elements.numero.value.trim() || null, items, total: round2(items.reduce((s, it) => s + lineaCompra(it), 0)), pagada: f.elements.pagada.checked,
+      numero: f.elements.numero.value.trim() || null, items, total: ti.total, itbis_pct: ti.on ? ti.pct : null,
+      itbis_monto: ti.itbis, itbis_incluido: ti.on ? ti.inc : false, pagada: f.elements.pagada.checked,
       notas: f.elements.notas.value.trim() || null };
     const id = openCompraId || compraNueva, prev = openCompraId && compras.find(x => x.id === openCompraId);
     let guardada = false;
@@ -4247,7 +4325,7 @@ grant select, insert, update, delete on compras to authenticated;`;
         if (f.elements.act_costo.checked) {
           for (const it of items) {
             const p = inventario.find(x => x.id === it.producto_id); if (!p || !(it.costo > 0)) continue;
-            const nuevo = round2(it.costo * niveles(p)[0].factor / it.factor);
+            const nuevo = round2(it.costo * factorItbis * niveles(p)[0].factor / it.factor);
             if (nuevo !== round2(Number(p.costo))) { const u = await sb.from('inventario').update({ costo: nuevo }).eq('id', p.id); if (!u.error) p.costo = nuevo; }
           }
         }
