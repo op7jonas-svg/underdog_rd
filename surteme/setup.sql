@@ -252,6 +252,8 @@ create table if not exists compras (
   itbis_pct numeric,
   itbis_monto numeric not null default 0,
   itbis_incluido boolean not null default false,
+  descuento_pct numeric,
+  descuento_monto numeric not null default 0,
   pagada boolean not null default false,
   archivo text,
   notas text
@@ -271,3 +273,5 @@ grant select, insert, update, delete on compras to authenticated;
 alter table compras add column if not exists itbis_pct numeric;
 alter table compras add column if not exists itbis_monto numeric not null default 0;
 alter table compras add column if not exists itbis_incluido boolean not null default false;
+alter table compras add column if not exists descuento_pct numeric;
+alter table compras add column if not exists descuento_monto numeric not null default 0;
