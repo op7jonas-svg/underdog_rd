@@ -1054,6 +1054,16 @@
           <p class="hint" id="co-itbis-hint" style="margin:8px 0 0"></p>
         </div>
       </div>
+      <div class="itbis-box" id="co-desc-box">
+        <label class="check"><input type="checkbox" id="co-desc-on"> <span>Esta factura trae descuento</span></label>
+        <div id="co-desc-det" hidden>
+          <div class="grid">
+            <label class="field"><span>Descuento (%)</span><input id="co-desc-pct" type="number" inputmode="decimal" step="any" min="0" max="100"></label>
+            <label class="field"><span>Descuento (RD$)</span><input id="co-desc-monto" type="number" inputmode="decimal" step="any" min="0"></label>
+          </div>
+          <p class="hint" id="co-desc-hint" style="margin:8px 0 0"></p>
+        </div>
+      </div>
       <label class="check"><input type="checkbox" name="pagada"> Ya la pagué</label>
       <label class="check" style="margin-top:8px"><input type="checkbox" name="act_costo" checked> Actualizar el costo de estos productos en el inventario</label>
       <div class="grid" style="margin-top:12px">
@@ -3191,6 +3201,8 @@ create table if not exists compras (
   itbis_pct numeric,
   itbis_monto numeric not null default 0,
   itbis_incluido boolean not null default false,
+  descuento_pct numeric,
+  descuento_monto numeric not null default 0,
   pagada boolean not null default false,
   archivo text,
   notas text
@@ -3910,7 +3922,7 @@ grant select, insert, update, delete on compras to authenticated;`;
     if (comprasFalta) { el.innerHTML = '<div class="empty">Falta el paso de Supabase que sale arriba.</div>'; return; }
     if (!compras.length) { el.innerHTML = '<div class="empty">Aún no hay compras. Pulsa <b>+ Registrar compra</b> cuando llegue mercancía.</div>'; return; }
     el.innerHTML = compras.map(c => {
-      const n = (c.items || []).length, sub = [fdate(c.fecha), `${n} producto${n === 1 ? '' : 's'}`, Number(c.itbis_monto) > 0 && 'ITBIS ' + money.format(Number(c.itbis_monto)), c.numero && '#' + c.numero, c.archivo && '📎'].filter(Boolean).join(' · ');
+      const n = (c.items || []).length, sub = [fdate(c.fecha), `${n} producto${n === 1 ? '' : 's'}`, Number(c.descuento_monto) > 0 && 'Desc. ' + money.format(Number(c.descuento_monto)), Number(c.itbis_monto) > 0 && 'ITBIS ' + money.format(Number(c.itbis_monto)), c.numero && '#' + c.numero, c.archivo && '📎'].filter(Boolean).join(' · ');
       return `<button class="row" data-compra="${c.id}"><div class="main"><div class="title">${esc(c.proveedor_nombre || 'Sin suplidor')}</div>
         <div class="sub">${esc(sub)}</div><span class="badge ${c.pagada ? 'pagada' : 'pendiente'}">${c.pagada ? 'Pagada' : 'Debo'}</span></div>
         <div class="amount">${montoHtml(Number(c.total))}</div></button>`;
@@ -3941,6 +3953,17 @@ grant select, insert, update, delete on compras to authenticated;`;
       $('#co-itbis-pct').value = Number(c.itbis_pct) > 0 ? Number(c.itbis_pct) : 18;
       $('#co-itbis-inc').checked = !!c.itbis_incluido;
       $('#co-itbis-det').hidden = false;
+    }
+    coDescModo = 'pct';
+    $('#co-desc-on').checked = false;
+    $('#co-desc-pct').value = '';
+    $('#co-desc-monto').value = '';
+    $('#co-desc-det').hidden = true;
+    if (c && (Number(c.descuento_monto) > 0 || Number(c.descuento_pct) > 0)) {
+      $('#co-desc-on').checked = true;
+      $('#co-desc-pct').value = Number(c.descuento_pct) > 0 ? Number(c.descuento_pct) : '';
+      $('#co-desc-monto').value = Number(c.descuento_monto) > 0 ? Number(c.descuento_monto) : '';
+      $('#co-desc-det').hidden = false;
     }
     fillProvCompra(c ? c.proveedor_id : undefined);
     f.elements.proveedor_nombre.value = c && !c.proveedor_id ? c.proveedor_nombre || '' : '';
@@ -3998,33 +4021,67 @@ grant select, insert, update, delete on compras to authenticated;`;
     sumasCompra();
   }
   const lineaCompra = it => round2((Number(it.cantidad) || 0) * (Number(it.costo) || 0));
-  // ITBIS de la compra. Para Surteme el ITBIS es un costo (no se compensa), así que el costo de cada
-  // producto queda con ITBIS: si los precios escritos ya lo traen se separa; si no, se les suma.
-  function datosItbisCompra(sub) {
+  // Descuento e ITBIS de la compra. El descuento se aplica antes del ITBIS y el costo del producto
+  // queda con las dos cosas (es lo que realmente te cuesta la mercancía).
+  let coDescModo = 'pct';   // si el descuento se está escribiendo en % o en RD$
+  function datosCompra(sub) {
+    const onDesc = $('#co-desc-on') ? !!$('#co-desc-on').checked : false;
+    let pctDesc = 0, desc = 0;
+    if (onDesc) {
+      if (coDescModo === 'monto') {
+        desc = Math.min(sub, Math.max(0, Number($('#co-desc-monto').value) || 0));
+        pctDesc = sub > 0 ? round2(desc / sub * 100) : 0;
+      } else {
+        pctDesc = Math.min(100, Math.max(0, Number($('#co-desc-pct').value) || 0));
+        desc = round2(sub * pctDesc / 100);
+      }
+    }
+    const base = round2(sub - desc);
     const onEl = $('#co-itbis-on');
-    if (!onEl) return { on: false, pct: 0, inc: false, itbis: 0, total: round2(sub) };
-    const on = !!onEl.checked;
-    const pct = Math.max(0, Number($('#co-itbis-pct').value) || 0);
-    const inc = !!$('#co-itbis-inc').checked;
-    if (!on || !(pct > 0)) return { on, pct: 0, inc: false, itbis: 0, total: round2(sub) };
-    if (inc) return { on, pct, inc, itbis: round2(sub - sub / (1 + pct / 100)), total: round2(sub) };
-    const itbis = round2(sub * pct / 100);
-    return { on, pct, inc, itbis, total: round2(sub + itbis) };
+    const on = onEl ? !!onEl.checked : false;
+    const pct = on ? Math.max(0, Number($('#co-itbis-pct').value) || 0) : 0;
+    const inc = on && !!$('#co-itbis-inc').checked;
+    if (!on || !(pct > 0)) return { onDesc, pctDesc, desc, base, on: false, pct: 0, inc: false, itbis: 0, total: base };
+    if (inc) return { onDesc, pctDesc, desc, base, on, pct, inc, itbis: round2(base - base / (1 + pct / 100)), total: base };
+    const itbis = round2(base * pct / 100);
+    return { onDesc, pctDesc, desc, base, on, pct, inc, itbis, total: round2(base + itbis) };
   }
   function sumasCompra() {
     $$('#co-items [data-i]').forEach(card => { $('.tot', card).innerHTML = montoHtml(lineaCompra(coItems[+card.dataset.i])); });
-    const sub = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0)), t = datosItbisCompra(sub);
-    const neto = t.inc ? round2(sub - t.itbis) : sub;
-    $('#co-sums').innerHTML = (t.itbis > 0
-      ? `<div><span>Subtotal</span><span>${montoHtml(neto)}</span></div>
-         <div><span>ITBIS ${cantTxt(round2(t.pct))}%${t.inc ? ' incluido' : ''}</span><span>${montoHtml(t.itbis)}</span></div>`
-      : '') +
-      `<div class="t"><span>Total de la compra</span><span>${montoHtml(t.total)}</span></div>`;
+    const sub = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0)), t = datosCompra(sub);
+    let html = '';
+    if (t.desc > 0) html += `<div><span>Subtotal</span><span>${montoHtml(sub)}</span></div>
+      <div><span>Descuento ${cantTxt(round2(t.pctDesc))}%</span><span>− ${montoHtml(t.desc)}</span></div>`;
+    if (t.itbis > 0) html += `<div><span>ITBIS ${cantTxt(round2(t.pct))}%${t.inc ? ' incluido' : ''}</span><span>${montoHtml(t.itbis)}</span></div>`;
+    html += `<div class="t"><span>Total de la compra</span><span>${montoHtml(t.total)}</span></div>`;
+    $('#co-sums').innerHTML = html;
+    const hd = $('#co-desc-hint');
+    if (hd) hd.textContent = !t.onDesc ? '' : t.desc > 0
+      ? `Le rebajan ${money.format(t.desc)} (${cantTxt(round2(t.pctDesc))}%). Pagas ${money.format(t.total)}.`
+      : '';
     const h = $('#co-itbis-hint');
     if (h) h.textContent = !t.on ? '' : t.inc
       ? 'El ITBIS ya está dentro de los precios. Se separa para tu registro; el costo no cambia.'
       : 'El costo de cada producto se guardará con el ITBIS incluido (para ti es un costo).';
   }
+  $('#co-desc-on').addEventListener('change', () => {
+    $('#co-desc-det').hidden = !$('#co-desc-on').checked;
+    if ($('#co-desc-on').checked && !$('#co-desc-pct').value) { coDescModo = 'pct'; $('#co-desc-pct').value = 10; }
+    sumasCompra();
+  });
+  $('#co-desc-pct').addEventListener('input', () => {
+    coDescModo = 'pct';
+    const sub = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0));
+    $('#co-desc-monto').value = sub > 0 ? round2(sub * (Number($('#co-desc-pct').value) || 0) / 100) : '';
+    sumasCompra();
+  });
+  $('#co-desc-monto').addEventListener('input', () => {
+    coDescModo = 'monto';
+    const sub = round2(coItems.reduce((s, it) => s + lineaCompra(it), 0));
+    const m = Number($('#co-desc-monto').value) || 0;
+    $('#co-desc-pct').value = sub > 0 ? round2(m / sub * 100) : '';
+    sumasCompra();
+  });
   $('#co-itbis-on').addEventListener('change', () => {
     $('#co-itbis-det').hidden = !$('#co-itbis-on').checked;
     sumasCompra();
@@ -4302,12 +4359,14 @@ grant select, insert, update, delete on compras to authenticated;`;
     if (!items.length) return toast('Agrega al menos un producto con su cantidad.', true);
     const provId = f.elements.proveedor_id.value || null;
     const subTotal = round2(items.reduce((s, it) => s + lineaCompra(it), 0));
-    const ti = datosItbisCompra(subTotal);
-    const factorItbis = ti.on && !ti.inc ? 1 + ti.pct / 100 : 1;   // el costo del producto queda con ITBIS
+    const t = datosCompra(subTotal);
+    const factorDesc = subTotal > 0 ? t.base / subTotal : 1;
+    const factorItbis = t.on && !t.inc ? 1 + t.pct / 100 : 1;
+    const factorCosto = factorDesc * factorItbis;   // lo que realmente te cuesta la mercancía
     const data = { fecha: f.elements.fecha.value || today(), proveedor_id: provId, proveedor_nombre: provId ? provName(provId) : f.elements.proveedor_nombre.value.trim() || null,
-      numero: f.elements.numero.value.trim() || null, items, total: ti.total, itbis_pct: ti.on ? ti.pct : null,
-      itbis_monto: ti.itbis, itbis_incluido: ti.on ? ti.inc : false, pagada: f.elements.pagada.checked,
-      notas: f.elements.notas.value.trim() || null };
+      numero: f.elements.numero.value.trim() || null, items, total: t.total, itbis_pct: t.on ? t.pct : null,
+      itbis_monto: t.itbis, itbis_incluido: t.on ? t.inc : false, descuento_pct: t.onDesc ? t.pctDesc : null,
+      descuento_monto: t.desc, pagada: f.elements.pagada.checked, notas: f.elements.notas.value.trim() || null };
     const id = openCompraId || compraNueva, prev = openCompraId && compras.find(x => x.id === openCompraId);
     let guardada = false;
     await conBoton(btn, 'Guardando…', async () => {
@@ -4325,7 +4384,7 @@ grant select, insert, update, delete on compras to authenticated;`;
         if (f.elements.act_costo.checked) {
           for (const it of items) {
             const p = inventario.find(x => x.id === it.producto_id); if (!p || !(it.costo > 0)) continue;
-            const nuevo = round2(it.costo * factorItbis * niveles(p)[0].factor / it.factor);
+            const nuevo = round2(it.costo * factorCosto * niveles(p)[0].factor / it.factor);
             if (nuevo !== round2(Number(p.costo))) { const u = await sb.from('inventario').update({ costo: nuevo }).eq('id', p.id); if (!u.error) p.costo = nuevo; }
           }
         }
